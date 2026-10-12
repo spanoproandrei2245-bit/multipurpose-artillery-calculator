@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Header } from './components/Header'
 import { ModelSelector } from './components/ModelSelector'
@@ -8,8 +8,24 @@ import { ModelDetails } from './components/ModelDetails'
 import { models, type ModelId } from './data/models'
 
 function App() {
-  const [selectedModel, setSelectedModel] =
-    useState<ModelId>('mk6')
+  // Загружаем ранее выбранную модель
+  const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
+    const savedModel = localStorage.getItem('selectedModel')
+
+    if (
+      savedModel &&
+      Object.prototype.hasOwnProperty.call(models, savedModel)
+    ) {
+      return savedModel as ModelId
+    }
+
+    return 'mk6'
+  })
+
+  // Сохраняем выбор при изменении модели
+  useEffect(() => {
+    localStorage.setItem('selectedModel', selectedModel)
+  }, [selectedModel])
 
   const model = models[selectedModel]
 
