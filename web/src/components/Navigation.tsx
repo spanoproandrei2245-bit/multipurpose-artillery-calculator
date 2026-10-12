@@ -24,25 +24,27 @@ export function Navigation({
   const t = translations[language].navigation
 
   return (
-    <nav className="border-b border-slate-800 bg-slate-900/50">
+    <nav className="border-b border-app-border bg-app-surface">
       <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4">
-        {pages.map((page) => (
-          <button
-            key={page}
-            type="button"
-            onClick={() => onPageChange(page)}
-            aria-current={
-              activePage === page ? 'page' : undefined
-            }
-            className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-              activePage === page
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-white'
-            }`}
-          >
-            {t[page]}
-          </button>
-        ))}
+        {pages.map((page) => {
+          const isActive = activePage === page
+
+          return (
+            <button
+              key={page}
+              type="button"
+              onClick={() => onPageChange(page)}
+              aria-current={isActive ? 'page' : undefined}
+              className={`cursor-pointer border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-app-muted hover:text-app-text'
+              }`}
+            >
+              {t[page]}
+            </button>
+          )
+        })}
       </div>
     </nav>
   )

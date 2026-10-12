@@ -17,11 +17,11 @@ export function ModelsPage({
 
   return (
     <section>
-      <h2 className="text-2xl font-bold">
+      <h2 className="text-2xl font-bold text-app-text">
         {t.title}
       </h2>
 
-      <p className="mt-2 text-slate-400">
+      <p className="mt-2 text-app-muted">
         {t.description}
       </p>
 
@@ -34,25 +34,25 @@ export function ModelsPage({
               key={id}
               type="button"
               onClick={() => onSelectModel(id)}
-              className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900 p-6 text-left transition-colors hover:border-emerald-500 hover:bg-slate-800"
+              className="cursor-pointer rounded-xl border border-app-border bg-app-surface p-6 text-left transition-colors hover:border-emerald-500 hover:bg-app-bg"
             >
-              <h3 className="text-xl font-semibold">
+              <h3 className="text-xl font-semibold text-app-text">
                 {model.name}
               </h3>
 
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-app-muted">
                 {model.mod}
               </p>
 
-              <p className="mt-4 text-sm text-slate-300">
+              <p className="mt-4 text-sm text-app-text">
                 {t.modes}: {model.modes.join(', ')}
               </p>
 
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-app-muted">
                 {t.source}: {model.source}
               </p>
 
-              <p className="mt-4 text-sm font-medium text-emerald-400">
+              <p className="mt-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                 {t.openDashboard} →
               </p>
             </button>

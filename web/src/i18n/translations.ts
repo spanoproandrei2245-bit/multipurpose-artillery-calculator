@@ -42,6 +42,9 @@ type Translation = {
     preferences: string
     language: string
     autoSave: string
+    theme: string
+    light: string
+    dark: string
   }
 }
 
@@ -89,6 +92,9 @@ export const translations: Record<Language, Translation> = {
       preferences: 'Preferences',
       language: 'Interface language',
       autoSave: 'Your preferences are saved automatically.',
+      theme: 'Appearance',
+      light: 'Light',
+      dark: 'Dark',
     },
   },
 
@@ -135,6 +141,9 @@ export const translations: Record<Language, Translation> = {
       preferences: 'Основные настройки',
       language: 'Язык интерфейса',
       autoSave: 'Настройки сохраняются автоматически.',
+      theme: 'Тема оформления',
+      light: 'Светлая',
+      dark: 'Тёмная',
     },
   },
 }

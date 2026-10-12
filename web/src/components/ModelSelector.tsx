@@ -22,7 +22,7 @@ export function ModelSelector({
     <div>
       <label
         htmlFor="model"
-        className="mb-2 block text-sm font-medium text-slate-300"
+        className="mb-2 block text-sm font-medium text-app-muted"
       >
         {t.label}
       </label>
@@ -33,7 +33,7 @@ export function ModelSelector({
         onChange={(event) =>
           onChange(event.target.value as ModelId)
         }
-        className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-emerald-500"
+        className="w-full rounded-lg border border-app-border bg-app-bg px-4 py-3 text-app-text outline-none focus:border-emerald-500"
       >
         {modelIds.map((id) => (
           <option key={id} value={id}>

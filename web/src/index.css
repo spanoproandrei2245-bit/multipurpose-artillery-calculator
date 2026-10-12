@@ -1,1 +1,28 @@
+
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+}
+
+.dark {
+  --color-background: #020617;
+  --color-surface: #0f172a;
+  --color-text: #f8fafc;
+  --color-muted: #94a3b8;
+  --color-border: #334155;
+}
+
+@theme inline {
+  --color-app-bg: var(--color-background);
+  --color-app-surface: var(--color-surface);
+  --color-app-text: var(--color-text);
+  --color-app-muted: var(--color-muted);
+  --color-app-border: var(--color-border);
+}

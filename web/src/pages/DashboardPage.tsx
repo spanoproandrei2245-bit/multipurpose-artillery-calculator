@@ -21,15 +21,15 @@ export function DashboardPage({
 
   return (
     <section>
-      <h2 className="text-2xl font-bold">
+      <h2 className="text-2xl font-bold text-app-text">
         {t.title}
       </h2>
 
-      <p className="mt-2 text-slate-400">
+      <p className="mt-2 text-app-muted">
         {t.description}
       </p>
 
-      <div className="mt-8 max-w-xl rounded-xl border border-slate-800 bg-slate-900 p-6">
+      <div className="mt-8 max-w-xl rounded-xl border border-app-border bg-app-surface p-6">
         <ModelSelector
           value={selectedModel}
           onChange={onModelChange}
