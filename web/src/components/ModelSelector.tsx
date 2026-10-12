@@ -1,9 +1,12 @@
 
 import { models, type ModelId } from '../data/models'
+import { translations } from '../i18n/translations'
+import type { Language } from '../types/settings'
 
-type ModelSelectorProps = {
+interface ModelSelectorProps {
   value: ModelId
   onChange: (value: ModelId) => void
+  language: Language
 }
 
 const modelIds = Object.keys(models) as ModelId[]
@@ -11,14 +14,17 @@ const modelIds = Object.keys(models) as ModelId[]
 export function ModelSelector({
   value,
   onChange,
+  language,
 }: ModelSelectorProps) {
+  const t = translations[language].modelSelector
+
   return (
     <div>
       <label
         htmlFor="model"
         className="mb-2 block text-sm font-medium text-slate-300"
       >
-        Game Model
+        {t.label}
       </label>
 
       <select

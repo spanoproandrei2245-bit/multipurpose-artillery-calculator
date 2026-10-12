@@ -55,23 +55,28 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <Header />
+      <Header language={language} />
 
-      <Navigation
-        activePage={activePage}
-        onPageChange={setActivePage}
-      />
+  <Navigation
+    activePage={activePage}
+    onPageChange={setActivePage}
+    language={language}
+  />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         {activePage === 'dashboard' && (
           <DashboardPage
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
+            language={language}
           />
         )}
 
         {activePage === 'models' && (
-          <ModelsPage onSelectModel={handleModelSelect} />
+          <ModelsPage
+            onSelectModel={handleModelSelect}
+            language={language}
+          />
         )}
 
         {activePage === 'settings' && (

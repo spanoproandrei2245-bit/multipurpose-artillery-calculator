@@ -1,21 +1,28 @@
 
 import { models, type ModelId } from '../data/models'
+import { translations } from '../i18n/translations'
+import type { Language } from '../types/settings'
 
 interface ModelsPageProps {
   onSelectModel: (id: ModelId) => void
+  language: Language
 }
 
 export function ModelsPage({
   onSelectModel,
+  language,
 }: ModelsPageProps) {
   const modelIds = Object.keys(models) as ModelId[]
+  const t = translations[language].modelsPage
 
   return (
     <section>
-      <h2 className="text-2xl font-bold">Game Models</h2>
+      <h2 className="text-2xl font-bold">
+        {t.title}
+      </h2>
 
       <p className="mt-2 text-slate-400">
-        Select a model to open its dashboard.
+        {t.description}
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -38,11 +45,15 @@ export function ModelsPage({
               </p>
 
               <p className="mt-4 text-sm text-slate-300">
-                Modes: {model.modes.join(', ')}
+                {t.modes}: {model.modes.join(', ')}
+              </p>
+
+              <p className="mt-2 text-xs text-slate-500">
+                {t.source}: {model.source}
               </p>
 
               <p className="mt-4 text-sm font-medium text-emerald-400">
-                Open Dashboard →
+                {t.openDashboard} →
               </p>
             </button>
           )

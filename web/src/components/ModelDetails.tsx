@@ -1,10 +1,23 @@
-import type { GameModel } from '../types/gameModel'
 
-type ModelDetailsProps = {
+import type { GameModel } from '../types/gameModel'
+import type { Language } from '../types/settings'
+import type { ModelId } from '../data/models'
+import { translations } from '../i18n/translations'
+
+interface ModelDetailsProps {
   model: GameModel
+  modelId: ModelId
+  language: Language
 }
 
-export function ModelDetails({ model }: ModelDetailsProps) {
+export function ModelDetails({
+  model,
+  modelId,
+  language,
+}: ModelDetailsProps) {
+  const t = translations[language].modelDetails
+  const notes = translations[language].modelNotes[modelId]
+
   return (
     <section className="mt-6 border-t border-slate-700 pt-5">
       <h3 className="text-xl font-semibold text-white">
@@ -14,7 +27,7 @@ export function ModelDetails({ model }: ModelDetailsProps) {
       <dl className="mt-5 space-y-4">
         <div>
           <dt className="text-sm text-slate-400">
-            Modification
+            {t.modification}
           </dt>
           <dd className="mt-1 text-white">
             {model.mod}
@@ -23,7 +36,7 @@ export function ModelDetails({ model }: ModelDetailsProps) {
 
         <div>
           <dt className="text-sm text-slate-400">
-            Available modes
+            {t.availableModes}
           </dt>
           <dd className="mt-1 text-white">
             {model.modes.join(', ')}
@@ -32,7 +45,7 @@ export function ModelDetails({ model }: ModelDetailsProps) {
 
         <div>
           <dt className="text-sm text-slate-400">
-            Data source
+            {t.dataSource}
           </dt>
           <dd className="mt-1 text-white">
             {model.source}
@@ -41,21 +54,21 @@ export function ModelDetails({ model }: ModelDetailsProps) {
 
         <div>
           <dt className="text-sm text-slate-400">
-            Import status
+            {t.importStatus}
           </dt>
 
           <dd className="mt-1">
             <span className="inline-block rounded-md bg-amber-500/10 px-3 py-1 text-sm text-amber-400">
               {model.importStatus === 'verified'
-                ? 'Verified'
-                : 'Screenshots collected'}
+                ? t.verified
+                : t.screenshots}
             </span>
           </dd>
         </div>
       </dl>
 
       <p className="mt-6 text-sm text-slate-400">
-        {model.notes}
+        {notes}
       </p>
     </section>
   )
