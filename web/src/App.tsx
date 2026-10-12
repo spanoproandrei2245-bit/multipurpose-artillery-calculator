@@ -1,7 +1,30 @@
 
+import { useState } from 'react'
 import { Header } from './components/Header'
+import {
+  ModelSelector,
+  type ModelId,
+} from './components/ModelSelector'
+
+const models = {
+  mk6: {
+    name: 'Mk6',
+    mod: 'Arma 3 / ACE3',
+    mode: 'HIGH',
+  },
+  m252: {
+    name: 'M252',
+    mod: 'RHSUSAF / ACE3',
+    mode: 'HIGH',
+  },
+}
 
 function App() {
+  const [selectedModel, setSelectedModel] =
+    useState<ModelId>('mk6')
+
+  const model = models[selectedModel]
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Header />
@@ -12,17 +35,28 @@ function App() {
         </h2>
 
         <p className="mt-2 text-slate-400">
-          Welcome to Multipurpose Artillery Calculator.
+          Select a game model to view its information.
         </p>
 
-        <section className="mt-8 rounded-xl border border-slate-800 bg-slate-900 p-6">
-          <h3 className="text-lg font-semibold">
-            Game Models
-          </h3>
+        <section className="mt-8 max-w-xl rounded-xl border border-slate-800 bg-slate-900 p-6">
+          <ModelSelector
+            value={selectedModel}
+            onChange={setSelectedModel}
+          />
 
-          <p className="mt-2 text-sm text-slate-400">
-            Your game model library will appear here.
-          </p>
+          <div className="mt-6 space-y-3 border-t border-slate-700 pt-5">
+            <h3 className="text-lg font-semibold">
+              {model.name}
+            </h3>
+
+            <p className="text-sm text-slate-400">
+              Mod: {model.mod}
+            </p>
+
+            <p className="text-sm text-slate-400">
+              Available mode: {model.mode}
+            </p>
+          </div>
         </section>
       </main>
     </div>
