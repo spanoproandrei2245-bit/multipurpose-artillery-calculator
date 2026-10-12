@@ -1,7 +1,10 @@
 
 import { useState } from 'react'
+
 import { Header } from './components/Header'
 import { ModelSelector } from './components/ModelSelector'
+import { ModelDetails } from './components/ModelDetails'
+
 import { models, type ModelId } from './data/models'
 
 function App() {
@@ -23,26 +26,14 @@ function App() {
           Select a game model to view its information.
         </p>
 
-        <section className="mt-8 max-w-xl rounded-xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mt-8 max-w-xl rounded-xl border border-slate-800 bg-slate-900 p-6">
           <ModelSelector
             value={selectedModel}
             onChange={setSelectedModel}
           />
 
-          <div className="mt-6 space-y-3 border-t border-slate-700 pt-5">
-            <h3 className="text-lg font-semibold">
-              {model.name}
-            </h3>
-
-            <p className="text-sm text-slate-400">
-              Mod: {model.mod}
-            </p>
-
-            <p className="text-sm text-slate-400">
-              Available mode: {model.mode}
-            </p>
-          </div>
-        </section>
+          <ModelDetails model={model} />
+        </div>
       </main>
     </div>
   )
