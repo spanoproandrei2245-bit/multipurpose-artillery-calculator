@@ -1,23 +1,8 @@
 
 import { useState } from 'react'
 import { Header } from './components/Header'
-import {
-  ModelSelector,
-  type ModelId,
-} from './components/ModelSelector'
-
-const models = {
-  mk6: {
-    name: 'Mk6',
-    mod: 'Arma 3 / ACE3',
-    mode: 'HIGH',
-  },
-  m252: {
-    name: 'M252',
-    mod: 'RHSUSAF / ACE3',
-    mode: 'HIGH',
-  },
-}
+import { ModelSelector } from './components/ModelSelector'
+import { models, type ModelId } from './data/models'
 
 function App() {
   const [selectedModel, setSelectedModel] =

@@ -1,5 +1,4 @@
-
-export type ModelId = 'mk6' | 'm252'
+import type { ModelId } from '../data/models'
 
 type ModelSelectorProps = {
   value: ModelId
