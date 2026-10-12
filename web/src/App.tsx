@@ -1,21 +1,31 @@
 
+import { Header } from './components/Header'
+
 function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950">
-      <div className="rounded-2xl border border-slate-700 bg-slate-900 p-10 text-center">
-        <h1 className="text-3xl font-bold text-white">
-          Multipurpose Artillery Calculator
-        </h1>
+    <div className="min-h-screen bg-slate-950 text-white">
+      <Header />
 
-        <p className="mt-4 text-slate-400">
-          React + TypeScript + Tailwind CSS
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <h2 className="text-2xl font-bold">
+          Dashboard
+        </h2>
+
+        <p className="mt-2 text-slate-400">
+          Welcome to Multipurpose Artillery Calculator.
         </p>
 
-        <span className="mt-6 inline-block rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white">
-          Project initialized!
-        </span>
-      </div>
-    </main>
+        <section className="mt-8 rounded-xl border border-slate-800 bg-slate-900 p-6">
+          <h3 className="text-lg font-semibold">
+            Game Models
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-400">
+            Your game model library will appear here.
+          </p>
+        </section>
+      </main>
+    </div>
   )
 }
 
