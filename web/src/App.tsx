@@ -9,8 +9,10 @@ import { ModelsPage } from './pages/ModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 import { models, type ModelId } from './data/models'
+import type { Language } from './types/settings'
 
 function App() {
+  // Выбранная игровая модель
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
     const savedModel = localStorage.getItem('selectedModel')
 
@@ -24,12 +26,32 @@ function App() {
     return 'mk6'
   })
 
+  // Активная страница
   const [activePage, setActivePage] =
     useState<PageId>('dashboard')
 
+  // НОВОЕ: язык приложения
+  const [language, setLanguage] = useState<Language>(() => {
+    const savedLanguage = localStorage.getItem('language')
+
+    return savedLanguage === 'ru' ? 'ru' : 'en'
+  })
+
+  // Сохранение выбранной модели
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
   }, [selectedModel])
+
+  // НОВОЕ: сохранение языка
+  useEffect(() => {
+    localStorage.setItem('language', language)
+  }, [language])
+
+  // Выбор модели со страницы Models
+  function handleModelSelect(id: ModelId) {
+    setSelectedModel(id)
+    setActivePage('dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -48,9 +70,16 @@ function App() {
           />
         )}
 
-        {activePage === 'models' && <ModelsPage />}
+        {activePage === 'models' && (
+          <ModelsPage onSelectModel={handleModelSelect} />
+        )}
 
-        {activePage === 'settings' && <SettingsPage />}
+        {activePage === 'settings' && (
+          <SettingsPage
+            language={language}
+            onLanguageChange={setLanguage}
+          />
+        )}
       </main>
     </div>
   )
