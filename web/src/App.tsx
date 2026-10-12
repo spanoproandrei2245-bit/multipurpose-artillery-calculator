@@ -2,13 +2,15 @@
 import { useEffect, useState } from 'react'
 
 import { Header } from './components/Header'
-import { ModelSelector } from './components/ModelSelector'
-import { ModelDetails } from './components/ModelDetails'
+import { Navigation, type PageId } from './components/Navigation'
+
+import { DashboardPage } from './pages/DashboardPage'
+import { ModelsPage } from './pages/ModelsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 import { models, type ModelId } from './data/models'
 
 function App() {
-  // Загружаем ранее выбранную модель
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
     const savedModel = localStorage.getItem('selectedModel')
 
@@ -22,34 +24,33 @@ function App() {
     return 'mk6'
   })
 
-  // Сохраняем выбор при изменении модели
+  const [activePage, setActivePage] =
+    useState<PageId>('dashboard')
+
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
   }, [selectedModel])
-
-  const model = models[selectedModel]
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Header />
 
+      <Navigation
+        activePage={activePage}
+        onPageChange={setActivePage}
+      />
+
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <h2 className="text-2xl font-bold">
-          Dashboard
-        </h2>
-
-        <p className="mt-2 text-slate-400">
-          Select a game model to view its information.
-        </p>
-
-        <div className="mt-8 max-w-xl rounded-xl border border-slate-800 bg-slate-900 p-6">
-          <ModelSelector
-            value={selectedModel}
-            onChange={setSelectedModel}
+        {activePage === 'dashboard' && (
+          <DashboardPage
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
           />
+        )}
 
-          <ModelDetails model={model} />
-        </div>
+        {activePage === 'models' && <ModelsPage />}
+
+        {activePage === 'settings' && <SettingsPage />}
       </main>
     </div>
   )
