@@ -1,9 +1,12 @@
-import type { ModelId } from '../data/models'
+
+import { models, type ModelId } from '../data/models'
 
 type ModelSelectorProps = {
   value: ModelId
   onChange: (value: ModelId) => void
 }
+
+const modelIds = Object.keys(models) as ModelId[]
 
 export function ModelSelector({
   value,
@@ -26,8 +29,11 @@ export function ModelSelector({
         }
         className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-emerald-500"
       >
-        <option value="mk6">Mk6</option>
-        <option value="m252">M252</option>
+        {modelIds.map((id) => (
+          <option key={id} value={id}>
+            {models[id].name}
+          </option>
+        ))}
       </select>
     </div>
   )
