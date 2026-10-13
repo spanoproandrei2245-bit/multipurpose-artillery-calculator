@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Language, Theme } from '../types/settings'
 import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
+import { OpenOnPhone } from '../components/OpenOnPhone'
 
 interface SettingsPageProps {
   language: Language
@@ -117,6 +118,10 @@ export function SettingsPage({
         </label>
 
         <p className="mt-6 text-sm text-app-muted">{t.autoSave}</p>
+      </Card>
+
+      <Card title={t.openOnPhone} description={t.openOnPhoneDescription}>
+        <OpenOnPhone language={language} />
       </Card>
 
       <Card title={t.experimental} description={t.experimentalDescription}>

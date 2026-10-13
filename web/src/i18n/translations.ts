@@ -37,6 +37,8 @@ type Translation = {
     keepAwake: string
     keepAwakeDescription: string
     keepAwakeUnsupported: string
+    openOnPhone: string
+    openOnPhoneDescription: string
   }
 }
 
@@ -79,6 +81,9 @@ export const translations: Record<Language, Translation> = {
       keepAwakeDescription:
         'While the app is open — handy for a phone next to the keyboard. The combat screen always keeps it on.',
       keepAwakeUnsupported: 'Not supported by this browser.',
+      openOnPhone: 'Open on a phone',
+      openOnPhoneDescription:
+        'Scan the code to open the calculator on your phone. It can be installed as an app and works offline.',
     },
   },
 
@@ -120,6 +125,9 @@ export const translations: Record<Language, Translation> = {
       keepAwakeDescription:
         'Пока приложение открыто — удобно для телефона рядом с клавиатурой. Боевой экран не даёт экрану гаснуть всегда.',
       keepAwakeUnsupported: 'Этот браузер не поддерживает.',
+      openOnPhone: 'Открыть на телефоне',
+      openOnPhoneDescription:
+        'Отсканируйте код, чтобы открыть калькулятор на телефоне. Его можно установить как приложение — работает без интернета.',
     },
   },
 }
