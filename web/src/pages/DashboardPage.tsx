@@ -1,4 +1,5 @@
-
+import { ArtilleryReferencePanel } from '../components/ArtilleryReferencePanel'
+import { Mk6Prototype } from '../components/Mk6Prototype'
 import { ModelSelector } from '../components/ModelSelector'
 import { ModelDetails } from '../components/ModelDetails'
 import { models, type ModelId } from '../data/models'
@@ -42,6 +43,13 @@ export function DashboardPage({
           language={language}
         />
       </div>
+      {selectedModel === 'mk6' && (
+       <Mk6Prototype language={language} />
+        )}
+        <ArtilleryReferencePanel
+        modelId={selectedModel}
+        language={language}
+      />
     </section>
   )
 }

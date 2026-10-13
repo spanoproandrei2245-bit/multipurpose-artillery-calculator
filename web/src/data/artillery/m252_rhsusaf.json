@@ -1,0 +1,13 @@
+
+{
+  "schemaVersion": 1,
+  "id": "m252_rhsusaf",
+  "name": "M252",
+  "modification": "RHSUSAF + ACE3",
+  "availableModes": ["HIGH"],
+  "source": {
+    "name": "ACE3 Artillery Table",
+    "status": "pending"
+  },
+  "screenshots": []
+}
