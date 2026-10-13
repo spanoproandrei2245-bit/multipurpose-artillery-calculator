@@ -81,7 +81,7 @@ function isProfile(value: unknown): boolean {
   )
 }
 
-function parseReference(
+export function parseReference(
   data: unknown,
   expectedId: string
 ): ArtilleryReference {
