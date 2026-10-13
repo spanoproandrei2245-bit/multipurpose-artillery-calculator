@@ -214,6 +214,17 @@ export function useJournal() {
     return entry
   }
 
+  /** Перезаписать вводные и результат записи, сохранив её id и день. */
+  function update(id: string, draft: JournalDraft) {
+    commit(
+      entries.map((e) =>
+        e.id === id
+          ? { ...draft, id: e.id, createdAt: e.createdAt, dayKey: e.dayKey }
+          : e
+      )
+    )
+  }
+
   function rename(id: string, name: string) {
     const trimmed = name.trim()
     if (trimmed === '') return
@@ -230,5 +241,5 @@ export function useJournal() {
     commit(entries.filter((e) => e.dayKey !== dayKey))
   }
 
-  return { entries, add, rename, remove, clearDay }
+  return { entries, add, update, rename, remove, clearDay }
 }

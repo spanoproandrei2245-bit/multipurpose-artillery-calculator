@@ -13,6 +13,8 @@ import type { Language } from '../types/settings'
 
 interface Props {
   entries: readonly JournalEntry[]
+  // Цель, открытая в калькуляторе
+  activeId?: string | null
   language: Language
   onLoad: (entry: JournalEntry) => void
   onRename: (id: string, name: string) => void
@@ -26,6 +28,7 @@ function formatSigned(value: number): string {
 
 export function ShotJournal({
   entries,
+  activeId = null,
   language,
   onLoad,
   onRename,
@@ -137,7 +140,12 @@ export function ShotJournal({
               {day.entries.map((entry) => (
                 <li
                   key={entry.id}
-                  className="rounded-lg border border-app-border bg-app-bg p-3"
+                  className={[
+                    'rounded-lg border bg-app-bg p-3',
+                    entry.id === activeId
+                      ? 'border-emerald-500'
+                      : 'border-app-border',
+                  ].join(' ')}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     {editingId === entry.id ? (
