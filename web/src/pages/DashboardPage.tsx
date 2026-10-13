@@ -114,6 +114,7 @@ export function DashboardPage({
         onRename={journal.rename}
         onRemove={journal.remove}
         onClearDay={journal.clearDay}
+        onImport={journal.importEntries}
       />
     </section>
   )

@@ -136,6 +136,94 @@ export function loadEntries(): JournalEntry[] {
   }
 }
 
+// ---- перенос журнала между устройствами ----
+
+const EXPORT_APP = 'multipurpose-artillery-calculator'
+const EXPORT_VERSION = 1
+
+/** Файл экспорта: обёртка с пометкой приложения и версии формата. */
+export function exportJournal(
+  entries: readonly JournalEntry[],
+  now = new Date()
+): string {
+  return JSON.stringify(
+    {
+      app: EXPORT_APP,
+      version: EXPORT_VERSION,
+      exportedAt: now.toISOString(),
+      entries,
+    },
+    null,
+    2
+  )
+}
+
+/**
+ * Разбор файла журнала. Принимает файл экспорта или голый массив
+ * записей. Возвращает корректные записи (повреждённые отбрасываются)
+ * и число отброшенных; null — файл не похож на журнал.
+ */
+export function parseJournalFile(
+  text: string
+): { entries: JournalEntry[]; invalid: number } | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return null
+  }
+
+  const list =
+    Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === 'object' &&
+          parsed !== null &&
+          (parsed as { app?: unknown }).app === EXPORT_APP &&
+          Array.isArray((parsed as { entries?: unknown }).entries)
+        ? (parsed as { entries: unknown[] }).entries
+        : null
+
+  if (list === null) return null
+
+  const entries = list.filter(isEntry)
+  return { entries, invalid: list.length - entries.length }
+}
+
+/** Добавить новые записи; записи с уже существующим id пропускаются. */
+export function mergeEntries(
+  existing: readonly JournalEntry[],
+  incoming: readonly JournalEntry[]
+): { entries: JournalEntry[]; added: number; skipped: number } {
+  const ids = new Set(existing.map((e) => e.id))
+  const fresh: JournalEntry[] = []
+
+  for (const entry of incoming) {
+    if (ids.has(entry.id)) continue
+    ids.add(entry.id)
+    fresh.push(entry)
+  }
+
+  return {
+    entries: [...existing, ...fresh],
+    added: fresh.length,
+    skipped: incoming.length - fresh.length,
+  }
+}
+
+/** Поиск по названию, модели и дистанции (без учёта регистра). */
+export function matchesQuery(
+  entry: JournalEntry,
+  query: string,
+  modelName = ''
+): boolean {
+  const q = query.trim().toLowerCase()
+  if (q === '') return true
+  return [entry.name, modelName, String(entry.distance)]
+    .join(' ')
+    .toLowerCase()
+    .includes(q)
+}
+
 function saveEntries(entries: JournalEntry[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
@@ -225,6 +313,13 @@ export function useJournal() {
     )
   }
 
+  /** Импорт: возвращает, сколько записей добавлено и пропущено. */
+  function importEntries(incoming: readonly JournalEntry[]) {
+    const result = mergeEntries(entries, incoming)
+    if (result.added > 0) commit(result.entries)
+    return { added: result.added, skipped: result.skipped }
+  }
+
   function rename(id: string, name: string) {
     const trimmed = name.trim()
     if (trimmed === '') return
@@ -241,5 +336,5 @@ export function useJournal() {
     commit(entries.filter((e) => e.dayKey !== dayKey))
   }
 
-  return { entries, add, update, rename, remove, clearDay }
+  return { entries, add, update, importEntries, rename, remove, clearDay }
 }
