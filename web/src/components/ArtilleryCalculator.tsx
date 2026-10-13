@@ -21,11 +21,12 @@ import {
   readStored,
   writeStored,
 } from '../lib/input'
+import { sumAdjustments } from '../lib/adjust'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
 import type { ArtilleryMode } from '../types/artillery'
 import type { Language } from '../types/settings'
-import { AdjustFire } from './AdjustFire'
+import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
 import { BallisticTableView } from './BallisticTableView'
 import { FireTimer } from './FireTimer'
@@ -79,13 +80,19 @@ export function ArtilleryCalculator({
       readStored<AngleUnit>('azimuthUnit', ['mil', 'deg'], 'mil')
   )
 
-  // Накопленная корректировка огня, м
-  const [rangeAdjust, setRangeAdjust] = useState(
-    initial?.rangeCorrection ?? 0
+  // История докладов корректировки. Из журнала приходит только итог —
+  // он становится одной записью истории.
+  const [adjustHistory, setAdjustHistory] = useState<AdjustmentEntry[]>(
+    () => {
+      const range = initial?.rangeCorrection ?? 0
+      const lateral = initial?.lateralCorrection ?? 0
+      return range !== 0 || lateral !== 0
+        ? [{ range, lateral, label: ru ? 'из журнала' : 'from journal' }]
+        : []
+    }
   )
-  const [lateralAdjust, setLateralAdjust] = useState(
-    initial?.lateralCorrection ?? 0
-  )
+  const { range: rangeAdjust, lateral: lateralAdjust } =
+    sumAdjustments(adjustHistory)
 
   const [chosenCharge, setChosenCharge] = useState<number | null>(
     initial?.charge ?? null
@@ -128,6 +135,12 @@ export function ArtilleryCalculator({
   const baseRange = validDistance ? distanceValue + rangeAdjust : null
 
   const azimuthValue = parseNumber(azimuth)
+  const azimuthMil =
+    azimuthValue === null
+      ? null
+      : azimuthUnit === 'mil'
+        ? azimuthValue
+        : degToMil(azimuthValue)
   const azimuthDeg =
     azimuthValue === null
       ? null
@@ -202,8 +215,7 @@ export function ArtilleryCalculator({
     setOwnHeight('')
     setTargetHeight('')
     setAzimuth('')
-    setRangeAdjust(0)
-    setLateralAdjust(0)
+    setAdjustHistory([])
     setChosenCharge(null)
     setSaveName('')
     markEdited()
@@ -622,18 +634,21 @@ export function ArtilleryCalculator({
         {/* ---- Корректировка и погода ---- */}
         <div className="lg:col-start-1 lg:row-start-2">
           <AdjustFire
-            range={rangeAdjust}
-            lateral={lateralAdjust}
-            onAdd={(rangeDelta, lateralDelta) => {
-              setRangeAdjust((value) => value + rangeDelta)
-              setLateralAdjust((value) => value + lateralDelta)
+            history={adjustHistory}
+            onAdd={(entry) => {
+              setAdjustHistory((list) => [...list, entry])
+              markEdited()
+            }}
+            onUndo={() => {
+              setAdjustHistory((list) => list.slice(0, -1))
               markEdited()
             }}
             onReset={() => {
-              setRangeAdjust(0)
-              setLateralAdjust(0)
+              setAdjustHistory([])
               markEdited()
             }}
+            gunAzimuthMil={azimuthMil}
+            azimuthUnit={azimuthUnit}
             language={language}
           />
 
