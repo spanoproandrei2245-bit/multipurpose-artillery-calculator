@@ -28,3 +28,6 @@ Desktop.ini
 *.bak
 
 target/
+
+# Claude Code local settings
+.claude/

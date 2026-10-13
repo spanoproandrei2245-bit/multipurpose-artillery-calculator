@@ -1,10 +1,8 @@
 import { useState } from 'react'
 
 import { ArtilleryCalculator } from '../components/ArtilleryCalculator'
-import { ArtilleryReferencePanel } from '../components/ArtilleryReferencePanel'
 import { ModelSelector } from '../components/ModelSelector'
 import { ShotJournal } from '../components/ShotJournal'
-import { artilleryRegistry } from '../data/artillery/registry'
 import { isModelId, type ModelId } from '../data/models'
 import { useJournal, type JournalEntry } from '../lib/journal'
 import type { Language } from '../types/settings'
@@ -27,14 +25,10 @@ export function DashboardPage({
   language,
   gridInput,
 }: DashboardPageProps) {
-
   const journal = useJournal()
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
     null
   )
-
-  const hasTables =
-    artilleryRegistry[selectedModel].profiles !== undefined
 
   // Ручная смена модели сбрасывает ранее загруженную запись.
   function handleModelChange(id: ModelId) {
@@ -69,25 +63,15 @@ export function DashboardPage({
 
   return (
     <section>
-      {hasTables ? (
-        <ArtilleryCalculator
-          modelSelector={selector}
-          key={`${selectedModel}-${loadRequest?.nonce ?? 0}`}
-          modelId={selectedModel}
-          language={language}
-          initial={initial}
-          gridInput={gridInput}
-          onSave={journal.add}
-        />
-      ) : (
-        <>
-        <div className="max-w-xl">{selector}</div>
-        <ArtilleryReferencePanel
-          modelId={selectedModel}
-          language={language}
-        />
-        </>
-      )}
+      <ArtilleryCalculator
+        key={`${selectedModel}-${loadRequest?.nonce ?? 0}`}
+        modelId={selectedModel}
+        modelSelector={selector}
+        language={language}
+        initial={initial}
+        gridInput={gridInput}
+        onSave={journal.add}
+      />
 
       <ShotJournal
         entries={journal.entries}
