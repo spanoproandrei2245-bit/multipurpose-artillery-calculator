@@ -9,6 +9,7 @@ import { ModelsPage } from './pages/ModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 import { models, type ModelId } from './data/models'
+import { useWakeLock } from './lib/useWakeLock'
 import type { Language, Theme } from './types/settings'
 
 function App() {
@@ -43,6 +44,25 @@ function App() {
 
     return savedTheme === 'light' ? 'light' : 'dark'
   })
+
+  // Не гасить экран (телефон у орудия)
+  const [keepAwake, setKeepAwake] = useState(() => {
+    try {
+      return localStorage.getItem('keepAwake') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('keepAwake', String(keepAwake))
+    } catch {
+      // Хранилище недоступно — настройка живёт до перезагрузки.
+    }
+  }, [keepAwake])
+
+  useWakeLock(keepAwake)
 
   // Экспериментальный ввод по координатам сетки
   const [gridInput, setGridInput] = useState(() => {
@@ -122,6 +142,8 @@ function App() {
             onThemeChange={setTheme}
             gridInput={gridInput}
             onGridInputChange={setGridInput}
+            keepAwake={keepAwake}
+            onKeepAwakeChange={setKeepAwake}
           />
         )}
       </main>

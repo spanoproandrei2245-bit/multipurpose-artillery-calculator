@@ -32,6 +32,7 @@ import type { Language } from '../types/settings'
 import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
 import { BallisticTableView } from './BallisticTableView'
+import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
@@ -230,6 +231,7 @@ export function ArtilleryCalculator({
   // ---- горячие клавиши ----
   const timerRef = useRef<FireTimerHandle>(null)
   const [showKeys, setShowKeys] = useState(false)
+  const [combatOpen, setCombatOpen] = useState(false)
 
   function focusField(id: string) {
     const field = document.getElementById(id)
@@ -249,8 +251,13 @@ export function ArtilleryCalculator({
   const hotkeys: HotkeyMap = {
     KeyF: () => timerRef.current?.fire(),
     Escape: () => {
-      timerRef.current?.stop()
+      // Сначала закрывается боевой экран, затем останавливается таймер
+      if (combatOpen) setCombatOpen(false)
+      else timerRef.current?.stop()
       setShowKeys(false)
+    },
+    KeyB: () => {
+      if (solution) setCombatOpen((value) => !value)
     },
     KeyD: () => focusField('calc-distance'),
     KeyA: () => focusField('calc-azimuth'),
@@ -631,11 +638,43 @@ export function ArtilleryCalculator({
                   </p>
                 )}
 
-                <FireTimer
-                  ref={timerRef}
-                  tof={solution.tof}
-                  language={language}
-                />
+                {!combatOpen && (
+                  <FireTimer
+                    ref={timerRef}
+                    tof={solution.tof}
+                    language={language}
+                  />
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setCombatOpen(true)}
+                  className="mt-2 w-full cursor-pointer rounded-lg border border-app-border bg-app-surface px-4 py-2 text-sm text-app-text hover:border-emerald-500"
+                >
+                  {ru ? 'Боевой экран' : 'Combat screen'}
+                  <span className="ml-2 hidden text-xs text-app-muted sm:inline">
+                    B
+                  </span>
+                </button>
+
+                {combatOpen && (
+                  <CombatScreen
+                    title={`${reference.name} · ${selectedAmmo ? `${selectedAmmo.designation} [${selectedAmmo.type}]` : ''}`}
+                    targetName={activeEntry?.name ?? null}
+                    charge={activeResult.charge}
+                    elevation={solution.elevation}
+                    azimuth={
+                      firingAzimuth === null
+                        ? null
+                        : formatAzimuth(firingAzimuth)
+                    }
+                    azimuthUnit={unitAzimuth}
+                    tof={solution.tof}
+                    timerRef={timerRef}
+                    onClose={() => setCombatOpen(false)}
+                    language={language}
+                  />
+                )}
 
                 {/* ---- Сохранение в журнал ---- */}
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -840,6 +879,7 @@ export function ArtilleryCalculator({
           <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             {[
               ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
+              ['B', ru ? 'Боевой экран' : 'Combat screen'],
               ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
               ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
               ['D', ru ? 'К полю дистанции' : 'Go to distance'],

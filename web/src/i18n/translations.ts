@@ -34,6 +34,9 @@ type Translation = {
     experimentalDescription: string
     gridInput: string
     gridInputDescription: string
+    keepAwake: string
+    keepAwakeDescription: string
+    keepAwakeUnsupported: string
   }
 }
 
@@ -72,6 +75,10 @@ export const translations: Record<Language, Translation> = {
       gridInput: 'Grid coordinate input',
       gridInputDescription:
         'Distance and azimuth from the gun and target grid references (6, 8 or 10 digits).',
+      keepAwake: 'Keep the screen on',
+      keepAwakeDescription:
+        'While the app is open — handy for a phone next to the keyboard. The combat screen always keeps it on.',
+      keepAwakeUnsupported: 'Not supported by this browser.',
     },
   },
 
@@ -109,6 +116,10 @@ export const translations: Record<Language, Translation> = {
       gridInput: 'Ввод по координатам сетки',
       gridInputDescription:
         'Дистанция и азимут по координатам орудия и цели (6, 8 или 10 цифр).',
+      keepAwake: 'Не гасить экран',
+      keepAwakeDescription:
+        'Пока приложение открыто — удобно для телефона рядом с клавиатурой. Боевой экран не даёт экрану гаснуть всегда.',
+      keepAwakeUnsupported: 'Этот браузер не поддерживает.',
     },
   },
 }
