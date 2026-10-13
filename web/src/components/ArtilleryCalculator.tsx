@@ -11,7 +11,9 @@ import {
   normalizeAngle,
   overallRange,
   profileHasWeather,
+  pickCharge,
   solveAllCharges,
+  type ChargePreference,
 } from '../lib/ballistics'
 import {
   formatSigned,
@@ -110,9 +112,22 @@ export function ArtilleryCalculator({
     null
   )
 
+  const [chargePreference, setChargePreference] =
+    useState<ChargePreference>(() =>
+      readStored<ChargePreference>(
+        'chargePreference',
+        ['lowest', 'fastest', 'precise'],
+        'lowest'
+      )
+    )
+
   useEffect(() => {
     writeStored('azimuthUnit', azimuthUnit)
   }, [azimuthUnit])
+
+  useEffect(() => {
+    writeStored('chargePreference', chargePreference)
+  }, [chargePreference])
 
   const selectedAmmo =
     ammunition.find((ammo) => ammo.id === ammoId) ?? ammunition[0]
@@ -187,8 +202,10 @@ export function ArtilleryCalculator({
 
   const applicable = results.filter((r) => r.solution !== null)
 
+  // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
-    applicable.find((r) => r.charge === chosenCharge) ?? applicable[0]
+    applicable.find((r) => r.charge === chosenCharge) ??
+    pickCharge(results, chargePreference)
 
   const solution = activeResult?.solution ?? null
   const range = overallRange(results)
@@ -557,6 +574,14 @@ export function ArtilleryCalculator({
                   </p>
                 )}
 
+                {activeResult.nearEdge && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {ru
+                      ? `Заряд ${activeResult.charge} у края своей таблицы: поправки на погоду и высоту здесь менее надёжны. Если есть заряд выше — лучше взять его.`
+                      : `Charge ${activeResult.charge} is at the edge of its table: weather and height corrections are less reliable here. Prefer a higher charge if available.`}
+                  </p>
+                )}
+
                 {isLargeCorrection(solution) && (
                   <p className="mt-2 text-xs text-app-text">
                     {ru
@@ -620,9 +645,26 @@ export function ArtilleryCalculator({
             {/* ---- Выбор заряда ---- */}
             {results.length > 0 && (
               <div className="mt-5 border-t border-app-border pt-4">
-                <h4 className="text-sm font-semibold text-app-text">
-                  {ru ? 'Заряды' : 'Charges'}
-                </h4>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-semibold text-app-text">
+                    {ru ? 'Заряды' : 'Charges'}
+                  </h4>
+
+                  <Toggle
+                    label={ru ? 'Заряд по умолчанию' : 'Default charge'}
+                    value={chargePreference}
+                    onChange={(value) => {
+                      setChargePreference(value)
+                      setChosenCharge(null)
+                      markEdited()
+                    }}
+                    options={[
+                      { value: 'lowest', label: ru ? 'меньший' : 'lowest' },
+                      { value: 'fastest', label: ru ? 'быстрее' : 'fastest' },
+                      { value: 'precise', label: ru ? 'точнее' : 'precise' },
+                    ]}
+                  />
+                </div>
 
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {results.map((result) => {
@@ -659,6 +701,21 @@ export function ArtilleryCalculator({
                             ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
                             : `${result.minRange}–${result.maxRange} ${unitM}`}
                         </span>
+
+                        {result.solution && result.metersPerMil !== null && (
+                          <span
+                            className={[
+                              'block text-xs',
+                              result.nearEdge
+                                ? 'text-amber-700 dark:text-amber-300'
+                                : 'text-app-muted',
+                            ].join(' ')}
+                          >
+                            1 {unitMil} ≈ {result.metersPerMil.toFixed(1)}{' '}
+                            {unitM}
+                            {result.nearEdge && (ru ? ' · край' : ' · edge')}
+                          </span>
+                        )}
                       </button>
                     )
                   })}
@@ -666,8 +723,8 @@ export function ArtilleryCalculator({
 
                 <p className="mt-2 text-xs text-app-muted">
                   {ru
-                    ? 'По умолчанию — наименьший подходящий заряд. Между строками таблицы — линейная интерполяция.'
-                    : 'The lowest suitable charge by default. Linear interpolation between table rows.'}
+                    ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
+                    : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
                 </p>
               </div>
             )}

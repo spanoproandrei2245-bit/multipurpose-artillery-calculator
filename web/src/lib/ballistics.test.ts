@@ -9,6 +9,9 @@ import {
   degToMil,
   interpolateRow,
   isLargeCorrection,
+  isNearTableEdge,
+  metersPerMil,
+  pickCharge,
   lateralCorrectionMil,
   milToDeg,
   NO_WEATHER,
@@ -250,5 +253,38 @@ describe('geometry helpers', () => {
     expect(milToDeg(3200)).toBe(180)
     expect(normalizeAngle(6500, 6400)).toBe(100)
     expect(normalizeAngle(-100, 6400)).toBe(6300)
+  })
+})
+
+describe('charge choice', () => {
+  it('measures metres per mil from the table slope', () => {
+    // 2000 → 2050: 11 мил на 50 м → 4.55 м/мил
+    expect(metersPerMil(WEATHER_ROWS, 2000)).toBeCloseTo(50 / 11)
+    expect(metersPerMil(WEATHER_ROWS, 2025)).toBeCloseTo(50 / 11)
+    // Последняя строка — предыдущий промежуток
+    expect(metersPerMil(WEATHER_ROWS, 2100)).toBeCloseTo(50 / 11)
+    expect(metersPerMil(WEATHER_ROWS, 3000)).toBeNull()
+  })
+
+  it('flags the last table interval as the edge', () => {
+    expect(isNearTableEdge(WEATHER_ROWS, 2050)).toBe(false)
+    expect(isNearTableEdge(WEATHER_ROWS, 2060)).toBe(true)
+  })
+
+  const results = [
+    { charge: 0, minRange: 0, maxRange: 0, solution: null, metersPerMil: null, nearEdge: false },
+    { charge: 1, minRange: 0, maxRange: 0, solution: { tof: 30 } as never, metersPerMil: 2, nearEdge: false },
+    { charge: 2, minRange: 0, maxRange: 0, solution: { tof: 20 } as never, metersPerMil: 5, nearEdge: false },
+    { charge: 3, minRange: 0, maxRange: 0, solution: { tof: 25 } as never, metersPerMil: 1, nearEdge: true },
+  ]
+
+  it('picks by preference among usable charges', () => {
+    expect(pickCharge(results, 'lowest')?.charge).toBe(1)
+    expect(pickCharge(results, 'fastest')?.charge).toBe(2)
+    // Заряд 3 точнее всех, но у края таблицы — берётся заряд 1
+    expect(pickCharge(results, 'precise')?.charge).toBe(1)
+    // Если остался только заряд у края — берётся он
+    expect(pickCharge([results[3]], 'precise')?.charge).toBe(3)
+    expect(pickCharge([], 'precise')).toBeUndefined()
   })
 })
