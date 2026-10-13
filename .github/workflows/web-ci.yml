@@ -40,5 +40,11 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Check ballistic tables against sources
+        run: npm run tables:check
+
+      - name: Run tests
+        run: npm test
+
       - name: Build application
         run: npm run build

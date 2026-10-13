@@ -44,6 +44,23 @@ function App() {
     return savedTheme === 'light' ? 'light' : 'dark'
   })
 
+  // Экспериментальный ввод по координатам сетки
+  const [gridInput, setGridInput] = useState(() => {
+    try {
+      return localStorage.getItem('experimentalGrid') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('experimentalGrid', String(gridInput))
+    } catch {
+      // Хранилище недоступно — настройка живёт до перезагрузки.
+    }
+  }, [gridInput])
+
   // Сохраняем выбранную модель
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
@@ -86,6 +103,7 @@ function App() {
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
             language={language}
+            gridInput={gridInput}
           />
         )}
 
@@ -102,6 +120,8 @@ function App() {
             onLanguageChange={setLanguage}
             theme={theme}
             onThemeChange={setTheme}
+            gridInput={gridInput}
+            onGridInputChange={setGridInput}
           />
         )}
       </main>
