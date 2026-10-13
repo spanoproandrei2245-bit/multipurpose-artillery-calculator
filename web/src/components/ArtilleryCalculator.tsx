@@ -43,7 +43,12 @@ interface Props {
   gridInput?: boolean
   // Выбор модели — в одной строке с выбором боеприпаса
   modelSelector?: ReactNode
+  // Полоска быстрого выбора сохранённых целей
+  targetBar?: ReactNode
+  // Цель из журнала, с которой сейчас работаем: её можно обновить
+  activeEntry?: Pick<JournalEntry, 'id' | 'name'> | null
   onSave: (draft: JournalDraft) => void
+  onUpdate?: (id: string, draft: JournalDraft) => void
 }
 
 export function ArtilleryCalculator({
@@ -52,7 +57,10 @@ export function ArtilleryCalculator({
   initial = null,
   gridInput = false,
   modelSelector,
+  targetBar,
+  activeEntry = null,
   onSave,
+  onUpdate,
 }: Props) {
   const ru = language === 'ru'
   const reference = artilleryRegistry[modelId]
@@ -98,7 +106,9 @@ export function ArtilleryCalculator({
     initial?.charge ?? null
   )
   const [saveName, setSaveName] = useState('')
-  const [justSaved, setJustSaved] = useState(false)
+  const [justSaved, setJustSaved] = useState<'saved' | 'updated' | null>(
+    null
+  )
 
   useEffect(() => {
     writeStored('azimuthUnit', azimuthUnit)
@@ -200,7 +210,7 @@ export function ArtilleryCalculator({
         : normalizeAngle(azimuthValue + milToDeg(azimuthCorrectionMil), 360)
 
   function markEdited() {
-    setJustSaved(false)
+    setJustSaved(null)
   }
 
   function edited(setter: (value: string) => void) {
@@ -239,16 +249,12 @@ export function ArtilleryCalculator({
     markEdited()
   }
 
-  function handleSave() {
-    if (!solution || !activeResult || !selectedAmmo) return
-    if (distanceValue === null) return
+  function buildDraft(name: string): JournalDraft | null {
+    if (!solution || !activeResult || !selectedAmmo) return null
+    if (distanceValue === null) return null
 
-    const defaultName = `${ru ? 'Цель' : 'Target'} ${distanceValue} ${
-      ru ? 'м' : 'm'
-    }`
-
-    onSave({
-      name: saveName.trim() || defaultName,
+    return {
+      name,
       modelId,
       ammoId: selectedAmmo.id,
       charge: activeResult.charge,
@@ -263,10 +269,29 @@ export function ArtilleryCalculator({
       azimuthUnit,
       firingAzimuth,
       weather: weatherInputs.toJournal(),
-    })
+    }
+  }
 
+  function handleSave() {
+    const defaultName = `${ru ? 'Цель' : 'Target'} ${distanceValue} ${
+      ru ? 'м' : 'm'
+    }`
+    const draft = buildDraft(saveName.trim() || defaultName)
+    if (!draft) return
+
+    onSave(draft)
     setSaveName('')
-    setJustSaved(true)
+    setJustSaved('saved')
+  }
+
+  // Перезаписать текущую цель: те же имя и запись, новые вводные.
+  function handleUpdate() {
+    if (!activeEntry || !onUpdate) return
+    const draft = buildDraft(activeEntry.name)
+    if (!draft) return
+
+    onUpdate(activeEntry.id, draft)
+    setJustSaved('updated')
   }
 
   const unitM = ru ? 'м' : 'm'
@@ -297,6 +322,8 @@ export function ArtilleryCalculator({
           language={language}
         />
       </div>
+
+      {targetBar}
 
       {/* Мобильный порядок: цель → результат → корректировка → погода.
           На широком экране результат справа и не уезжает при прокрутке. */}
@@ -562,15 +589,31 @@ export function ArtilleryCalculator({
                     onClick={handleSave}
                     className="cursor-pointer rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                   >
-                    {justSaved
+                    {justSaved === 'saved'
                       ? ru
                         ? 'Сохранено ✓'
                         : 'Saved ✓'
                       : ru
-                        ? 'В журнал'
-                        : 'Save'}
+                        ? 'Новая цель'
+                        : 'New target'}
                   </button>
                 </div>
+
+                {activeEntry && onUpdate && (
+                  <button
+                    type="button"
+                    onClick={handleUpdate}
+                    className="mt-2 w-full cursor-pointer truncate rounded-lg border border-emerald-600 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-600 hover:text-white dark:text-emerald-300"
+                  >
+                    {justSaved === 'updated'
+                      ? ru
+                        ? `«${activeEntry.name}» обновлена ✓`
+                        : `"${activeEntry.name}" updated ✓`
+                      : ru
+                        ? `Обновить «${activeEntry.name}»`
+                        : `Update "${activeEntry.name}"`}
+                  </button>
+                )}
               </>
             )}
 
