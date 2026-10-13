@@ -10,7 +10,7 @@ corrections and fire adjustment.
 > азимут и время полёта по таблицам ACE из игры, с погодными поправками
 > и корректировкой огня. Интерфейс на русском и английском.
 
-**Status:** alpha (v0.8). Made by Heis.
+**Status:** alpha (v0.9). Made by Heis.
 
 ## Features
 
@@ -27,6 +27,16 @@ corrections and fire adjustment.
 - **Fire → impact timer** with a "splash" beep 5 s before impact
 - **Shot journal** grouped by day: save, load, rename, delete
 - **In-game table viewer** with the rows used for the current solution highlighted
+- **Observer adjustment**: reports along the observer–target line are
+  rotated into the gun frame; history with undo
+- **Target bar**: switch between saved targets in one click, update a target
+  after adjusting fire
+- **Charge preference**: lowest, fastest or most precise ("1 mil ≈ X m"),
+  with a warning at the edge of a charge table
+- **Keyboard shortcuts** (press `?` in the app), work in any layout
+- **Journal search, export and import** to move targets between devices
+- **Installable app (PWA)** that works offline, **combat screen** with large
+  numbers and a keep-screen-on option for a phone next to the keyboard
 - Light and dark theme, desktop and mobile layout
 - Experimental: distance and azimuth from grid references (Settings)
 
@@ -50,6 +60,14 @@ Then open http://localhost:5173.
 | `npm test` | Unit tests (Vitest) |
 | `npm run tables:import` | Rebuild table JSON from `web/data-sources` |
 | `npm run tables:check` | Check that table JSON matches `web/data-sources` |
+| `node scripts/make-icons.mjs` | Regenerate the app icons in `web/public` |
+
+## Deployment
+
+`.github/workflows/deploy-pages.yml` builds the app and publishes it to
+GitHub Pages on every push to `main`. Enable it once in the repository:
+**Settings → Pages → Source: GitHub Actions**. The build uses relative paths,
+so it works under `https://<user>.github.io/<repo>/`.
 
 ## How the tables work
 
