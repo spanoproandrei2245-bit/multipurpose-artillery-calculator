@@ -170,6 +170,7 @@ export function AdjustFire({
 
   return (
     <details
+      id="adjust-fire"
       open={hasTotal}
       className="rounded-lg border border-app-border bg-app-bg p-4"
     >
@@ -229,6 +230,7 @@ export function AdjustFire({
           label={ru ? 'По дальности (м)' : 'Range (m)'}
           value={rangeMiss}
           onChange={setRangeMiss}
+          onEnter={add}
           aside={
             <Toggle
               label={ru ? 'Недолёт или перелёт' : 'Short or over'}
@@ -246,6 +248,7 @@ export function AdjustFire({
           label={ru ? 'По направлению (м)' : 'Deflection (m)'}
           value={lateralMiss}
           onChange={setLateralMiss}
+          onEnter={add}
           aside={
             <Toggle
               label={ru ? 'Левее или правее' : 'Left or right'}

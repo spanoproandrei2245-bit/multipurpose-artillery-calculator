@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { artilleryRegistry } from '../data/artillery/registry'
 import type { ModelId } from '../data/models'
@@ -25,13 +25,14 @@ import {
 } from '../lib/input'
 import { sumAdjustments } from '../lib/adjust'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
+import { useHotkeys, type HotkeyMap } from '../lib/useHotkeys'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
 import type { ArtilleryMode } from '../types/artillery'
 import type { Language } from '../types/settings'
 import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
 import { BallisticTableView } from './BallisticTableView'
-import { FireTimer } from './FireTimer'
+import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { WeatherSection } from './WeatherSection'
@@ -225,6 +226,46 @@ export function ArtilleryCalculator({
       : azimuthUnit === 'mil'
         ? normalizeAngle(azimuthValue + azimuthCorrectionMil, MILS_PER_TURN)
         : normalizeAngle(azimuthValue + milToDeg(azimuthCorrectionMil), 360)
+
+  // ---- горячие клавиши ----
+  const timerRef = useRef<FireTimerHandle>(null)
+  const [showKeys, setShowKeys] = useState(false)
+
+  function focusField(id: string) {
+    const field = document.getElementById(id)
+    if (field instanceof HTMLInputElement) {
+      field.focus()
+      field.select()
+    }
+  }
+
+  function selectCharge(charge: number) {
+    if (applicable.some((r) => r.charge === charge)) {
+      setChosenCharge(charge)
+      markEdited()
+    }
+  }
+
+  const hotkeys: HotkeyMap = {
+    KeyF: () => timerRef.current?.fire(),
+    Escape: () => {
+      timerRef.current?.stop()
+      setShowKeys(false)
+    },
+    KeyD: () => focusField('calc-distance'),
+    KeyA: () => focusField('calc-azimuth'),
+    KeyC: () => {
+      const details = document.getElementById('adjust-fire')
+      if (details instanceof HTMLDetailsElement) details.open = true
+      focusField('adjust-range')
+    },
+    Question: () => setShowKeys((value) => !value),
+  }
+  for (let charge = 0; charge <= 9; charge += 1) {
+    hotkeys[`Digit${charge}`] = () => selectCharge(charge)
+    hotkeys[`Numpad${charge}`] = () => selectCharge(charge)
+  }
+  useHotkeys(hotkeys)
 
   function markEdited() {
     setJustSaved(null)
@@ -590,7 +631,11 @@ export function ArtilleryCalculator({
                   </p>
                 )}
 
-                <FireTimer tof={solution.tof} language={language} />
+                <FireTimer
+                  ref={timerRef}
+                  tof={solution.tof}
+                  language={language}
+                />
 
                 {/* ---- Сохранение в журнал ---- */}
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -787,11 +832,54 @@ export function ArtilleryCalculator({
         />
       )}
 
-      <div className="mt-6 flex justify-end">
+      {showKeys && (
+        <div className="mt-6 rounded-lg border border-app-border bg-app-bg p-4">
+          <h3 className="font-semibold text-app-text">
+            {ru ? 'Горячие клавиши' : 'Keyboard shortcuts'}
+          </h3>
+          <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            {[
+              ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
+              ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
+              ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
+              ['D', ru ? 'К полю дистанции' : 'Go to distance'],
+              ['A', ru ? 'К полю азимута' : 'Go to azimuth'],
+              ['C', ru ? 'К корректировке огня' : 'Go to fire adjustment'],
+              ['Enter', ru ? 'В поле доклада — учесть разрыв' : 'In a report field — apply'],
+              ['?', ru ? 'Показать / скрыть эту справку' : 'Show / hide this help'],
+            ].map(([key, text]) => (
+              <div key={key} className="flex items-baseline gap-3">
+                <dt className="min-w-12">
+                  <kbd className="rounded border border-app-border bg-app-surface px-1.5 py-0.5 font-mono text-xs text-app-text">
+                    {key}
+                  </kbd>
+                </dt>
+                <dd className="text-app-muted">{text}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs text-app-muted">
+            {ru
+              ? 'Клавиши работают в любой раскладке, когда курсор не в поле ввода.'
+              : 'Shortcuts work in any keyboard layout when no input field is focused.'}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setShowKeys((value) => !value)}
+          aria-expanded={showKeys}
+          className="hidden cursor-pointer rounded-lg px-2 py-2 text-xs text-app-muted hover:text-app-text sm:inline-block"
+        >
+          {ru ? 'Горячие клавиши (?)' : 'Shortcuts (?)'}
+        </button>
+
         <button
           type="button"
           onClick={resetForm}
-          className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-4 py-2 text-sm text-app-text"
+          className="ml-auto cursor-pointer rounded-lg border border-app-border bg-app-bg px-4 py-2 text-sm text-app-text"
         >
           {ru ? 'Очистить поля' : 'Clear inputs'}
         </button>

@@ -10,6 +10,8 @@ interface FieldProps {
   label: string
   value: string
   onChange: (value: string) => void
+  // Enter в поле (например, «Учесть разрыв»)
+  onEnter?: () => void
   className?: string
   // Элемент справа от подписи (например, переключатель)
   aside?: ReactNode
@@ -30,6 +32,7 @@ export function NumberField({
   placeholder = '0',
   hint,
   inputMode = 'decimal',
+  onEnter,
   validate = true,
 }: FieldProps) {
   const invalid = validate && isInvalid(value)
@@ -52,6 +55,13 @@ export function NumberField({
         autoComplete="off"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={
+          onEnter
+            ? (event) => {
+                if (event.key === 'Enter') onEnter()
+              }
+            : undefined
+        }
         placeholder={placeholder}
         aria-invalid={invalid}
         className={[inputClass, invalid ? 'border-red-500' : ''].join(' ')}

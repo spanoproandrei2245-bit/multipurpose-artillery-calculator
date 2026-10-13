@@ -1,12 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react'
 
 import { readStored, writeStored } from '../lib/input'
 import type { Language } from '../types/settings'
+
+/** Управление таймером снаружи (горячие клавиши). */
+export interface FireTimerHandle {
+  fire: () => void
+  stop: () => void
+}
 
 interface Props {
   // Время полёта текущего решения, с
   tof: number
   language: Language
+  ref?: Ref<FireTimerHandle>
 }
 
 // За сколько секунд до разрыва предупреждать («сплэш»),
@@ -48,7 +61,7 @@ interface Shot {
  * Таймер «Огонь → разрыв»: отсчёт по времени полёта,
  * сигнал за 5 с до разрыва и в момент разрыва.
  */
-export function FireTimer({ tof, language }: Props) {
+export function FireTimer({ tof, language, ref }: Props) {
   const ru = language === 'ru'
 
   const [shot, setShot] = useState<Shot | null>(null)
@@ -89,6 +102,8 @@ export function FireTimer({ tof, language }: Props) {
 
     return () => window.clearInterval(interval)
   }, [shot, sound])
+
+  useImperativeHandle(ref, () => ({ fire, stop: () => setShot(null) }))
 
   function fire() {
     splashSignaled.current = false
