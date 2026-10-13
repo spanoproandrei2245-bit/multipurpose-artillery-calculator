@@ -1,0 +1,23 @@
+
+{
+  "schemaVersion": 1,
+  "id": "mk6",
+  "name": "Mk6",
+  "modification": "Arma 3 + ACE3",
+  "availableModes": ["HIGH"],
+  "source": {
+    "name": "ACE3 Artillery Table",
+    "status": "pending"
+  },
+  "screenshots": [],
+  "ammunition": [
+    {
+      "id": "default",
+      "designation": "Standard Shell",
+      "type": "HE",
+      "verified": false,
+      "description": "Default ammunition. Designation requires verification.",
+      "charges": [0, 1, 2]
+    }
+  ]
+}
