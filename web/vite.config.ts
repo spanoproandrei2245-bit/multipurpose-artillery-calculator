@@ -10,6 +10,9 @@ const { version } = JSON.parse(
 ) as { version: string }
 
 export default defineConfig({
+  // Относительные пути: сборка работает из любой папки —
+  // GitHub Pages (/<repo>/), локальный файл, будущее ПК-приложение.
+  base: './',
   plugins: [react(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(version),
