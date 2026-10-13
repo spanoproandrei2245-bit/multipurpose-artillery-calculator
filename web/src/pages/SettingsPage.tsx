@@ -7,6 +7,8 @@ interface SettingsPageProps {
   onLanguageChange: (language: Language) => void
   theme: Theme
   onThemeChange: (theme: Theme) => void
+  gridInput: boolean
+  onGridInputChange: (value: boolean) => void
 }
 
 export function SettingsPage({
@@ -14,6 +16,8 @@ export function SettingsPage({
   onLanguageChange,
   theme,
   onThemeChange,
+  gridInput,
+  onGridInputChange,
 }: SettingsPageProps) {
   const t = translations[language].settings
 
@@ -79,6 +83,29 @@ export function SettingsPage({
         <p className="mt-6 text-sm text-slate-500">
           {t.autoSave}
         </p>
+      </div>
+
+      {/* Экспериментальные функции */}
+      <div className="mt-6 max-w-xl rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="text-lg font-semibold">{t.experimental}</h3>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {t.experimentalDescription}
+        </p>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={gridInput}
+            onChange={(event) => onGridInputChange(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-emerald-600"
+          />
+          <span>
+            <span className="block text-sm font-medium">{t.gridInput}</span>
+            <span className="block text-xs text-slate-500 dark:text-slate-400">
+              {t.gridInputDescription}
+            </span>
+          </span>
+        </label>
       </div>
     </section>
   )

@@ -14,9 +14,6 @@ interface AmmunitionSelectorProps {
   selectedId: string
   onSelect: (id: string) => void
 
-  showFullNames: boolean
-  onShowFullNamesChange: (value: boolean) => void
-
   language: Language
 }
 
@@ -24,8 +21,6 @@ export function AmmunitionSelector({
   ammunition,
   selectedId,
   onSelect,
-  showFullNames,
-  onShowFullNamesChange,
   language,
 }: AmmunitionSelectorProps) {
   const selectId = useId()
@@ -36,29 +31,14 @@ export function AmmunitionSelector({
     ammunition[0]
 
   function formatLabel(item: AmmunitionOption): string {
-    if (showFullNames) {
-      return `${item.designation} [${item.type}]`
-    }
-
-    const sameType = ammunition.filter(
-      (other) => other.type === item.type
-    )
-
-    if (sameType.length === 1) {
-      return `[${item.type}]`
-    }
-
-    const index =
-      sameType.findIndex((other) => other.id === item.id) + 1
-
-    return `[${item.type} #${index}]`
+    return `${item.designation} [${item.type}]`
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       <label
         htmlFor={selectId}
-        className="block text-sm font-medium text-app-muted"
+        className="mb-2 block text-sm font-medium text-app-muted"
       >
         {ru ? 'Боеприпас' : 'Ammunition'}
       </label>
@@ -70,7 +50,7 @@ export function AmmunitionSelector({
             : 'No ammunition data'}
         </p>
       ) : ammunition.length === 1 ? (
-        <div className="rounded-lg border border-app-border bg-app-bg px-4 py-3 text-app-text">
+        <div className="flex min-h-14 items-center rounded-lg border border-app-border bg-app-bg px-4 text-app-text">
           {formatLabel(ammunition[0])}
         </div>
       ) : (
@@ -78,7 +58,7 @@ export function AmmunitionSelector({
           id={selectId}
           value={selected?.id ?? ''}
           onChange={(event) => onSelect(event.target.value)}
-          className="w-full rounded-lg border border-app-border bg-app-bg px-4 py-3 text-app-text"
+          className="min-h-14 w-full rounded-lg border border-app-border bg-app-bg px-4 text-app-text"
         >
           {ammunition.map((item) => (
             <option key={item.id} value={item.id}>
@@ -86,22 +66,6 @@ export function AmmunitionSelector({
             </option>
           ))}
         </select>
-      )}
-
-      {ammunition.length > 0 && (
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-app-muted">
-          <input
-            type="checkbox"
-            checked={showFullNames}
-            onChange={(event) =>
-              onShowFullNamesChange(event.target.checked)
-            }
-          />
-
-          {ru
-            ? 'Показывать полные названия'
-            : 'Show full names'}
-        </label>
       )}
     </div>
   )

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tables:import": "node scripts/import-tables.mjs --all",
+    "tables:check": "node scripts/import-tables.mjs --all --check"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
