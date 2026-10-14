@@ -165,6 +165,20 @@ function RoomCard({ language }: Props) {
           />
         </label>
 
+        <label className="block">
+          <span className="mb-1 block text-sm text-app-muted">
+            {ru ? 'Позывной' : 'Callsign'}
+          </span>
+          <input
+            type="text"
+            value={sync.callsign}
+            onChange={(event) => sync.setCallsign(event.target.value)}
+            placeholder={ru ? 'для меток' : 'for markers'}
+            maxLength={24}
+            className="w-32 rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text outline-none focus:border-emerald-500"
+          />
+        </label>
+
         <button
           type="button"
           onClick={() => sync.setCode(generateRoomCode())}

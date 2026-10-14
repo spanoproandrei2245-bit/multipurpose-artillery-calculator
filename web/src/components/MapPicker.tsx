@@ -12,7 +12,20 @@ import {
   type Heightmap,
   type MapPoint,
 } from '../lib/heightmap'
+import { parseGrid } from '../lib/grid'
 import { formatSigned, readStoredText, writeStored } from '../lib/input'
+import {
+  addMarker,
+  formatAge,
+  MARKER_COLORS,
+  MARKER_RGB,
+  markerOpacity,
+  removeMarker,
+  useMarkers,
+  type MapMarker,
+  type MarkerColor,
+} from '../lib/markers'
+import { useSync } from '../lib/syncContext'
 import type { AngleUnit } from '../lib/journal'
 import {
   deleteHeightmap,
@@ -24,6 +37,7 @@ import {
 import { renderRelief } from '../lib/relief'
 import type { Language } from '../types/settings'
 import { Toggle } from './FormControls'
+import { ScreenMarkers } from './ScreenMarkers'
 
 export interface MapSelection {
   distance: number
@@ -46,7 +60,25 @@ interface View {
   scale: number
 }
 
-type Placing = 'gun' | 'target'
+type Placing = 'gun' | 'target' | 'marker'
+
+// Клик ближе — попадание в метку, пиксели
+const MARKER_HIT_PX = 14
+
+const COLOR_NAMES: Record<MarkerColor, { ru: string; en: string }> = {
+  red: { ru: 'красная', en: 'red' },
+  orange: { ru: 'оранжевая', en: 'orange' },
+  yellow: { ru: 'жёлтая', en: 'yellow' },
+  green: { ru: 'зелёная', en: 'green' },
+  blue: { ru: 'синяя', en: 'blue' },
+  purple: { ru: 'фиолетовая', en: 'purple' },
+  black: { ru: 'чёрная', en: 'black' },
+}
+
+function markerTitle(marker: MapMarker, ru: boolean): string {
+  const color = ru ? COLOR_NAMES[marker.color].ru : COLOR_NAMES[marker.color].en
+  return marker.label || `${ru ? 'Метка' : 'Marker'} (${color})`
+}
 
 const MAX_SCALE = 4
 const GRID_SPACINGS = [100, 1000, 10000]
@@ -122,6 +154,65 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
   } | null>(null)
 
   const relief = useMemo(() => (map ? createReliefCanvas(map) : null), [map])
+
+  // ---- метки ----
+  const sync = useSync()
+  const author =
+    sync.callsign.trim() ||
+    (sync.role === 'gunner'
+      ? ru
+        ? 'стрелок'
+        : 'gunner'
+      : ru
+        ? 'наводчик'
+        : 'FDC')
+  const allMarkers = useMarkers()
+  const markers = useMemo(
+    () =>
+      map
+        ? allMarkers
+            .filter((m) => m.world === map.world || m.world === '')
+            .sort((a, b) => b.createdAt - a.createdAt)
+        : [],
+    [allMarkers, map]
+  )
+  // Новая метка: где поставлена и что вписать
+  const [draft, setDraft] = useState<{
+    point: MapPoint
+    label: string
+    color: MarkerColor
+  } | null>(null)
+  const [gridDraft, setGridDraft] = useState('')
+  const [markerColor, setMarkerColor] = useState<MarkerColor>('red')
+
+  // Часы для «сколько метке»
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 15_000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  function saveDraft() {
+    if (!draft || !map) return
+    addMarker({
+      world: map.world,
+      x: draft.point.x,
+      y: draft.point.y,
+      label: draft.label.trim(),
+      color: draft.color,
+      author,
+      source: 'app',
+    })
+    setMarkerColor(draft.color)
+    setDraft(null)
+  }
+
+  function addByGrid() {
+    const point = parseGrid(gridDraft)
+    if (!point || !map) return
+    setDraft({ point: { x: point.x, y: point.y }, label: '', color: markerColor })
+    setGridDraft('')
+  }
 
   // ---- загрузка списка и последней карты ----
   function openMap(world: string) {
@@ -308,6 +399,44 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
       ctx.fillText(String(Math.floor(y / 100)).padStart(3, '0'), 3, sy - 3)
     }
 
+    // Метки: значок цвета метки, подпись и возраст; старые бледнее
+    ctx.font = '12px system-ui, sans-serif'
+    for (const marker of markers) {
+      const p = toScreen(marker)
+      if (p.x < -40 || p.y < -40 || p.x > size.width + 40 || p.y > size.height + 40) continue
+      ctx.globalAlpha = markerOpacity(now - marker.createdAt)
+      ctx.fillStyle = MARKER_RGB[marker.color]
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y - 8)
+      ctx.lineTo(p.x + 8, p.y)
+      ctx.lineTo(p.x, p.y + 8)
+      ctx.lineTo(p.x - 8, p.y)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      const text = `${markerTitle(marker, ru)} · ${formatAge(now - marker.createdAt, ru)}`
+      const width = ctx.measureText(text).width
+      ctx.fillStyle = 'rgba(2,6,23,0.75)'
+      ctx.fillRect(p.x + 11, p.y - 9, width + 8, 18)
+      ctx.fillStyle = '#fff'
+      ctx.fillText(text, p.x + 15, p.y + 4)
+    }
+    ctx.globalAlpha = 1
+
+    if (draft) {
+      const p = toScreen(draft.point)
+      ctx.strokeStyle = MARKER_RGB[draft.color]
+      ctx.lineWidth = 2
+      ctx.setLineDash([3, 3])
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 11, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
+
     // Линия огня
     if (gun && target) {
       const a = toScreen(gun)
@@ -355,7 +484,7 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
       ctx.lineTo(p.x, p.y + 13)
       ctx.stroke()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -430,6 +559,22 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
       y: drag.view.y0 - (event.clientY - rect.top) / drag.view.scale,
     }
     if (!isInside(map, point)) return
+
+    if (placing === 'marker') {
+      setDraft({ point, label: '', color: markerColor })
+      return
+    }
+
+    // Клик по метке — цель ставится точно в неё
+    const hit = markers.find(
+      (m) =>
+        Math.hypot(m.x - point.x, m.y - point.y) * drag.view.scale <=
+        MARKER_HIT_PX
+    )
+    if (hit && placing === 'target') {
+      setTarget({ x: hit.x, y: hit.y })
+      return
+    }
 
     if (placing === 'gun') {
       setGun(point)
@@ -572,6 +717,7 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
               options={[
                 { value: 'gun', label: ru ? 'орудие' : 'gun' },
                 { value: 'target', label: ru ? 'цель' : 'target' },
+                { value: 'marker', label: ru ? 'метка' : 'marker' },
               ]}
             />
             <div className="flex gap-1">
@@ -612,6 +758,47 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
             </div>
           </dl>
 
+          {draft && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-app-border bg-app-surface p-2">
+              <span className="font-mono text-xs text-app-muted">
+                {toGridReference(draft.point, 8)}
+              </span>
+              <input
+                autoFocus
+                value={draft.label}
+                maxLength={40}
+                placeholder={ru ? 'Подпись (необязательно)' : 'Label (optional)'}
+                onChange={(event) =>
+                  setDraft({ ...draft, label: event.target.value })
+                }
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') saveDraft()
+                  if (event.key === 'Escape') setDraft(null)
+                }}
+                className="min-w-0 flex-1 rounded-lg border border-app-border bg-app-bg px-2 py-1 text-sm text-app-text outline-none focus:border-emerald-500"
+              />
+              <ColorPicker
+                value={draft.color}
+                onChange={(color) => setDraft({ ...draft, color })}
+                language={language}
+              />
+              <button
+                type="button"
+                onClick={saveDraft}
+                className="cursor-pointer rounded-lg bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700"
+              >
+                {ru ? 'Поставить' : 'Place'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                className={buttonClass}
+              >
+                {ru ? 'Отмена' : 'Cancel'}
+              </button>
+            </div>
+          )}
+
           {line && gunHeight !== null && targetHeight !== null && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-app-text">
@@ -628,6 +815,42 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
             </div>
           )}
 
+          <MarkerList
+            markers={markers}
+            now={now}
+            language={language}
+            onTarget={(marker) => {
+              setTarget({ x: marker.x, y: marker.y })
+              setPlacing('target')
+            }}
+          />
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-app-muted">
+              {ru ? 'Метка по координате' : 'Marker by grid'}
+            </span>
+            <input
+              value={gridDraft}
+              onChange={(event) => setGridDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') addByGrid()
+              }}
+              placeholder="045 078"
+              inputMode="numeric"
+              className="w-32 rounded-lg border border-app-border bg-app-surface px-2 py-1 font-mono text-app-text outline-none focus:border-emerald-500"
+            />
+            <button
+              type="button"
+              onClick={addByGrid}
+              disabled={!parseGrid(gridDraft)}
+              className={`${buttonClass} disabled:cursor-default disabled:opacity-40`}
+            >
+              {ru ? 'Добавить' : 'Add'}
+            </button>
+          </div>
+
+          <ScreenMarkers world={map.world} author={author} language={language} />
+
           <p className="mt-2 text-xs text-app-muted">
             {ru
               ? `Колёсико — масштаб, перетаскивание — сдвиг. Высоты по сетке с шагом ${map.step} м: на крутых склонах ошибка до нескольких метров. Подписи сетки — сотни метров, как в 6-значной координате.`
@@ -636,5 +859,107 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
         </>
       )}
     </div>
+  )
+}
+
+function ColorPicker({
+  value,
+  onChange,
+  language,
+}: {
+  value: MarkerColor
+  onChange: (color: MarkerColor) => void
+  language: Language
+}) {
+  const ru = language === 'ru'
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ru ? 'Цвет' : 'Colour'}
+      className="flex gap-1"
+    >
+      {MARKER_COLORS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          role="radio"
+          aria-checked={value === color}
+          aria-label={ru ? COLOR_NAMES[color].ru : COLOR_NAMES[color].en}
+          onClick={() => onChange(color)}
+          style={{ backgroundColor: MARKER_RGB[color] }}
+          className={[
+            'h-6 w-6 cursor-pointer rounded-full border-2',
+            value === color ? 'border-emerald-400' : 'border-white/40',
+          ].join(' ')}
+        />
+      ))}
+    </div>
+  )
+}
+
+function MarkerList({
+  markers,
+  now,
+  language,
+  onTarget,
+}: {
+  markers: MapMarker[]
+  now: number
+  language: Language
+  onTarget: (marker: MapMarker) => void
+}) {
+  const ru = language === 'ru'
+  if (markers.length === 0) {
+    return (
+      <p className="mt-3 text-xs text-app-muted">
+        {ru
+          ? 'Меток нет. Режим «метка» — клик по карте; в связке метки видят все в комнате.'
+          : 'No markers. "Marker" mode — click the map; in a link everyone in the room sees them.'}
+      </p>
+    )
+  }
+  return (
+    <ul className="mt-3 divide-y divide-app-border rounded-lg border border-app-border bg-app-surface text-sm">
+      {markers.map((marker) => (
+        <li
+          key={marker.id}
+          className="flex flex-wrap items-center gap-2 px-3 py-1.5"
+          style={{ opacity: markerOpacity(now - marker.createdAt) }}
+        >
+          <span
+            className="h-3 w-3 shrink-0 rotate-45"
+            style={{ backgroundColor: MARKER_RGB[marker.color] }}
+          />
+          <span className="min-w-0 flex-1 truncate text-app-text">
+            {markerTitle(marker, ru)}
+            <span className="ml-2 text-xs text-app-muted">
+              {marker.author}
+              {marker.source === 'screen' && (ru ? ' · с экрана' : ' · from screen')}
+            </span>
+          </span>
+          <span className="font-mono text-xs text-app-muted">
+            {toGridReference(marker, 8)}
+          </span>
+          <span className="w-24 text-right text-xs tabular-nums text-app-muted">
+            {formatAge(now - marker.createdAt, ru)}
+          </span>
+          <button
+            type="button"
+            onClick={() => onTarget(marker)}
+            className="cursor-pointer rounded border border-app-border px-2 py-0.5 text-xs text-app-text hover:border-red-500"
+          >
+            {ru ? 'Цель' : 'Target'}
+          </button>
+          <button
+            type="button"
+            onClick={() => removeMarker(marker.id)}
+            aria-label={ru ? 'Удалить метку' : 'Delete marker'}
+            className="cursor-pointer rounded px-1.5 text-app-muted hover:text-red-500"
+          >
+            ×
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }

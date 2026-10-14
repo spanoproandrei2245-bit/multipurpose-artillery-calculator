@@ -1,4 +1,5 @@
 import type { ArtilleryMode } from '../types/artillery'
+import { parseMarker, type MapMarker } from './markers'
 
 /**
  * Связка наводчик ↔ стрелок: общее для всех устройств.
@@ -51,6 +52,8 @@ export type SyncMessage =
   | { kind: 'shot'; from: string; sentAt: number }
   // «Я в сети» — раз в несколько секунд
   | { kind: 'hello'; from: string; sentAt: number; role: SyncRole }
+  // Метка на карте; хранится на брокере (retain) в своём канале
+  | { kind: 'marker'; from: string; sentAt: number; marker: MapMarker }
 
 // Без похожих символов: 0/O, 1/I/L — код диктуют голосом.
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
@@ -245,6 +248,10 @@ export function parseMessage(value: unknown): SyncMessage | null {
     }
     case 'shot':
       return { kind: 'shot', ...base }
+    case 'marker': {
+      const marker = parseMarker(m.marker)
+      return marker ? { kind: 'marker', ...base, marker } : null
+    }
     case 'hello':
       return m.role === 'computer' || m.role === 'gunner'
         ? { kind: 'hello', ...base, role: m.role }

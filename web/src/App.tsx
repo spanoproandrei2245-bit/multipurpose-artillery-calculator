@@ -94,18 +94,18 @@ function App() {
     }
   }, [gridInput])
 
-  // Экспериментальная карта с высотами
+  // Карта с метками и высотами (по умолчанию включена)
   const [mapInput, setMapInput] = useState(() => {
     try {
-      return localStorage.getItem('experimentalMap') === 'true'
+      return localStorage.getItem('showMap') !== 'false'
     } catch {
-      return false
+      return true
     }
   })
 
   useEffect(() => {
     try {
-      localStorage.setItem('experimentalMap', String(mapInput))
+      localStorage.setItem('showMap', String(mapInput))
     } catch {
       // Хранилище недоступно — настройка живёт до перезагрузки.
     }
