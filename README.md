@@ -40,7 +40,10 @@ corrections and fire adjustment.
 - **Installable app (PWA)** that works offline, **combat screen** with large
   numbers and a keep-screen-on option for a phone next to the keyboard
 - Light and dark theme, desktop and mobile layout
-- Experimental: distance and azimuth from grid references (Settings)
+- Experimental (Settings): distance and azimuth from grid references, and a
+  **map with heights**: a script exports terrain heights from the game, the app
+  draws a shaded relief with the grid, and clicking the gun and the target fills
+  in distance, azimuth and both heights
 
 ## Quick start
 

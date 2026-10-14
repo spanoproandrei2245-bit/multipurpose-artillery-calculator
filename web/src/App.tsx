@@ -91,6 +91,23 @@ function App() {
     }
   }, [gridInput])
 
+  // Экспериментальная карта с высотами
+  const [mapInput, setMapInput] = useState(() => {
+    try {
+      return localStorage.getItem('experimentalMap') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('experimentalMap', String(mapInput))
+    } catch {
+      // Хранилище недоступно — настройка живёт до перезагрузки.
+    }
+  }, [mapInput])
+
   // Сохраняем выбранную модель
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
@@ -134,6 +151,7 @@ function App() {
             onModelChange={setSelectedModel}
             language={language}
             gridInput={gridInput}
+            mapInput={mapInput}
           />
         )}
 
@@ -152,6 +170,8 @@ function App() {
             onThemeChange={setTheme}
             gridInput={gridInput}
             onGridInputChange={setGridInput}
+            mapInput={mapInput}
+            onMapInputChange={setMapInput}
             keepAwake={keepAwake}
             onKeepAwakeChange={setKeepAwake}
           />

@@ -34,6 +34,8 @@ type Translation = {
     experimentalDescription: string
     gridInput: string
     gridInputDescription: string
+    mapInput: string
+    mapInputDescription: string
     keepAwake: string
     keepAwakeDescription: string
     keepAwakeUnsupported: string
@@ -79,6 +81,9 @@ export const translations: Record<Language, Translation> = {
       dark: 'Dark',
       experimental: 'Experimental features',
       experimentalDescription: 'May change or be removed in future versions.',
+      mapInput: 'Map with heights',
+      mapInputDescription:
+        'Export terrain heights from the game with a script, then click the gun and the target: distance, azimuth and both heights are filled in.',
       gridInput: 'Grid coordinate input',
       gridInputDescription:
         'Distance and azimuth from the gun and target grid references (6, 8 or 10 digits).',
@@ -134,6 +139,9 @@ export const translations: Record<Language, Translation> = {
       dark: 'Тёмная',
       experimental: 'Экспериментальные функции',
       experimentalDescription: 'Могут измениться или исчезнуть в следующих версиях.',
+      mapInput: 'Карта с высотами',
+      mapInputDescription:
+        'Выгрузите высоты карты скриптом из игры, затем кликните орудие и цель — дистанция, азимут и обе высоты подставятся сами.',
       gridInput: 'Ввод по координатам сетки',
       gridInputDescription:
         'Дистанция и азимут по координатам орудия и цели (6, 8 или 10 цифр).',

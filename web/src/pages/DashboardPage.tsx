@@ -17,6 +17,7 @@ interface DashboardPageProps {
   onModelChange: (model: ModelId) => void
   language: Language
   gridInput: boolean
+  mapInput: boolean
 }
 
 interface LoadRequest {
@@ -29,6 +30,7 @@ export function DashboardPage({
   onModelChange,
   language,
   gridInput,
+  mapInput,
 }: DashboardPageProps) {
   const journal = useJournal()
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
@@ -101,6 +103,7 @@ export function DashboardPage({
         language={language}
         initial={initial}
         gridInput={gridInput}
+        mapInput={mapInput}
         activeEntry={activeEntry}
         onSave={handleSave}
         onUpdate={handleUpdate}

@@ -13,6 +13,8 @@ interface SettingsPageProps {
   onThemeChange: (theme: Theme) => void
   gridInput: boolean
   onGridInputChange: (value: boolean) => void
+  mapInput: boolean
+  onMapInputChange: (value: boolean) => void
   keepAwake: boolean
   onKeepAwakeChange: (value: boolean) => void
 }
@@ -47,6 +49,8 @@ export function SettingsPage({
   onThemeChange,
   gridInput,
   onGridInputChange,
+  mapInput,
+  onMapInputChange,
   keepAwake,
   onKeepAwakeChange,
 }: SettingsPageProps) {
@@ -166,6 +170,23 @@ export function SettingsPage({
             </span>
             <span className="block text-xs text-app-muted">
               {t.gridInputDescription}
+            </span>
+          </span>
+        </label>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={mapInput}
+            onChange={(event) => onMapInputChange(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-emerald-600"
+          />
+          <span>
+            <span className="block text-sm font-medium text-app-text">
+              {t.mapInput}
+            </span>
+            <span className="block text-xs text-app-muted">
+              {t.mapInputDescription}
             </span>
           </span>
         </label>

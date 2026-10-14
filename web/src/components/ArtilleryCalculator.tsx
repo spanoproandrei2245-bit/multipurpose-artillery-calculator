@@ -43,6 +43,7 @@ import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
+import { MapPicker } from './MapPicker'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -54,6 +55,8 @@ interface Props {
   initial?: JournalEntry | null
   // Экспериментальный ввод по координатам сетки (из настроек)
   gridInput?: boolean
+  // Экспериментальная карта с высотами (из настроек)
+  mapInput?: boolean
   // Выбор модели — в одной строке с выбором боеприпаса
   modelSelector?: ReactNode
   // Полоска быстрого выбора сохранённых целей
@@ -69,6 +72,7 @@ export function ArtilleryCalculator({
   language,
   initial = null,
   gridInput = false,
+  mapInput = false,
   modelSelector,
   targetBar,
   activeEntry = null,
@@ -539,6 +543,24 @@ export function ArtilleryCalculator({
               onApply={(gridDistance, gridAzimuth) => {
                 setDistance(String(gridDistance))
                 setAzimuth(String(gridAzimuth))
+                markEdited()
+              }}
+            />
+          )}
+
+          {mapInput && (
+            <MapPicker
+              azimuthUnit={azimuthUnit}
+              language={language}
+              onApply={(selection) => {
+                setDistance(String(Math.round(selection.distance)))
+                setAzimuth(
+                  azimuthUnit === 'mil'
+                    ? String(Math.round(selection.azimuthMil))
+                    : String(Math.round(milToDeg(selection.azimuthMil) * 10) / 10)
+                )
+                setOwnHeight(String(Math.round(selection.ownHeight)))
+                setTargetHeight(String(Math.round(selection.targetHeight)))
                 markEdited()
               }}
             />
