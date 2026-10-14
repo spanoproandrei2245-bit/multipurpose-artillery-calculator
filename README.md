@@ -12,6 +12,9 @@ corrections and fire adjustment.
 
 **Status:** alpha (v0.10). Made by Heis.
 
+**Web app:** https://spanoproandrei2245-bit.github.io/multipurpose-artillery-calculator/ —
+works offline and installs on a phone (Add to Home screen / Install).
+
 ## Features
 
 - **Supported weapons:** Mk6 (82 mm, vanilla), M252 (81 mm, RHSUSAF),
