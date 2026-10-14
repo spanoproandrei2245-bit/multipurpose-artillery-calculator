@@ -38,6 +38,8 @@ import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { WeatherSection } from './WeatherSection'
 
+const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
+
 interface Props {
   modelId: ModelId
   language: Language
@@ -70,8 +72,11 @@ export function ArtilleryCalculator({
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
-  const [mode, setMode] = useState<ArtilleryMode>(
-    reference.availableModes[0]
+  // Режим из загруженной записи журнала, если модель его поддерживает
+  const [mode, setMode] = useState<ArtilleryMode>(() =>
+    initial?.mode && reference.availableModes.includes(initial.mode)
+      ? initial.mode
+      : reference.availableModes[0]
   )
   const [ammoId, setAmmoId] = useState(
     initial && ammunition.some((a) => a.id === initial.ammoId)
@@ -204,6 +209,11 @@ export function ArtilleryCalculator({
 
   const applicable = results.filter((r) => r.solution !== null)
 
+  // Режимы, для которых у боеприпаса есть таблицы
+  const profileModes = MODES.filter(
+    (item) => profile?.modes[item] !== undefined
+  )
+
   // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
     applicable.find((r) => r.charge === chosenCharge) ??
@@ -259,6 +269,11 @@ export function ArtilleryCalculator({
     KeyB: () => {
       if (solution) setCombatOpen((value) => !value)
     },
+    KeyM: () => {
+      if (profileModes.length > 1) {
+        changeMode(mode === 'HIGH' ? 'LOW' : 'HIGH')
+      }
+    },
     KeyD: () => focusField('calc-distance'),
     KeyA: () => focusField('calc-azimuth'),
     KeyC: () => {
@@ -273,6 +288,13 @@ export function ArtilleryCalculator({
     hotkeys[`Numpad${charge}`] = () => selectCharge(charge)
   }
   useHotkeys(hotkeys)
+
+  function changeMode(value: ArtilleryMode) {
+    if (value === mode) return
+    setMode(value)
+    setChosenCharge(null)
+    markEdited()
+  }
 
   function markEdited() {
     setJustSaved(null)
@@ -334,6 +356,7 @@ export function ArtilleryCalculator({
       azimuthUnit,
       firingAzimuth,
       weather: weatherInputs.toJournal(),
+      mode,
     }
   }
 
@@ -475,9 +498,30 @@ export function ArtilleryCalculator({
         {/* ---- Результат ---- */}
         <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <div className="rounded-lg border border-app-border bg-app-bg p-4 lg:sticky lg:top-4">
-            <h3 className="font-semibold text-app-text">
-              {ru ? 'Установки наведения' : 'Firing solution'}
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold text-app-text">
+                {ru ? 'Установки наведения' : 'Firing solution'}
+              </h3>
+
+              {profileModes.length > 1 && (
+                <Toggle
+                  label={ru ? 'Режим траектории' : 'Trajectory mode'}
+                  value={mode}
+                  onChange={changeMode}
+                  options={profileModes.map((item) => ({
+                    value: item,
+                    label:
+                      item === 'HIGH'
+                        ? ru
+                          ? 'HIGH · навесная'
+                          : 'HIGH · high angle'
+                        : ru
+                          ? 'LOW · настильная'
+                          : 'LOW · low angle',
+                  }))}
+                />
+              )}
+            </div>
 
             {!profile && (
               <p className="mt-3 text-sm text-app-muted">
@@ -630,6 +674,14 @@ export function ArtilleryCalculator({
                   </p>
                 )}
 
+                {activeResult.wideGap && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {ru
+                      ? 'В таблице игры здесь пропущены строки: значение интерполировано по далёким соседям, точность ниже. Сверьте с таблицей ниже.'
+                      : 'The game table skips rows here: the value is interpolated between distant rows, accuracy is lower. Check the table below.'}
+                  </p>
+                )}
+
                 {isLargeCorrection(solution) && (
                   <p className="mt-2 text-xs text-app-text">
                     {ru
@@ -662,6 +714,7 @@ export function ArtilleryCalculator({
                     title={`${reference.name} · ${selectedAmmo ? `${selectedAmmo.designation} [${selectedAmmo.type}]` : ''}`}
                     targetName={activeEntry?.name ?? null}
                     charge={activeResult.charge}
+                    mode={mode}
                     elevation={solution.elevation}
                     azimuth={
                       firingAzimuth === null
@@ -859,11 +912,7 @@ export function ArtilleryCalculator({
         <BallisticTableView
           profile={profile}
           mode={mode}
-          onModeChange={(value) => {
-            setMode(value)
-            setChosenCharge(null)
-            markEdited()
-          }}
+          onModeChange={changeMode}
           charges={selectedAmmo?.charges}
           activeCharge={activeResult?.charge ?? null}
           highlightRange={solution?.lookupRange ?? null}
@@ -880,6 +929,7 @@ export function ArtilleryCalculator({
             {[
               ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
               ['B', ru ? 'Боевой экран' : 'Combat screen'],
+              ['M', ru ? 'Режим HIGH / LOW' : 'HIGH / LOW mode'],
               ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
               ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
               ['D', ru ? 'К полю дистанции' : 'Go to distance'],

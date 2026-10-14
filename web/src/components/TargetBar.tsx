@@ -62,7 +62,8 @@ export function TargetBar({ entries, activeId, onLoad, language }: Props) {
                 {entry.name}
               </span>
               <span className="block text-xs text-app-muted">
-                {shortModel(entry.modelId)} · {entry.distance}{' '}
+                {shortModel(entry.modelId)}
+                {entry.mode === 'LOW' && ' LOW'} · {entry.distance}{' '}
                 {ru ? 'м' : 'm'} · {Math.round(entry.elevation)}{' '}
                 {ru ? 'мил' : 'mil'}
               </span>

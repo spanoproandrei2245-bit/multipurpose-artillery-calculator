@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import type { ArtilleryMode } from '../types/artillery'
+
 const STORAGE_KEY = 'artilleryJournal'
 
 export type AngleUnit = 'mil' | 'deg'
@@ -52,6 +54,9 @@ export interface JournalEntry {
 
   // Поле v0.8: боковая поправка, м (> 0 — вправо)
   lateralCorrection?: number
+
+  // Поле v0.10: режим таблицы; нет — HIGH
+  mode?: ArtilleryMode
 }
 
 export type JournalDraft = Omit<
@@ -117,6 +122,7 @@ function isEntry(value: unknown): value is JournalEntry {
       v.azimuthUnit === 'deg') &&
     isOptionalNumber(v.firingAzimuth) &&
     (v.lateralCorrection === undefined || isNumber(v.lateralCorrection)) &&
+    (v.mode === undefined || v.mode === 'HIGH' || v.mode === 'LOW') &&
     isWeather(v.weather)
   )
 }

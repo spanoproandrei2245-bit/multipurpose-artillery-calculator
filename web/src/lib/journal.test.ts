@@ -38,6 +38,7 @@ const NEW_ENTRY = {
   azimuthUnit: 'mil',
   firingAzimuth: 3848,
   lateralCorrection: 20,
+  mode: 'LOW',
   weather: {
     windMode: 'components',
     windSpeed: null,
@@ -73,6 +74,7 @@ describe('loadEntries', () => {
         { ...OLD_ENTRY, id: 'bad2', dayKey: '13.10.2026' },
         { ...NEW_ENTRY, id: 'bad3', azimuthUnit: 'rad' },
         { ...NEW_ENTRY, id: 'bad4', weather: { windMode: 'storm' } },
+        { ...NEW_ENTRY, id: 'bad5', mode: 'MID' },
         null,
       ])
     )
