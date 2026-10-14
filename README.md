@@ -10,7 +10,7 @@ corrections and fire adjustment.
 > азимут и время полёта по таблицам ACE из игры, с погодными поправками
 > и корректировкой огня. Интерфейс на русском и английском.
 
-**Status:** alpha (v0.10). Made by Heis.
+**Status:** alpha (v0.11). Made by Heis.
 
 **Web app:** https://spanoproandrei2245-bit.github.io/multipurpose-artillery-calculator/ —
 works offline and installs on a phone (Add to Home screen / Install).
