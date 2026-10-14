@@ -24,6 +24,7 @@ import {
   writeStored,
 } from '../lib/input'
 import { sumAdjustments } from '../lib/adjust'
+import type { MrsiOption } from '../lib/mrsi'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
 import {
   onHotkey,
@@ -44,6 +45,7 @@ import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MapPicker } from './MapPicker'
+import { MrsiPanel } from './MrsiPanel'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -408,6 +410,35 @@ export function ArtilleryCalculator({
   }
 
   const totalRangeCorrection = rangeAdjust + (w?.total ?? 0)
+
+  // ---- одновременный удар: все заряды во всех режимах ----
+  const mrsiOptions: MrsiOption[] =
+    profile && baseRange !== null
+      ? profileModes.flatMap((item) =>
+          (item === mode
+            ? results
+            : solveAllCharges(
+                profile,
+                item,
+                selectedAmmo?.charges,
+                baseRange,
+                heightDifference,
+                weatherInputs.weather
+              )
+          ).flatMap((result) =>
+            result.solution
+              ? [
+                  {
+                    mode: item,
+                    charge: result.charge,
+                    elevation: result.solution.elevation,
+                    tof: result.solution.tof,
+                  },
+                ]
+              : []
+          )
+        )
+      : []
 
   // ---- программа для ПК: оверлей поверх игры и глобальные клавиши ----
   const overlaySolution: OverlaySolution | null =
@@ -935,6 +966,12 @@ export function ArtilleryCalculator({
                     ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
                     : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
                 </p>
+
+                <MrsiPanel
+                  options={mrsiOptions}
+                  showMode={profileModes.length > 1}
+                  language={language}
+                />
               </div>
             )}
           </div>

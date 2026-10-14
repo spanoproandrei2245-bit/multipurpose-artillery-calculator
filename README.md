@@ -35,6 +35,8 @@ corrections and fire adjustment.
   after adjusting fire
 - **Charge preference**: lowest, fastest or most precise ("1 mil ≈ X m"),
   with a warning at the edge of a charge table
+- **Simultaneous impact (MRSI)**: one gun fires on several charges (and
+  HIGH/LOW) with delays so that all rounds land together; countdown with beeps
 - **Keyboard shortcuts** (press `?` in the app), work in any layout
 - **Journal search, export and import** to move targets between devices
 - **Installable app (PWA)** that works offline, **combat screen** with large
