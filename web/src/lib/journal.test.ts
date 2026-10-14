@@ -8,6 +8,8 @@ import {
   loadEntries,
   matchesQuery,
   mergeEntries,
+  neighbourEntry,
+  recentEntries,
   parseJournalFile,
   type JournalEntry,
 } from './journal'
@@ -38,6 +40,7 @@ const NEW_ENTRY = {
   azimuthUnit: 'mil',
   firingAzimuth: 3848,
   lateralCorrection: 20,
+  mode: 'LOW',
   weather: {
     windMode: 'components',
     windSpeed: null,
@@ -73,6 +76,7 @@ describe('loadEntries', () => {
         { ...OLD_ENTRY, id: 'bad2', dayKey: '13.10.2026' },
         { ...NEW_ENTRY, id: 'bad3', azimuthUnit: 'rad' },
         { ...NEW_ENTRY, id: 'bad4', weather: { windMode: 'storm' } },
+        { ...NEW_ENTRY, id: 'bad5', mode: 'MID' },
         null,
       ])
     )
@@ -158,5 +162,27 @@ describe('export and import', () => {
     expect(matchesQuery(entry, '1200')).toBe(true)
     expect(matchesQuery(entry, 'мост')).toBe(false)
     expect(matchesQuery(entry, '  ')).toBe(true)
+  })
+})
+
+describe('target cycling', () => {
+  const entries = [
+    { ...OLD_ENTRY, id: 'x', createdAt: '2026-10-14T08:00:00.000Z' },
+    { ...OLD_ENTRY, id: 'y', createdAt: '2026-10-14T10:00:00.000Z' },
+    { ...OLD_ENTRY, id: 'z', createdAt: '2026-10-14T09:00:00.000Z' },
+  ] as JournalEntry[]
+
+  it('orders recent targets newest first', () => {
+    expect(recentEntries(entries).map((e) => e.id)).toEqual(['y', 'z', 'x'])
+    expect(recentEntries(entries, 2).map((e) => e.id)).toEqual(['y', 'z'])
+  })
+
+  it('steps through targets and wraps around', () => {
+    const list = recentEntries(entries)
+    expect(neighbourEntry(list, null, 1)?.id).toBe('y')
+    expect(neighbourEntry(list, 'y', 1)?.id).toBe('z')
+    expect(neighbourEntry(list, 'x', 1)?.id).toBe('y')
+    expect(neighbourEntry(list, 'y', -1)?.id).toBe('x')
+    expect(neighbourEntry([], null, 1)).toBeUndefined()
   })
 })

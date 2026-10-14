@@ -10,12 +10,14 @@ corrections and fire adjustment.
 > азимут и время полёта по таблицам ACE из игры, с погодными поправками
 > и корректировкой огня. Интерфейс на русском и английском.
 
-**Status:** alpha (v0.9). Made by Heis.
+**Status:** alpha (v0.10). Made by Heis.
 
 ## Features
 
 - **Supported weapons:** Mk6 (82 mm, vanilla), M252 (81 mm, RHSUSAF),
-  M29 (81 mm), M2 (60 mm) and M101 (105 mm) from S.O.G. Prairie Fire
+  M29 (81 mm), M2 (60 mm) and M101 (105 mm) from S.O.G. Prairie Fire,
+  Seara / M5 Sandstorm MLRS (227 mm, vanilla)
+- **HIGH and LOW** (high- and low-angle) tables where the game has both
 - **Firing solution for every charge**, with interpolation between table rows
 - **Height difference correction** (the ACE "D ELEV per 100 m" rule)
 - **Weather corrections** for ACE advanced corrections: wind (speed and
@@ -33,12 +35,17 @@ corrections and fire adjustment.
   after adjusting fire
 - **Charge preference**: lowest, fastest or most precise ("1 mil ≈ X m"),
   with a warning at the edge of a charge table
+- **Simultaneous impact (MRSI)**: one gun fires on several charges (and
+  HIGH/LOW) with delays so that all rounds land together; countdown with beeps
 - **Keyboard shortcuts** (press `?` in the app), work in any layout
 - **Journal search, export and import** to move targets between devices
 - **Installable app (PWA)** that works offline, **combat screen** with large
   numbers and a keep-screen-on option for a phone next to the keyboard
 - Light and dark theme, desktop and mobile layout
-- Experimental: distance and azimuth from grid references (Settings)
+- Experimental (Settings): distance and azimuth from grid references, and a
+  **map with heights**: a script exports terrain heights from the game, the app
+  draws a shaded relief with the grid, and clicking the gun and the target fills
+  in distance, azimuth and both heights
 
 ## Quick start
 
@@ -61,6 +68,25 @@ Then open http://localhost:5173.
 | `npm run tables:import` | Rebuild table JSON from `web/data-sources` |
 | `npm run tables:check` | Check that table JSON matches `web/data-sources` |
 | `node scripts/make-icons.mjs` | Regenerate the app icons in `web/public` |
+
+## Desktop app (Windows)
+
+The same app runs as a desktop program (Tauri 2) with an **overlay window**
+that stays on top of Arma 3 and **global shortcuts** that work while the game
+is focused: `Ctrl+Alt+F` fire (start the timer), `Ctrl+Alt+O` show/hide the
+overlay, `Ctrl+Alt+M` switch HIGH/LOW. Set Arma's display mode to
+*Fullscreen Window* or *Window*: nothing can be drawn over exclusive fullscreen.
+
+- **Download:** the installer is attached to each
+  [GitHub release](../../releases) (a `v*` tag publishes one). Every push also
+  builds it as the `artillery-calculator-windows` artifact of the
+  `Desktop app` workflow.
+- Shortcuts: `Ctrl+Alt+N` / `Ctrl+Alt+P` switch to the next / previous saved
+  target (`N` / `P` inside the app window).
+- **Build locally:** install [Rust](https://rustup.rs) and
+  [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+  with the *Desktop development with C++* workload, then in `web/`:
+  `npm run desktop:dev` (development) or `npm run desktop:build` (installer).
 
 ## Deployment
 

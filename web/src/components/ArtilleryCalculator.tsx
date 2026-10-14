@@ -24,7 +24,15 @@ import {
   writeStored,
 } from '../lib/input'
 import { sumAdjustments } from '../lib/adjust'
+import type { MrsiOption } from '../lib/mrsi'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
+import {
+  onHotkey,
+  onSolutionRequest,
+  publishSolution,
+  type HotkeyAction,
+  type OverlaySolution,
+} from '../lib/desktop'
 import { useHotkeys, type HotkeyMap } from '../lib/useHotkeys'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
 import type { ArtilleryMode } from '../types/artillery'
@@ -36,7 +44,11 @@ import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
+import { MapPicker } from './MapPicker'
+import { MrsiPanel } from './MrsiPanel'
 import { WeatherSection } from './WeatherSection'
+
+const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
 
 interface Props {
   modelId: ModelId
@@ -45,6 +57,8 @@ interface Props {
   initial?: JournalEntry | null
   // Экспериментальный ввод по координатам сетки (из настроек)
   gridInput?: boolean
+  // Экспериментальная карта с высотами (из настроек)
+  mapInput?: boolean
   // Выбор модели — в одной строке с выбором боеприпаса
   modelSelector?: ReactNode
   // Полоска быстрого выбора сохранённых целей
@@ -60,6 +74,7 @@ export function ArtilleryCalculator({
   language,
   initial = null,
   gridInput = false,
+  mapInput = false,
   modelSelector,
   targetBar,
   activeEntry = null,
@@ -70,8 +85,11 @@ export function ArtilleryCalculator({
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
-  const [mode, setMode] = useState<ArtilleryMode>(
-    reference.availableModes[0]
+  // Режим из загруженной записи журнала, если модель его поддерживает
+  const [mode, setMode] = useState<ArtilleryMode>(() =>
+    initial?.mode && reference.availableModes.includes(initial.mode)
+      ? initial.mode
+      : reference.availableModes[0]
   )
   const [ammoId, setAmmoId] = useState(
     initial && ammunition.some((a) => a.id === initial.ammoId)
@@ -204,6 +222,11 @@ export function ArtilleryCalculator({
 
   const applicable = results.filter((r) => r.solution !== null)
 
+  // Режимы, для которых у боеприпаса есть таблицы
+  const profileModes = MODES.filter(
+    (item) => profile?.modes[item] !== undefined
+  )
+
   // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
     applicable.find((r) => r.charge === chosenCharge) ??
@@ -259,6 +282,11 @@ export function ArtilleryCalculator({
     KeyB: () => {
       if (solution) setCombatOpen((value) => !value)
     },
+    KeyM: () => {
+      if (profileModes.length > 1) {
+        changeMode(mode === 'HIGH' ? 'LOW' : 'HIGH')
+      }
+    },
     KeyD: () => focusField('calc-distance'),
     KeyA: () => focusField('calc-azimuth'),
     KeyC: () => {
@@ -273,6 +301,13 @@ export function ArtilleryCalculator({
     hotkeys[`Numpad${charge}`] = () => selectCharge(charge)
   }
   useHotkeys(hotkeys)
+
+  function changeMode(value: ArtilleryMode) {
+    if (value === mode) return
+    setMode(value)
+    setChosenCharge(null)
+    markEdited()
+  }
 
   function markEdited() {
     setJustSaved(null)
@@ -334,6 +369,7 @@ export function ArtilleryCalculator({
       azimuthUnit,
       firingAzimuth,
       weather: weatherInputs.toJournal(),
+      mode,
     }
   }
 
@@ -374,6 +410,78 @@ export function ArtilleryCalculator({
   }
 
   const totalRangeCorrection = rangeAdjust + (w?.total ?? 0)
+
+  // ---- одновременный удар: все заряды во всех режимах ----
+  const mrsiOptions: MrsiOption[] =
+    profile && baseRange !== null
+      ? profileModes.flatMap((item) =>
+          (item === mode
+            ? results
+            : solveAllCharges(
+                profile,
+                item,
+                selectedAmmo?.charges,
+                baseRange,
+                heightDifference,
+                weatherInputs.weather
+              )
+          ).flatMap((result) =>
+            result.solution
+              ? [
+                  {
+                    mode: item,
+                    charge: result.charge,
+                    elevation: result.solution.elevation,
+                    tof: result.solution.tof,
+                  },
+                ]
+              : []
+          )
+        )
+      : []
+
+  // ---- программа для ПК: оверлей поверх игры и глобальные клавиши ----
+  const overlaySolution: OverlaySolution | null =
+    solution && activeResult
+      ? {
+          language,
+          title: reference.name,
+          targetName: activeEntry?.name ?? null,
+          charge: activeResult.charge,
+          mode,
+          elevation: solution.elevation,
+          azimuth:
+            firingAzimuth === null ? null : formatAzimuth(firingAzimuth),
+          azimuthUnit: unitAzimuth,
+          tof: solution.tof,
+        }
+      : null
+  // Строка — чтобы отправлять в оверлей только реальные изменения
+  const overlayJson = JSON.stringify(overlaySolution)
+  const overlayJsonRef = useRef(overlayJson)
+
+  useEffect(() => {
+    overlayJsonRef.current = overlayJson
+    publishSolution(JSON.parse(overlayJson))
+  }, [overlayJson])
+
+  useEffect(
+    () =>
+      onSolutionRequest(() =>
+        publishSolution(JSON.parse(overlayJsonRef.current))
+      ),
+    []
+  )
+
+  // Обработчик глобальных клавиш видит актуальное состояние через ref
+  const globalHotkeyRef = useRef<(action: HotkeyAction) => void>(() => {})
+  useEffect(() => {
+    globalHotkeyRef.current = (action) => {
+      if (action === 'fire') timerRef.current?.fire()
+      if (action === 'mode') hotkeys.KeyM()
+    }
+  })
+  useEffect(() => onHotkey((action) => globalHotkeyRef.current(action)), [])
 
   return (
     <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">
@@ -470,14 +578,53 @@ export function ArtilleryCalculator({
               }}
             />
           )}
+
+          {mapInput && (
+            <MapPicker
+              azimuthUnit={azimuthUnit}
+              language={language}
+              onApply={(selection) => {
+                setDistance(String(Math.round(selection.distance)))
+                setAzimuth(
+                  azimuthUnit === 'mil'
+                    ? String(Math.round(selection.azimuthMil))
+                    : String(Math.round(milToDeg(selection.azimuthMil) * 10) / 10)
+                )
+                setOwnHeight(String(Math.round(selection.ownHeight)))
+                setTargetHeight(String(Math.round(selection.targetHeight)))
+                markEdited()
+              }}
+            />
+          )}
         </div>
 
         {/* ---- Результат ---- */}
         <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <div className="rounded-lg border border-app-border bg-app-bg p-4 lg:sticky lg:top-4">
-            <h3 className="font-semibold text-app-text">
-              {ru ? 'Установки наведения' : 'Firing solution'}
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold text-app-text">
+                {ru ? 'Установки наведения' : 'Firing solution'}
+              </h3>
+
+              {profileModes.length > 1 && (
+                <Toggle
+                  label={ru ? 'Режим траектории' : 'Trajectory mode'}
+                  value={mode}
+                  onChange={changeMode}
+                  options={profileModes.map((item) => ({
+                    value: item,
+                    label:
+                      item === 'HIGH'
+                        ? ru
+                          ? 'HIGH · навесная'
+                          : 'HIGH · high angle'
+                        : ru
+                          ? 'LOW · настильная'
+                          : 'LOW · low angle',
+                  }))}
+                />
+              )}
+            </div>
 
             {!profile && (
               <p className="mt-3 text-sm text-app-muted">
@@ -630,6 +777,14 @@ export function ArtilleryCalculator({
                   </p>
                 )}
 
+                {activeResult.wideGap && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {ru
+                      ? 'В таблице игры здесь пропущены строки: значение интерполировано по далёким соседям, точность ниже. Сверьте с таблицей ниже.'
+                      : 'The game table skips rows here: the value is interpolated between distant rows, accuracy is lower. Check the table below.'}
+                  </p>
+                )}
+
                 {isLargeCorrection(solution) && (
                   <p className="mt-2 text-xs text-app-text">
                     {ru
@@ -662,6 +817,7 @@ export function ArtilleryCalculator({
                     title={`${reference.name} · ${selectedAmmo ? `${selectedAmmo.designation} [${selectedAmmo.type}]` : ''}`}
                     targetName={activeEntry?.name ?? null}
                     charge={activeResult.charge}
+                    mode={mode}
                     elevation={solution.elevation}
                     azimuth={
                       firingAzimuth === null
@@ -810,6 +966,12 @@ export function ArtilleryCalculator({
                     ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
                     : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
                 </p>
+
+                <MrsiPanel
+                  options={mrsiOptions}
+                  showMode={profileModes.length > 1}
+                  language={language}
+                />
               </div>
             )}
           </div>
@@ -859,11 +1021,7 @@ export function ArtilleryCalculator({
         <BallisticTableView
           profile={profile}
           mode={mode}
-          onModeChange={(value) => {
-            setMode(value)
-            setChosenCharge(null)
-            markEdited()
-          }}
+          onModeChange={changeMode}
           charges={selectedAmmo?.charges}
           activeCharge={activeResult?.charge ?? null}
           highlightRange={solution?.lookupRange ?? null}
@@ -880,6 +1038,8 @@ export function ArtilleryCalculator({
             {[
               ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
               ['B', ru ? 'Боевой экран' : 'Combat screen'],
+              ['M', ru ? 'Режим HIGH / LOW' : 'HIGH / LOW mode'],
+              ['N / P', ru ? 'Следующая / предыдущая цель' : 'Next / previous target'],
               ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
               ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
               ['D', ru ? 'К полю дистанции' : 'Go to distance'],

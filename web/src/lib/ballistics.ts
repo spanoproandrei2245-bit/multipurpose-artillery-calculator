@@ -101,6 +101,9 @@ export interface ChargeResult {
   // Решение в последнем промежутке таблицы (у максимальной дальности
   // заряда): поправки здесь менее надёжны
   nearEdge: boolean
+  // Между соседними строками таблицы пропуск (шире обычного шага):
+  // интерполяция менее точна
+  wideGap: boolean
 }
 
 /** Как выбирать заряд по умолчанию. */
@@ -428,6 +431,28 @@ export function isNearTableEdge(
 }
 
 /**
+ * Дальность лежит между строками, разнесёнными шире обычного шага
+ * таблицы (игра пропускает часть дальностей, особенно в режиме LOW).
+ * На самой строке интерполяции нет — пропуск не важен.
+ */
+export function isWideGap(
+  rows: readonly BallisticRow[],
+  range: number
+): boolean {
+  if (rows.length < 3) return false
+
+  const steps = rows
+    .slice(1)
+    .map((row, i) => row[0] - rows[i][0])
+    .sort((a, b) => a - b)
+  const typical = steps[Math.floor(steps.length / 2)]
+
+  const i = rows.findIndex((row) => row[0] >= range)
+  if (i <= 0 || rows[i][0] === range) return false
+  return rows[i][0] - rows[i - 1][0] > 1.5 * typical
+}
+
+/**
  * Заряд по умолчанию среди подходящих:
  *   lowest  — наименьший номер;
  *   fastest — кратчайшее время полёта;
@@ -495,6 +520,7 @@ export function solveAllCharges(
         nearEdge: solution
           ? isNearTableEdge(rows, solution.lookupRange)
           : false,
+        wideGap: solution ? isWideGap(rows, solution.lookupRange) : false,
       }
     })
 }

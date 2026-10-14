@@ -9,6 +9,7 @@ import { ModelsPage } from './pages/ModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 import { models, type ModelId } from './data/models'
+import { onHotkey, toggleOverlay } from './lib/desktop'
 import { useWakeLock } from './lib/useWakeLock'
 import type { Language, Theme } from './types/settings'
 
@@ -64,6 +65,15 @@ function App() {
 
   useWakeLock(keepAwake)
 
+  // Программа для ПК: Ctrl+Alt+O показывает и скрывает оверлей
+  useEffect(
+    () =>
+      onHotkey((action) => {
+        if (action === 'overlay') void toggleOverlay()
+      }),
+    []
+  )
+
   // Экспериментальный ввод по координатам сетки
   const [gridInput, setGridInput] = useState(() => {
     try {
@@ -80,6 +90,23 @@ function App() {
       // Хранилище недоступно — настройка живёт до перезагрузки.
     }
   }, [gridInput])
+
+  // Экспериментальная карта с высотами
+  const [mapInput, setMapInput] = useState(() => {
+    try {
+      return localStorage.getItem('experimentalMap') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('experimentalMap', String(mapInput))
+    } catch {
+      // Хранилище недоступно — настройка живёт до перезагрузки.
+    }
+  }, [mapInput])
 
   // Сохраняем выбранную модель
   useEffect(() => {
@@ -124,6 +151,7 @@ function App() {
             onModelChange={setSelectedModel}
             language={language}
             gridInput={gridInput}
+            mapInput={mapInput}
           />
         )}
 
@@ -142,6 +170,8 @@ function App() {
             onThemeChange={setTheme}
             gridInput={gridInput}
             onGridInputChange={setGridInput}
+            mapInput={mapInput}
+            onMapInputChange={setMapInput}
             keepAwake={keepAwake}
             onKeepAwakeChange={setKeepAwake}
           />

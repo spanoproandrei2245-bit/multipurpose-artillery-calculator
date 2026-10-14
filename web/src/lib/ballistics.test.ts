@@ -10,6 +10,7 @@ import {
   interpolateRow,
   isLargeCorrection,
   isNearTableEdge,
+  isWideGap,
   metersPerMil,
   pickCharge,
   lateralCorrectionMil,
@@ -272,10 +273,10 @@ describe('charge choice', () => {
   })
 
   const results = [
-    { charge: 0, minRange: 0, maxRange: 0, solution: null, metersPerMil: null, nearEdge: false },
-    { charge: 1, minRange: 0, maxRange: 0, solution: { tof: 30 } as never, metersPerMil: 2, nearEdge: false },
-    { charge: 2, minRange: 0, maxRange: 0, solution: { tof: 20 } as never, metersPerMil: 5, nearEdge: false },
-    { charge: 3, minRange: 0, maxRange: 0, solution: { tof: 25 } as never, metersPerMil: 1, nearEdge: true },
+    { charge: 0, minRange: 0, maxRange: 0, solution: null, metersPerMil: null, nearEdge: false, wideGap: false },
+    { charge: 1, minRange: 0, maxRange: 0, solution: { tof: 30 } as never, metersPerMil: 2, nearEdge: false, wideGap: false },
+    { charge: 2, minRange: 0, maxRange: 0, solution: { tof: 20 } as never, metersPerMil: 5, nearEdge: false, wideGap: false },
+    { charge: 3, minRange: 0, maxRange: 0, solution: { tof: 25 } as never, metersPerMil: 1, nearEdge: true, wideGap: false },
   ]
 
   it('picks by preference among usable charges', () => {
@@ -286,5 +287,40 @@ describe('charge choice', () => {
     // Если остался только заряд у края — берётся он
     expect(pickCharge([results[3]], 'precise')?.charge).toBe(3)
     expect(pickCharge([], 'precise')).toBeUndefined()
+  })
+})
+
+// Строки режима LOW (Seara, заряд 0): возвышение растёт с дальностью,
+// поправка на высоту отрицательная, часть дальностей пропущена.
+const LOW_ROWS: BallisticRow[] = [
+  [1000, 228, -106.6, -0.1, 6.9],
+  [1050, 240, -101.7, -0.1, 7.2],
+  [1100, 254, -98.4, -0.1, 7.6],
+  [1200, 281, null, null, 8.4],
+  [1400, 338, null, null, 10.1],
+  [1450, 353, -80.4, -0.3, 10.5],
+]
+
+describe('LOW mode', () => {
+  it('raises elevation for a higher target', () => {
+    const solution = solve(LOW_ROWS, 1000, 50)
+    // 228 − 0.5 · (−106.6) = 281.3
+    expect(solution?.elevation).toBeCloseTo(281.3)
+    expect(solution?.tof).toBeCloseTo(6.95)
+  })
+
+  it('lowers elevation for a lower target', () => {
+    expect(solve(LOW_ROWS, 1000, -50)?.elevation).toBeCloseTo(174.7)
+  })
+
+  it('interpolates with rising elevation', () => {
+    expect(solve(LOW_ROWS, 1025)?.elevation).toBeCloseTo(234)
+  })
+
+  it('flags wide gaps between rows only inside the gap', () => {
+    expect(isWideGap(LOW_ROWS, 1025)).toBe(false)
+    expect(isWideGap(LOW_ROWS, 1300)).toBe(true)
+    expect(isWideGap(LOW_ROWS, 1400)).toBe(false)
+    expect(isWideGap(WEATHER_ROWS, 2025)).toBe(false)
   })
 })

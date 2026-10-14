@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import type { ArtilleryMode } from '../types/artillery'
+
 const STORAGE_KEY = 'artilleryJournal'
 
 export type AngleUnit = 'mil' | 'deg'
@@ -52,6 +54,9 @@ export interface JournalEntry {
 
   // Поле v0.8: боковая поправка, м (> 0 — вправо)
   lateralCorrection?: number
+
+  // Поле v0.10: режим таблицы; нет — HIGH
+  mode?: ArtilleryMode
 }
 
 export type JournalDraft = Omit<
@@ -117,6 +122,7 @@ function isEntry(value: unknown): value is JournalEntry {
       v.azimuthUnit === 'deg') &&
     isOptionalNumber(v.firingAzimuth) &&
     (v.lateralCorrection === undefined || isNumber(v.lateralCorrection)) &&
+    (v.mode === undefined || v.mode === 'HIGH' || v.mode === 'LOW') &&
     isWeather(v.weather)
   )
 }
@@ -208,6 +214,34 @@ export function mergeEntries(
     added: fresh.length,
     skipped: incoming.length - fresh.length,
   }
+}
+
+/** Сколько последних целей в полоске и при переключении клавишами */
+export const RECENT_TARGETS = 10
+
+/** Последние цели, свежие первыми (полоска целей и переключение). */
+export function recentEntries(
+  entries: readonly JournalEntry[],
+  limit = RECENT_TARGETS
+): JournalEntry[] {
+  return [...entries]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, limit)
+}
+
+/**
+ * Соседняя цель по списку recent: direction 1 — следующая (старше),
+ * −1 — предыдущая. Без текущей — самая свежая.
+ */
+export function neighbourEntry(
+  list: readonly JournalEntry[],
+  currentId: string | null,
+  direction: 1 | -1
+): JournalEntry | undefined {
+  if (list.length === 0) return undefined
+  const index = list.findIndex((e) => e.id === currentId)
+  if (index === -1) return list[0]
+  return list[(index + direction + list.length) % list.length]
 }
 
 /** Поиск по названию, модели и дистанции (без учёта регистра). */

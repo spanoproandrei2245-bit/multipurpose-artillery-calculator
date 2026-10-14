@@ -1,6 +1,7 @@
 import { useEffect, type Ref } from 'react'
 
 import { useWakeLock } from '../lib/useWakeLock'
+import type { ArtilleryMode } from '../types/artillery'
 import type { Language } from '../types/settings'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 
@@ -8,6 +9,7 @@ interface Props {
   title: string
   targetName: string | null
   charge: number
+  mode: ArtilleryMode
   elevation: number
   // Готовый азимут в единицах ввода; null — не введён
   azimuth: string | null
@@ -26,6 +28,7 @@ export function CombatScreen({
   title,
   targetName,
   charge,
+  mode,
   elevation,
   azimuth,
   azimuthUnit,
@@ -102,7 +105,14 @@ export function CombatScreen({
             <p className="text-base text-app-muted">
               {ru ? 'Заряд' : 'Charge'}
             </p>
-            <p className={`${big} text-6xl`}>{charge}</p>
+            <p className={`${big} text-6xl`}>
+              {charge}
+              {mode === 'LOW' && (
+                <span className="ml-2 align-middle text-2xl text-amber-600 dark:text-amber-300">
+                  LOW
+                </span>
+              )}
+            </p>
           </div>
           <div>
             <p className="text-base text-app-muted">

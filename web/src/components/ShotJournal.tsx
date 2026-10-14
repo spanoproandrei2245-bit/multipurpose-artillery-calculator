@@ -136,7 +136,7 @@ export function ShotJournal({
     return [
       modelName,
       ammo ? `${ammo.designation} [${ammo.type}]` : null,
-      `${ru ? 'заряд' : 'charge'} ${entry.charge}`,
+      `${ru ? 'заряд' : 'charge'} ${entry.charge}${entry.mode === 'LOW' ? ' LOW' : ''}`,
     ]
       .filter(Boolean)
       .join(' · ')

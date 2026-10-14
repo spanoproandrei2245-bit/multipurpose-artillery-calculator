@@ -132,13 +132,26 @@ describe('bundled tables', () => {
           for (const [charge, rows] of Object.entries(tables ?? {})) {
             const label = `${profileKey} ${mode} charge ${charge}`
 
-            it(`${label}: elevation falls and time of flight is positive`, () => {
+            it(`${label}: elevation is monotonic and time of flight is positive`, () => {
               for (let i = 0; i < rows.length; i += 1) {
                 expect(rows[i][4]).toBeGreaterThan(0)
-                if (i > 0 && mode === 'HIGH') {
-                  // В режиме HIGH с ростом дальности возвышение падает.
+                if (i === 0) continue
+                // HIGH: с ростом дальности возвышение падает,
+                // LOW: растёт.
+                if (mode === 'HIGH') {
                   expect(rows[i][1]).toBeLessThan(rows[i - 1][1])
+                } else {
+                  expect(rows[i][1]).toBeGreaterThan(rows[i - 1][1])
                 }
+              }
+            })
+
+            it(`${label}: height correction has the sign of the mode`, () => {
+              // HIGH: D ELEV > 0, LOW: D ELEV < 0
+              for (const row of rows) {
+                if (row[2] === null) continue
+                if (mode === 'HIGH') expect(row[2]).toBeGreaterThan(0)
+                else expect(row[2]).toBeLessThan(0)
               }
             })
 

@@ -26,3 +26,10 @@
   --color-app-muted: var(--color-muted);
   --color-app-border: var(--color-border);
 }
+
+/* Окно-оверлей программы для ПК: прозрачный фон */
+html.overlay,
+html.overlay body {
+  background: transparent;
+  overflow: hidden;
+}
