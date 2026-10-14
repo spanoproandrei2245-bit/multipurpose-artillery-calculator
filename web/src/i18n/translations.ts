@@ -9,6 +9,7 @@ type Translation = {
   }
   navigation: {
     dashboard: string
+    sync: string
     models: string
     settings: string
   }
@@ -45,7 +46,7 @@ type Translation = {
     desktopDescription: string
     toggleOverlay: string
     hotkeys: Record<
-      'fire' | 'overlay' | 'mode' | 'next-target' | 'previous-target',
+      'fire' | 'overlay' | 'input' | 'mode' | 'next-target' | 'previous-target',
       string
     >
     armaDisplayMode: string
@@ -61,6 +62,7 @@ export const translations: Record<Language, Translation> = {
     },
     navigation: {
       dashboard: 'Dashboard',
+      sync: 'Link',
       models: 'Models',
       settings: 'Settings',
     },
@@ -104,6 +106,7 @@ export const translations: Record<Language, Translation> = {
         mode: 'Switch HIGH / LOW',
         'next-target': 'Next saved target',
         'previous-target': 'Previous saved target',
+        input: 'Type in the overlay (distance field)',
       },
       armaDisplayMode:
         'In Arma 3 set Display Mode to "Fullscreen Window" or "Window": the overlay cannot be drawn over exclusive fullscreen.',
@@ -121,6 +124,7 @@ export const translations: Record<Language, Translation> = {
     },
     navigation: {
       dashboard: 'Главная',
+      sync: 'Связка',
       models: 'Модели',
       settings: 'Настройки',
     },
@@ -164,6 +168,7 @@ export const translations: Record<Language, Translation> = {
         mode: 'Переключить HIGH / LOW',
         'next-target': 'Следующая сохранённая цель',
         'previous-target': 'Предыдущая сохранённая цель',
+        input: 'Ввод в оверлее (поле дистанции)',
       },
       armaDisplayMode:
         'В Arma 3 поставьте режим экрана «Полноэкранный в окне» (Fullscreen Window) или «Оконный»: поверх эксклюзивного полноэкранного режима оверлей не рисуется.',

@@ -1,3 +1,4 @@
+import { LogicalSize } from '@tauri-apps/api/dpi'
 import { emit, listen } from '@tauri-apps/api/event'
 import {
   getCurrentWebviewWindow,
@@ -19,6 +20,7 @@ export const isOverlayWindow =
 export type HotkeyAction =
   | 'fire'
   | 'overlay'
+  | 'input'
   | 'mode'
   | 'next-target'
   | 'previous-target'
@@ -29,16 +31,14 @@ export const GLOBAL_HOTKEYS: readonly {
 }[] = [
   { keys: 'Ctrl + Alt + F', action: 'fire' },
   { keys: 'Ctrl + Alt + O', action: 'overlay' },
+  { keys: 'Ctrl + Alt + D', action: 'input' },
   { keys: 'Ctrl + Alt + M', action: 'mode' },
   { keys: 'Ctrl + Alt + N', action: 'next-target' },
   { keys: 'Ctrl + Alt + P', action: 'previous-target' },
 ]
 
-/** Что показывает оверлей. null — решения нет. */
-export interface OverlaySolution {
-  language: Language
-  title: string
-  targetName: string | null
+/** Готовые установки для орудия. */
+export interface FiringSolution {
   charge: number
   mode: ArtilleryMode
   elevation: number
@@ -47,6 +47,39 @@ export interface OverlaySolution {
   azimuthUnit: string
   tof: number
 }
+
+/** Поля ввода, которые можно менять из оверлея. */
+export type OverlayField = 'distance' | 'azimuth' | 'ownHeight' | 'targetHeight'
+
+/** Что показывает оверлей: вводные основного окна и решение. */
+export interface OverlayState {
+  language: Language
+  title: string
+  targetName: string | null
+  mode: ArtilleryMode
+  // Режимы, для которых есть таблицы
+  modes: ArtilleryMode[]
+  // Заряды, которыми можно достать цель
+  charges: number[]
+  // «мил» или «°» — единицы поля азимута
+  azimuthUnit: string
+  fields: Record<OverlayField, string>
+  // Сумма поправок корректировки, м, и число докладов
+  adjust: { range: number; lateral: number; count: number }
+  // null — решения нет
+  solution: FiringSolution | null
+  // Решение пришло от наводчика по связке: ввод в оверлее не нужен
+  readOnly?: boolean
+}
+
+/** Команда из оверлея в основное окно. */
+export type OverlayCommand =
+  | { type: 'field'; field: OverlayField; value: string }
+  | { type: 'charge'; charge: number }
+  | { type: 'mode' }
+  // Доклад по линии орудия: > 0 — перелёт / правее цели, м
+  | { type: 'spot'; over: number; right: number }
+  | { type: 'undo-adjust' }
 
 /**
  * Подписка на событие Tauri. Возвращает функцию отписки, которую можно
@@ -77,12 +110,29 @@ export function onHotkey(handler: (action: HotkeyAction) => void) {
   return subscribe<HotkeyAction>('hotkey', handler)
 }
 
-export function publishSolution(solution: OverlaySolution | null) {
-  if (isDesktop) void emit('solution', solution).catch(() => {})
+export function publishSolution(state: OverlayState) {
+  if (isDesktop) void emit('solution', state).catch(() => {})
 }
 
-export function onSolution(handler: (solution: OverlaySolution | null) => void) {
-  return subscribe<OverlaySolution | null>('solution', handler)
+export function onSolution(handler: (state: OverlayState) => void) {
+  return subscribe<OverlayState>('solution', handler)
+}
+
+/** Выстрел не с глобальной клавиши (кнопка, связка) — отсчёт в оверлее. */
+export function notifyOverlayShot() {
+  if (isDesktop) void emit('overlay-shot').catch(() => {})
+}
+
+export function onOverlayShot(handler: () => void) {
+  return subscribe<null>('overlay-shot', () => handler())
+}
+
+export function sendOverlayCommand(command: OverlayCommand) {
+  if (isDesktop) void emit('overlay-command', command).catch(() => {})
+}
+
+export function onOverlayCommand(handler: (command: OverlayCommand) => void) {
+  return subscribe<OverlayCommand>('overlay-command', handler)
 }
 
 /** Оверлей открылся и просит текущее решение. */
@@ -103,6 +153,28 @@ export async function toggleOverlay() {
     else await overlay.show()
   } catch {
     // Окно недоступно — ничего не делаем.
+  }
+}
+
+/** Показать оверлей поверх игры и забрать фокус клавиатуры. */
+export async function focusCurrentWindow() {
+  if (!isDesktop) return
+  try {
+    const current = getCurrentWebviewWindow()
+    await current.show()
+    await current.setFocus()
+  } catch {
+    // Окно недоступно — ничего не делаем.
+  }
+}
+
+/** Размер окна под содержимое (оверлей раскрывает панель ввода). */
+export async function resizeCurrentWindow(width: number, height: number) {
+  if (!isDesktop) return
+  try {
+    await getCurrentWebviewWindow().setSize(new LogicalSize(width, height))
+  } catch {
+    // Нет прав или окно недоступно — остаётся прежний размер.
   }
 }
 

@@ -10,7 +10,10 @@ corrections and fire adjustment.
 > азимут и время полёта по таблицам ACE из игры, с погодными поправками
 > и корректировкой огня. Интерфейс на русском и английском.
 
-**Status:** alpha (v0.10). Made by Heis.
+**Status:** alpha (v0.11). Made by Heis.
+
+**Web app:** https://spanoproandrei2245-bit.github.io/multipurpose-artillery-calculator/ —
+works offline and installs on a phone (Add to Home screen / Install).
 
 ## Features
 
@@ -37,6 +40,11 @@ corrections and fire adjustment.
   with a warning at the edge of a charge table
 - **Simultaneous impact (MRSI)**: one gun fires on several charges (and
   HIGH/LOW) with delays so that all rounds land together; countdown with beeps
+- **FDC ↔ gunner link**: the fire direction computer works in the
+  calculator, gunners (phone or PC) see elevation, azimuth and charge update
+  live; "Fire" on any device starts the impact countdown on all of them.
+  Devices join a room by code or QR invite; data goes through a free public
+  MQTT server, end-to-end encrypted with the room code
 - **Keyboard shortcuts** (press `?` in the app), work in any layout
 - **Journal search, export and import** to move targets between devices
 - **Installable app (PWA)** that works offline, **combat screen** with large
@@ -74,7 +82,9 @@ Then open http://localhost:5173.
 The same app runs as a desktop program (Tauri 2) with an **overlay window**
 that stays on top of Arma 3 and **global shortcuts** that work while the game
 is focused: `Ctrl+Alt+F` fire (start the timer), `Ctrl+Alt+O` show/hide the
-overlay, `Ctrl+Alt+M` switch HIGH/LOW. Set Arma's display mode to
+overlay, `Ctrl+Alt+D` type in the overlay (distance, azimuth, heights,
+charge, impact reports) without switching windows, `Ctrl+Alt+M` switch
+HIGH/LOW. Set Arma's display mode to
 *Fullscreen Window* or *Window*: nothing can be drawn over exclusive fullscreen.
 
 - **Download:** the installer is attached to each
@@ -127,10 +137,10 @@ web/
   data-sources/        text copies of the in-game tables
   scripts/             table import script
   src/
-    lib/               calculations: ballistics, grid, journal, input
+    lib/               calculations: ballistics, grid, journal, input, sync
     data/              models and table JSON
     components/        UI components
-    pages/             Dashboard, Models, Settings
+    pages/             Dashboard, Link, Models, Settings
     i18n/              Russian and English strings
 ```
 

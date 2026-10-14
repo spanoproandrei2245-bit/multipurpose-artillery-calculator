@@ -7,9 +7,11 @@ import { Navigation, type PageId } from './components/Navigation'
 import { DashboardPage } from './pages/DashboardPage'
 import { ModelsPage } from './pages/ModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SyncPage } from './pages/SyncPage'
 
 import { models, type ModelId } from './data/models'
 import { onHotkey, toggleOverlay } from './lib/desktop'
+import { readInvite } from './lib/sync'
 import { useWakeLock } from './lib/useWakeLock'
 import type { Language, Theme } from './types/settings'
 
@@ -28,9 +30,10 @@ function App() {
     return 'mk6'
   })
 
-  // Активная страница
-  const [activePage, setActivePage] =
-    useState<PageId>('dashboard')
+  // Активная страница; по ссылке-приглашению стрелка — сразу «Связка»
+  const [activePage, setActivePage] = useState<PageId>(() =>
+    readInvite(window.location.search) ? 'sync' : 'dashboard'
+  )
 
   // Язык приложения
   const [language, setLanguage] = useState<Language>(() => {
@@ -154,6 +157,8 @@ function App() {
             mapInput={mapInput}
           />
         )}
+
+        {activePage === 'sync' && <SyncPage language={language} />}
 
         {activePage === 'models' && (
           <ModelsPage

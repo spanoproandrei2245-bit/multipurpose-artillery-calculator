@@ -2,7 +2,7 @@
 import type { Language } from '../types/settings'
 import { translations } from '../i18n/translations'
 
-export type PageId = 'dashboard' | 'models' | 'settings'
+export type PageId = 'dashboard' | 'sync' | 'models' | 'settings'
 
 interface NavigationProps {
   activePage: PageId
@@ -12,6 +12,7 @@ interface NavigationProps {
 
 const pages: PageId[] = [
   'dashboard',
+  'sync',
   'models',
   'settings',
 ]
