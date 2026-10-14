@@ -5,6 +5,7 @@ import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
+import { SoundSettings } from '../components/SoundSettings'
 
 interface SettingsPageProps {
   language: Language
@@ -124,6 +125,8 @@ export function SettingsPage({
 
         <p className="mt-6 text-sm text-app-muted">{t.autoSave}</p>
       </Card>
+
+      <SoundSettings language={language} />
 
       {isDesktop && (
         <Card title={t.desktop} description={t.desktopDescription}>

@@ -7,7 +7,7 @@ import {
 } from 'react'
 
 import { readStored, writeStored } from '../lib/input'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
 import type { Language } from '../types/settings'
 
 /** Управление таймером снаружи (горячие клавиши). */
@@ -69,11 +69,11 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
 
       if (!splashSignaled.current && left <= SPLASH_WARNING_S) {
         splashSignaled.current = true
-        if (sound && shot.tof > SPLASH_WARNING_S) beep(880, 150)
+        if (sound && shot.tof > SPLASH_WARNING_S) playSound('splash')
       }
       if (!impactSignaled.current && left <= 0) {
         impactSignaled.current = true
-        if (sound) beep(660, 600)
+        if (sound) playSound('impact')
       }
       if (left * 1000 < -IMPACT_HOLD_MS) {
         setShot(null)
@@ -104,7 +104,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
     setShot({ firedAt, tof })
     // Короткий щелчок подтверждает нажатие и разблокирует звук
     // в браузере (AudioContext запускается только после жеста).
-    if (sound) beep(440, 60)
+    if (sound) playSound('fire')
   }
 
   const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null

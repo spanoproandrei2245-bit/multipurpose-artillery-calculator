@@ -12,7 +12,7 @@ import {
   publishSolution,
   type OverlayState,
 } from '../lib/desktop'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
 import {
   generateRoomCode,
   inviteLink,
@@ -340,7 +340,7 @@ function GunnerView({ language }: Props) {
   // Новые установки — короткий сигнал
   const receivedAt = remote?.solution ? remote.receivedAt : null
   useEffect(() => {
-    if (receivedAt !== null) beep(1200, 80)
+    if (receivedAt !== null) playSound('syncUpdate')
   }, [receivedAt])
 
   const { onShot, sendShot } = sync

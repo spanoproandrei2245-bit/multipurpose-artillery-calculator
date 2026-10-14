@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { parseNumber, readStoredText, writeStored } from '../lib/input'
 import { planMrsi, type MrsiOption } from '../lib/mrsi'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
 import type { Language } from '../types/settings'
 import { NumberField } from './FormControls'
 
@@ -57,13 +57,13 @@ export function MrsiPanel({ options, showMode, language }: Props) {
           const key = `${index}:${second}`
           if (elapsed >= shot.fireAt - second && !signaled.current.has(key)) {
             signaled.current.add(key)
-            if (elapsed < shot.fireAt) beep(600, 80)
+            if (elapsed < shot.fireAt) playSound('mrsiTick')
           }
         }
         const key = `${index}:fire`
         if (elapsed >= shot.fireAt && !signaled.current.has(key)) {
           signaled.current.add(key)
-          beep(900, 300)
+          playSound('mrsiFire')
         }
       })
 
@@ -87,7 +87,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
     const at = Date.now()
     setNow(at)
     setStartedAt(at)
-    beep(440, 60)
+    playSound('fire')
   }
 
   return (
