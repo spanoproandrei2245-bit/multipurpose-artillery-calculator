@@ -40,6 +40,11 @@ works offline and installs on a phone (Add to Home screen / Install).
   with a warning at the edge of a charge table
 - **Simultaneous impact (MRSI)**: one gun fires on several charges (and
   HIGH/LOW) with delays so that all rounds land together; countdown with beeps
+- **FDC ↔ gunner link**: the fire direction computer works in the
+  calculator, gunners (phone or PC) see elevation, azimuth and charge update
+  live; "Fire" on any device starts the impact countdown on all of them.
+  Devices join a room by code or QR invite; data goes through a free public
+  MQTT server, end-to-end encrypted with the room code
 - **Keyboard shortcuts** (press `?` in the app), work in any layout
 - **Journal search, export and import** to move targets between devices
 - **Installable app (PWA)** that works offline, **combat screen** with large
@@ -132,10 +137,10 @@ web/
   data-sources/        text copies of the in-game tables
   scripts/             table import script
   src/
-    lib/               calculations: ballistics, grid, journal, input
+    lib/               calculations: ballistics, grid, journal, input, sync
     data/              models and table JSON
     components/        UI components
-    pages/             Dashboard, Models, Settings
+    pages/             Dashboard, Link, Models, Settings
     i18n/              Russian and English strings
 ```
 

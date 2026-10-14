@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { OverlayApp } from './components/OverlayApp.tsx'
+import { SyncProvider } from './components/SyncProvider.tsx'
 import { isDesktop, isOverlayWindow } from './lib/desktop.ts'
 
 // Работа без интернета (PWA). В режиме разработки не нужна — мешала бы
@@ -22,5 +23,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && !isDesktop) {
 if (isOverlayWindow) document.documentElement.classList.add('overlay')
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{isOverlayWindow ? <OverlayApp /> : <App />}</StrictMode>,
+  <StrictMode>
+    {isOverlayWindow ? (
+      <OverlayApp />
+    ) : (
+      <SyncProvider>
+        <App />
+      </SyncProvider>
+    )}
+  </StrictMode>,
 )

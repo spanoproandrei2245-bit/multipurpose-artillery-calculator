@@ -68,6 +68,8 @@ export interface OverlayState {
   adjust: { range: number; lateral: number; count: number }
   // null — решения нет
   solution: FiringSolution | null
+  // Решение пришло от наводчика по связке: ввод в оверлее не нужен
+  readOnly?: boolean
 }
 
 /** Команда из оверлея в основное окно. */
@@ -114,6 +116,15 @@ export function publishSolution(state: OverlayState) {
 
 export function onSolution(handler: (state: OverlayState) => void) {
   return subscribe<OverlayState>('solution', handler)
+}
+
+/** Выстрел не с глобальной клавиши (кнопка, связка) — отсчёт в оверлее. */
+export function notifyOverlayShot() {
+  if (isDesktop) void emit('overlay-shot').catch(() => {})
+}
+
+export function onOverlayShot(handler: () => void) {
+  return subscribe<null>('overlay-shot', () => handler())
 }
 
 export function sendOverlayCommand(command: OverlayCommand) {

@@ -9,6 +9,7 @@ type Translation = {
   }
   navigation: {
     dashboard: string
+    sync: string
     models: string
     settings: string
   }
@@ -61,6 +62,7 @@ export const translations: Record<Language, Translation> = {
     },
     navigation: {
       dashboard: 'Dashboard',
+      sync: 'Link',
       models: 'Models',
       settings: 'Settings',
     },
@@ -122,6 +124,7 @@ export const translations: Record<Language, Translation> = {
     },
     navigation: {
       dashboard: 'Главная',
+      sync: 'Связка',
       models: 'Модели',
       settings: 'Настройки',
     },

@@ -27,6 +27,7 @@ import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
 import {
+  notifyOverlayShot,
   onHotkey,
   onOverlayCommand,
   onSolutionRequest,
@@ -35,6 +36,8 @@ import {
   type OverlayCommand,
   type OverlayState,
 } from '../lib/desktop'
+import type { SyncSolution } from '../lib/sync'
+import { useSync } from '../lib/syncContext'
 import { useHotkeys, type HotkeyMap } from '../lib/useHotkeys'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
 import type { ArtilleryMode } from '../types/artillery'
@@ -48,6 +51,7 @@ import { NumberField, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MapPicker } from './MapPicker'
 import { MrsiPanel } from './MrsiPanel'
+import { SyncStatusLine } from './SyncStatusLine'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -558,6 +562,37 @@ export function ArtilleryCalculator({
     []
   )
 
+  // ---- связка: наводчик отправляет установки, выстрел — у всех ----
+  const sync = useSync()
+  const sharing = sync.enabled && sync.role === 'computer'
+  const syncSolution: SyncSolution | null = overlayState.solution
+    ? {
+        ...overlayState.solution,
+        title: reference.name,
+        targetName: activeEntry?.name ?? null,
+      }
+    : null
+  const syncJson = JSON.stringify(syncSolution)
+  const { shareSolution, onShot, sendShot } = sync
+
+  useEffect(() => {
+    if (sharing) shareSolution(JSON.parse(syncJson))
+  }, [sharing, syncJson, shareSolution])
+
+  useEffect(
+    () =>
+      onShot(() => {
+        timerRef.current?.remoteFire()
+        notifyOverlayShot()
+      }),
+    [onShot]
+  )
+
+  function handleFire() {
+    notifyOverlayShot()
+    if (sync.active) sendShot()
+  }
+
   return (
     <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">
       {/* ---- Модель и боеприпас ---- */}
@@ -873,8 +908,11 @@ export function ArtilleryCalculator({
                     ref={timerRef}
                     tof={solution.tof}
                     language={language}
+                    onFire={handleFire}
                   />
                 )}
+
+                <SyncStatusLine language={language} />
 
                 <button
                   type="button"
@@ -902,6 +940,7 @@ export function ArtilleryCalculator({
                     azimuthUnit={unitAzimuth}
                     tof={solution.tof}
                     timerRef={timerRef}
+                    onFire={handleFire}
                     onClose={() => setCombatOpen(false)}
                     language={language}
                   />

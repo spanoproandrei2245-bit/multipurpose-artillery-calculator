@@ -16,6 +16,7 @@ interface Props {
   azimuthUnit: string
   tof: number
   timerRef: Ref<FireTimerHandle>
+  onFire?: () => void
   onClose: () => void
   language: Language
 }
@@ -34,6 +35,7 @@ export function CombatScreen({
   azimuthUnit,
   tof,
   timerRef,
+  onFire,
   onClose,
   language,
 }: Props) {
@@ -123,7 +125,12 @@ export function CombatScreen({
         </div>
       </div>
 
-      <FireTimer ref={timerRef} tof={tof} language={language} />
+      <FireTimer
+        ref={timerRef}
+        tof={tof}
+        language={language}
+        onFire={onFire}
+      />
 
       <p className="mt-3 hidden text-center text-xs text-app-muted sm:block">
         {ru ? 'F — огонь · Esc — закрыть' : 'F — fire · Esc — close'}

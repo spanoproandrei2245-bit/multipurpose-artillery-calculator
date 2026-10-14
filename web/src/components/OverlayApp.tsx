@@ -4,6 +4,7 @@ import {
   focusCurrentWindow,
   hideCurrentWindow,
   onHotkey,
+  onOverlayShot,
   onSolution,
   requestSolution,
   resizeCurrentWindow,
@@ -65,6 +66,9 @@ export function OverlayApp() {
   // Последнее состояние для обработчика клавиши «огонь»
   const stateRef = useRef<OverlayState | null>(null)
 
+  // Панель ввода — только для своих вводных, не для данных по связке
+  const canEdit = editing && state !== null && !state.readOnly
+
   useEffect(() => {
     const stop = onSolution((next) => {
       stateRef.current = next
@@ -85,9 +89,9 @@ export function OverlayApp() {
   useEffect(() => {
     void resizeCurrentWindow(
       WIDTH,
-      editing ? EDITING_HEIGHT : COMPACT_HEIGHT
+      canEdit ? EDITING_HEIGHT : COMPACT_HEIGHT
     )
-  }, [editing])
+  }, [canEdit])
 
   useEffect(
     () =>
@@ -115,6 +119,19 @@ export function OverlayApp() {
       field?.select()
     })
   }, [focusRequest])
+
+  // Выстрел из основного окна или по связке
+  useEffect(
+    () =>
+      onOverlayShot(() => {
+        const solution = stateRef.current?.solution
+        if (!solution) return
+        const firedAt = Date.now()
+        setNow(firedAt)
+        setShot({ firedAt, tof: solution.tof })
+      }),
+    []
+  )
 
   useEffect(() => {
     if (!shot) return
@@ -177,6 +194,11 @@ export function OverlayApp() {
         >
           {state ? (state.targetName ?? state.title) : ru ? 'Нет данных' : 'No data'}
         </p>
+        {state?.readOnly ? (
+          <span className="rounded bg-sky-500/20 px-1.5 text-xs text-sky-300">
+            {ru ? 'от наводчика' : 'from FDC'}
+          </span>
+        ) : (
         <button
           type="button"
           onClick={() => setEditing((value) => !value)}
@@ -191,6 +213,7 @@ export function OverlayApp() {
         >
           {ru ? 'Ввод' : 'Input'}
         </button>
+        )}
         <button
           type="button"
           onClick={() => void hideCurrentWindow()}
@@ -206,7 +229,7 @@ export function OverlayApp() {
           data-tauri-drag-region
           className={[
             'mt-1 grid grid-cols-2 content-center gap-x-4 gap-y-1',
-            editing ? '' : 'flex-1',
+            canEdit ? '' : 'flex-1',
           ].join(' ')}
         >
           <div data-tauri-drag-region>
@@ -242,12 +265,16 @@ export function OverlayApp() {
           data-tauri-drag-region
           className={[
             'flex items-center py-2 text-sm text-white/60',
-            editing ? '' : 'flex-1',
+            canEdit ? '' : 'flex-1',
           ].join(' ')}
         >
-          {ru
-            ? 'Введите дистанцию — здесь (Ввод) или в основном окне.'
-            : 'Enter a distance — here (Input) or in the main window.'}
+          {state?.readOnly
+            ? ru
+              ? 'Ждём установки от наводчика.'
+              : 'Waiting for the fire direction data.'
+            : ru
+              ? 'Введите дистанцию — здесь (Ввод) или в основном окне.'
+              : 'Enter a distance — here (Input) or in the main window.'}
         </p>
       )}
 
@@ -280,7 +307,7 @@ export function OverlayApp() {
         </div>
       )}
 
-      {editing && state && (
+      {canEdit && (
         <div className="mt-2 flex flex-1 flex-col gap-2 border-t border-white/10 pt-2">
           <div className="grid grid-cols-2 gap-2">
             {FIELDS.map((field) => (
