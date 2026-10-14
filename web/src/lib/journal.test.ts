@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   dayKeyOf,
+  exportJournal,
   formatDayKey,
   groupByDay,
   loadEntries,
+  matchesQuery,
+  mergeEntries,
+  parseJournalFile,
   type JournalEntry,
 } from './journal'
 
@@ -110,5 +114,49 @@ describe('days', () => {
   it('formats day keys', () => {
     expect(dayKeyOf(new Date(2026, 0, 5))).toBe('2026-01-05')
     expect(formatDayKey('2026-10-14')).toBe('14.10.2026')
+  })
+})
+
+describe('export and import', () => {
+  const entries = [OLD_ENTRY, NEW_ENTRY] as JournalEntry[]
+
+  it('round-trips through the export file', () => {
+    const text = exportJournal(entries, new Date('2026-10-14T00:00:00Z'))
+    const parsed = parseJournalFile(text)
+    expect(parsed?.entries.map((e) => e.id)).toEqual(['a', 'b'])
+    expect(parsed?.invalid).toBe(0)
+  })
+
+  it('accepts a bare array and counts damaged entries', () => {
+    const parsed = parseJournalFile(
+      JSON.stringify([OLD_ENTRY, { ...OLD_ENTRY, id: 'x', tof: 'slow' }])
+    )
+    expect(parsed?.entries.map((e) => e.id)).toEqual(['a'])
+    expect(parsed?.invalid).toBe(1)
+  })
+
+  it('rejects files that are not a journal', () => {
+    expect(parseJournalFile('not json')).toBeNull()
+    expect(parseJournalFile('{"app":"other","entries":[]}')).toBeNull()
+    expect(parseJournalFile('42')).toBeNull()
+  })
+
+  it('merges without duplicating ids', () => {
+    const result = mergeEntries(
+      [OLD_ENTRY] as JournalEntry[],
+      [OLD_ENTRY, NEW_ENTRY, NEW_ENTRY] as JournalEntry[]
+    )
+    expect(result.entries.map((e) => e.id)).toEqual(['a', 'b'])
+    expect(result).toMatchObject({ added: 1, skipped: 2 })
+  })
+
+  it('searches by name, model and distance', () => {
+    const entry = OLD_ENTRY as JournalEntry
+    expect(matchesQuery(entry, 'выш')).toBe(true)
+    expect(matchesQuery(entry, 'ВЫШКА')).toBe(true)
+    expect(matchesQuery(entry, 'mk6', 'Mk6 (82 mm)')).toBe(true)
+    expect(matchesQuery(entry, '1200')).toBe(true)
+    expect(matchesQuery(entry, 'мост')).toBe(false)
+    expect(matchesQuery(entry, '  ')).toBe(true)
   })
 })

@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 
 import type { Language, Theme } from '../types/settings'
 import { translations } from '../i18n/translations'
+import { wakeLockSupported } from '../lib/useWakeLock'
+import { OpenOnPhone } from '../components/OpenOnPhone'
 
 interface SettingsPageProps {
   language: Language
@@ -10,6 +12,8 @@ interface SettingsPageProps {
   onThemeChange: (theme: Theme) => void
   gridInput: boolean
   onGridInputChange: (value: boolean) => void
+  keepAwake: boolean
+  onKeepAwakeChange: (value: boolean) => void
 }
 
 const selectClass =
@@ -42,6 +46,8 @@ export function SettingsPage({
   onThemeChange,
   gridInput,
   onGridInputChange,
+  keepAwake,
+  onKeepAwakeChange,
 }: SettingsPageProps) {
   const t = translations[language].settings
 
@@ -93,7 +99,29 @@ export function SettingsPage({
           </select>
         </div>
 
+        <label className="mt-6 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={keepAwake}
+            disabled={!wakeLockSupported}
+            onChange={(event) => onKeepAwakeChange(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-emerald-600"
+          />
+          <span>
+            <span className="block text-sm font-medium text-app-text">
+              {t.keepAwake}
+            </span>
+            <span className="block text-xs text-app-muted">
+              {wakeLockSupported ? t.keepAwakeDescription : t.keepAwakeUnsupported}
+            </span>
+          </span>
+        </label>
+
         <p className="mt-6 text-sm text-app-muted">{t.autoSave}</p>
+      </Card>
+
+      <Card title={t.openOnPhone} description={t.openOnPhoneDescription}>
+        <OpenOnPhone language={language} />
       </Card>
 
       <Card title={t.experimental} description={t.experimentalDescription}>

@@ -96,7 +96,15 @@ export interface ChargeResult {
   maxRange: number
   // null — дальность вне таблицы этого заряда
   solution: FiringSolution | null
+  // Ошибка дальности на 1 мил ошибки возвышения, м (меньше — точнее)
+  metersPerMil: number | null
+  // Решение в последнем промежутке таблицы (у максимальной дальности
+  // заряда): поправки здесь менее надёжны
+  nearEdge: boolean
 }
+
+/** Как выбирать заряд по умолчанию. */
+export type ChargePreference = 'lowest' | 'fastest' | 'precise'
 
 // Поправка на высоту больше этого значения (мил) считается линейной
 // оценкой с пониженной точностью.
@@ -387,6 +395,66 @@ export function solve(
   }
 }
 
+/**
+ * Чувствительность к ошибке возвышения: сколько метров дальности
+ * даёт 1 мил по наклону таблицы в этой точке. На строке берётся
+ * следующий промежуток (у последней строки — предыдущий).
+ */
+export function metersPerMil(
+  rows: readonly BallisticRow[],
+  range: number
+): number | null {
+  if (rows.length < 2) return null
+  const { min, max } = tableRange(rows)
+  if (!Number.isFinite(range) || range < min || range > max) return null
+
+  let i = rows.findIndex((row) => row[0] > range)
+  if (i === -1) i = rows.length - 1
+  if (i === 0) i = 1
+
+  const a = rows[i - 1]
+  const b = rows[i]
+  const deltaElevation = Math.abs(b[1] - a[1])
+  return deltaElevation === 0 ? null : (b[0] - a[0]) / deltaElevation
+}
+
+/** Дальность попала в последний промежуток таблицы. */
+export function isNearTableEdge(
+  rows: readonly BallisticRow[],
+  range: number
+): boolean {
+  if (rows.length < 3) return false
+  return range > rows[rows.length - 2][0]
+}
+
+/**
+ * Заряд по умолчанию среди подходящих:
+ *   lowest  — наименьший номер;
+ *   fastest — кратчайшее время полёта;
+ *   precise — наименьшая ошибка дальности на 1 мил.
+ * При равенстве — меньший заряд. Для fastest и precise заряды у края
+ * таблицы не выбираются, если есть другие.
+ */
+export function pickCharge(
+  results: readonly ChargeResult[],
+  preference: ChargePreference
+): ChargeResult | undefined {
+  const usable = results.filter((r) => r.solution !== null)
+  if (preference === 'lowest' || usable.length < 2) return usable[0]
+
+  // Заряды у края таблицы — только если других нет: «точность» там
+  // мнимая, поправки ненадёжны.
+  const safe = usable.filter((r) => !r.nearEdge)
+  const pool = safe.length > 0 ? safe : usable
+
+  const score = (r: ChargeResult) =>
+    preference === 'fastest'
+      ? r.solution!.tof
+      : (r.metersPerMil ?? Number.POSITIVE_INFINITY)
+
+  return pool.reduce((best, r) => (score(r) < score(best) ? r : best))
+}
+
 export function isLargeCorrection(solution: FiringSolution): boolean {
   return Math.abs(solution.elevationCorrection) > LARGE_CORRECTION_MIL
 }
@@ -415,11 +483,18 @@ export function solveAllCharges(
     .sort((a, b) => a.charge - b.charge)
     .map(({ charge, rows }) => {
       const { min, max } = tableRange(rows)
+      const solution = solve(rows, range, heightDiff, weather)
       return {
         charge,
         minRange: min,
         maxRange: max,
-        solution: solve(rows, range, heightDiff, weather),
+        solution,
+        metersPerMil: solution
+          ? metersPerMil(rows, solution.lookupRange)
+          : null,
+        nearEdge: solution
+          ? isNearTableEdge(rows, solution.lookupRange)
+          : false,
       }
     })
 }
