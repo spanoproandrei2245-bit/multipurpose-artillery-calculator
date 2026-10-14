@@ -9,6 +9,7 @@ import { ModelsPage } from './pages/ModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 import { models, type ModelId } from './data/models'
+import { onHotkey, toggleOverlay } from './lib/desktop'
 import { useWakeLock } from './lib/useWakeLock'
 import type { Language, Theme } from './types/settings'
 
@@ -63,6 +64,15 @@ function App() {
   }, [keepAwake])
 
   useWakeLock(keepAwake)
+
+  // Программа для ПК: Ctrl+Alt+O показывает и скрывает оверлей
+  useEffect(
+    () =>
+      onHotkey((action) => {
+        if (action === 'overlay') void toggleOverlay()
+      }),
+    []
+  )
 
   // Экспериментальный ввод по координатам сетки
   const [gridInput, setGridInput] = useState(() => {

@@ -4,6 +4,7 @@ import type { Language, Theme } from '../types/settings'
 import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
+import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 
 interface SettingsPageProps {
   language: Language
@@ -119,6 +120,33 @@ export function SettingsPage({
 
         <p className="mt-6 text-sm text-app-muted">{t.autoSave}</p>
       </Card>
+
+      {isDesktop && (
+        <Card title={t.desktop} description={t.desktopDescription}>
+          <button
+            type="button"
+            onClick={() => void toggleOverlay()}
+            className="mt-4 cursor-pointer rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            {t.toggleOverlay}
+          </button>
+
+          <dl className="mt-4 space-y-2 text-sm">
+            {GLOBAL_HOTKEYS.map(({ keys, action }) => (
+              <div key={action} className="flex items-baseline gap-3">
+                <dt className="min-w-28">
+                  <kbd className="rounded border border-app-border bg-app-bg px-1.5 py-0.5 font-mono text-xs text-app-text">
+                    {keys}
+                  </kbd>
+                </dt>
+                <dd className="text-app-muted">{t.hotkeys[action]}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="mt-4 text-xs text-app-muted">{t.armaDisplayMode}</p>
+        </Card>
+      )}
 
       <Card title={t.openOnPhone} description={t.openOnPhoneDescription}>
         <OpenOnPhone language={language} />

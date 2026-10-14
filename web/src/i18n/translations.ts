@@ -39,6 +39,11 @@ type Translation = {
     keepAwakeUnsupported: string
     openOnPhone: string
     openOnPhoneDescription: string
+    desktop: string
+    desktopDescription: string
+    toggleOverlay: string
+    hotkeys: Record<'fire' | 'overlay' | 'mode', string>
+    armaDisplayMode: string
   }
 }
 
@@ -81,6 +86,17 @@ export const translations: Record<Language, Translation> = {
       keepAwakeDescription:
         'While the app is open — handy for a phone next to the keyboard. The combat screen always keeps it on.',
       keepAwakeUnsupported: 'Not supported by this browser.',
+      desktop: 'Desktop app',
+      desktopDescription:
+        'An overlay window stays on top of the game; global shortcuts work while Arma is focused.',
+      toggleOverlay: 'Show / hide overlay',
+      hotkeys: {
+        fire: 'Fire — start the timer',
+        overlay: 'Show / hide the overlay',
+        mode: 'Switch HIGH / LOW',
+      },
+      armaDisplayMode:
+        'In Arma 3 set Display Mode to "Fullscreen Window" or "Window": the overlay cannot be drawn over exclusive fullscreen.',
       openOnPhone: 'Open on a phone',
       openOnPhoneDescription:
         'Scan the code to open the calculator on your phone. It can be installed as an app and works offline.',
@@ -125,6 +141,17 @@ export const translations: Record<Language, Translation> = {
       keepAwakeDescription:
         'Пока приложение открыто — удобно для телефона рядом с клавиатурой. Боевой экран не даёт экрану гаснуть всегда.',
       keepAwakeUnsupported: 'Этот браузер не поддерживает.',
+      desktop: 'Программа для ПК',
+      desktopDescription:
+        'Окно-оверлей держится поверх игры, глобальные клавиши работают, пока в фокусе Arma.',
+      toggleOverlay: 'Показать / скрыть оверлей',
+      hotkeys: {
+        fire: 'Огонь — запустить таймер',
+        overlay: 'Показать / скрыть оверлей',
+        mode: 'Переключить HIGH / LOW',
+      },
+      armaDisplayMode:
+        'В Arma 3 поставьте режим экрана «Полноэкранный в окне» (Fullscreen Window) или «Оконный»: поверх эксклюзивного полноэкранного режима оверлей не рисуется.',
       openOnPhone: 'Открыть на телефоне',
       openOnPhoneDescription:
         'Отсканируйте код, чтобы открыть калькулятор на телефоне. Его можно установить как приложение — работает без интернета.',

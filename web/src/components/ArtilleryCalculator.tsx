@@ -25,6 +25,13 @@ import {
 } from '../lib/input'
 import { sumAdjustments } from '../lib/adjust'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
+import {
+  onHotkey,
+  onSolutionRequest,
+  publishSolution,
+  type HotkeyAction,
+  type OverlaySolution,
+} from '../lib/desktop'
 import { useHotkeys, type HotkeyMap } from '../lib/useHotkeys'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
 import type { ArtilleryMode } from '../types/artillery'
@@ -397,6 +404,49 @@ export function ArtilleryCalculator({
   }
 
   const totalRangeCorrection = rangeAdjust + (w?.total ?? 0)
+
+  // ---- программа для ПК: оверлей поверх игры и глобальные клавиши ----
+  const overlaySolution: OverlaySolution | null =
+    solution && activeResult
+      ? {
+          language,
+          title: reference.name,
+          targetName: activeEntry?.name ?? null,
+          charge: activeResult.charge,
+          mode,
+          elevation: solution.elevation,
+          azimuth:
+            firingAzimuth === null ? null : formatAzimuth(firingAzimuth),
+          azimuthUnit: unitAzimuth,
+          tof: solution.tof,
+        }
+      : null
+  // Строка — чтобы отправлять в оверлей только реальные изменения
+  const overlayJson = JSON.stringify(overlaySolution)
+  const overlayJsonRef = useRef(overlayJson)
+
+  useEffect(() => {
+    overlayJsonRef.current = overlayJson
+    publishSolution(JSON.parse(overlayJson))
+  }, [overlayJson])
+
+  useEffect(
+    () =>
+      onSolutionRequest(() =>
+        publishSolution(JSON.parse(overlayJsonRef.current))
+      ),
+    []
+  )
+
+  // Обработчик глобальных клавиш видит актуальное состояние через ref
+  const globalHotkeyRef = useRef<(action: HotkeyAction) => void>(() => {})
+  useEffect(() => {
+    globalHotkeyRef.current = (action) => {
+      if (action === 'fire') timerRef.current?.fire()
+      if (action === 'mode') hotkeys.KeyM()
+    }
+  })
+  useEffect(() => onHotkey((action) => globalHotkeyRef.current(action)), [])
 
   return (
     <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">

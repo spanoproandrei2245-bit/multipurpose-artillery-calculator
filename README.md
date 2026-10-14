@@ -64,6 +64,21 @@ Then open http://localhost:5173.
 | `npm run tables:check` | Check that table JSON matches `web/data-sources` |
 | `node scripts/make-icons.mjs` | Regenerate the app icons in `web/public` |
 
+## Desktop app (Windows)
+
+The same app runs as a desktop program (Tauri 2) with an **overlay window**
+that stays on top of Arma 3 and **global shortcuts** that work while the game
+is focused: `Ctrl+Alt+F` fire (start the timer), `Ctrl+Alt+O` show/hide the
+overlay, `Ctrl+Alt+M` switch HIGH/LOW. Set Arma's display mode to
+*Fullscreen Window* or *Window*: nothing can be drawn over exclusive fullscreen.
+
+- **Download:** the `Desktop app` workflow builds a Windows installer on every
+  push; get it from the run's `artillery-calculator-windows` artifact.
+- **Build locally:** install [Rust](https://rustup.rs) and
+  [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+  with the *Desktop development with C++* workload, then in `web/`:
+  `npm run desktop:dev` (development) or `npm run desktop:build` (installer).
+
 ## Deployment
 
 `.github/workflows/deploy-pages.yml` builds the app and publishes it to
