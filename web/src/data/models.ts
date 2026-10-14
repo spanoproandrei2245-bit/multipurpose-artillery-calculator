@@ -40,6 +40,15 @@ export const models = {
     modes: ['HIGH'],
     notes: 'S.O.G. Prairie Fire 105mm howitzer.',
   },
+
+  seara: {
+    name: 'Seara (227 mm)',
+    mod: 'Arma 3 · M5 Sandstorm MLRS',
+    category: 'mlrs',
+    modes: ['HIGH', 'LOW'],
+    notes:
+      'Vanilla M5 Sandstorm MLRS, M269 launcher, 227 mm HE rockets (ACE realistic name: Seara).',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
