@@ -44,7 +44,10 @@ type Translation = {
     desktop: string
     desktopDescription: string
     toggleOverlay: string
-    hotkeys: Record<'fire' | 'overlay' | 'mode', string>
+    hotkeys: Record<
+      'fire' | 'overlay' | 'mode' | 'next-target' | 'previous-target',
+      string
+    >
     armaDisplayMode: string
   }
 }
@@ -99,6 +102,8 @@ export const translations: Record<Language, Translation> = {
         fire: 'Fire — start the timer',
         overlay: 'Show / hide the overlay',
         mode: 'Switch HIGH / LOW',
+        'next-target': 'Next saved target',
+        'previous-target': 'Previous saved target',
       },
       armaDisplayMode:
         'In Arma 3 set Display Mode to "Fullscreen Window" or "Window": the overlay cannot be drawn over exclusive fullscreen.',
@@ -157,6 +162,8 @@ export const translations: Record<Language, Translation> = {
         fire: 'Огонь — запустить таймер',
         overlay: 'Показать / скрыть оверлей',
         mode: 'Переключить HIGH / LOW',
+        'next-target': 'Следующая сохранённая цель',
+        'previous-target': 'Предыдущая сохранённая цель',
       },
       armaDisplayMode:
         'В Arma 3 поставьте режим экрана «Полноэкранный в окне» (Fullscreen Window) или «Оконный»: поверх эксклюзивного полноэкранного режима оверлей не рисуется.',

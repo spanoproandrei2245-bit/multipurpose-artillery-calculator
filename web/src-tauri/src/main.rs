@@ -8,12 +8,14 @@ use tauri_plugin_global_shortcut::{
 
 /// Глобальные горячие клавиши: работают, когда в фокусе игра.
 /// Нажатие пересылается в окна событием `hotkey` с названием действия.
-fn shortcuts() -> [(Shortcut, &'static str); 3] {
+fn shortcuts() -> [(Shortcut, &'static str); 5] {
     let modifiers = Some(Modifiers::CONTROL | Modifiers::ALT);
     [
         (Shortcut::new(modifiers, Code::KeyF), "fire"),
         (Shortcut::new(modifiers, Code::KeyO), "overlay"),
         (Shortcut::new(modifiers, Code::KeyM), "mode"),
+        (Shortcut::new(modifiers, Code::KeyN), "next-target"),
+        (Shortcut::new(modifiers, Code::KeyP), "previous-target"),
     ]
 }
 

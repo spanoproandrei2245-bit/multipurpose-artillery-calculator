@@ -167,7 +167,8 @@ export function OverlayApp() {
 
       <p data-tauri-drag-region className="mt-1 text-[10px] text-white/40">
         Ctrl+Alt+F — {ru ? 'огонь' : 'fire'} · Ctrl+Alt+O —{' '}
-        {ru ? 'скрыть' : 'hide'} · Ctrl+Alt+M — HIGH/LOW
+        {ru ? 'скрыть' : 'hide'} · Ctrl+Alt+M — HIGH/LOW · Ctrl+Alt+N/P —{' '}
+        {ru ? 'цели' : 'targets'}
       </p>
     </div>
   )

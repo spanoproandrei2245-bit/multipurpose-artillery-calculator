@@ -216,6 +216,34 @@ export function mergeEntries(
   }
 }
 
+/** Сколько последних целей в полоске и при переключении клавишами */
+export const RECENT_TARGETS = 10
+
+/** Последние цели, свежие первыми (полоска целей и переключение). */
+export function recentEntries(
+  entries: readonly JournalEntry[],
+  limit = RECENT_TARGETS
+): JournalEntry[] {
+  return [...entries]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, limit)
+}
+
+/**
+ * Соседняя цель по списку recent: direction 1 — следующая (старше),
+ * −1 — предыдущая. Без текущей — самая свежая.
+ */
+export function neighbourEntry(
+  list: readonly JournalEntry[],
+  currentId: string | null,
+  direction: 1 | -1
+): JournalEntry | undefined {
+  if (list.length === 0) return undefined
+  const index = list.findIndex((e) => e.id === currentId)
+  if (index === -1) return list[0]
+  return list[(index + direction + list.length) % list.length]
+}
+
 /** Поиск по названию, модели и дистанции (без учёта регистра). */
 export function matchesQuery(
   entry: JournalEntry,

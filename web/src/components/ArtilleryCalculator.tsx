@@ -1002,6 +1002,7 @@ export function ArtilleryCalculator({
               ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
               ['B', ru ? 'Боевой экран' : 'Combat screen'],
               ['M', ru ? 'Режим HIGH / LOW' : 'HIGH / LOW mode'],
+              ['N / P', ru ? 'Следующая / предыдущая цель' : 'Next / previous target'],
               ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
               ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
               ['D', ru ? 'К полю дистанции' : 'Go to distance'],

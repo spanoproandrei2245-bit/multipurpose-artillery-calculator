@@ -75,8 +75,12 @@ is focused: `Ctrl+Alt+F` fire (start the timer), `Ctrl+Alt+O` show/hide the
 overlay, `Ctrl+Alt+M` switch HIGH/LOW. Set Arma's display mode to
 *Fullscreen Window* or *Window*: nothing can be drawn over exclusive fullscreen.
 
-- **Download:** the `Desktop app` workflow builds a Windows installer on every
-  push; get it from the run's `artillery-calculator-windows` artifact.
+- **Download:** the installer is attached to each
+  [GitHub release](../../releases) (a `v*` tag publishes one). Every push also
+  builds it as the `artillery-calculator-windows` artifact of the
+  `Desktop app` workflow.
+- Shortcuts: `Ctrl+Alt+N` / `Ctrl+Alt+P` switch to the next / previous saved
+  target (`N` / `P` inside the app window).
 - **Build locally:** install [Rust](https://rustup.rs) and
   [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
   with the *Desktop development with C++* workload, then in `web/`:

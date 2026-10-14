@@ -1,5 +1,5 @@
 import { isModelId, models } from '../data/models'
-import type { JournalEntry } from '../lib/journal'
+import { recentEntries, type JournalEntry } from '../lib/journal'
 import type { Language } from '../types/settings'
 
 interface Props {
@@ -8,9 +8,6 @@ interface Props {
   onLoad: (entry: JournalEntry) => void
   language: Language
 }
-
-// Сколько последних целей показывать в полоске
-const LIMIT = 10
 
 /** Короткое имя модели: «M252 (81 mm)» → «M252». */
 function shortModel(modelId: string): string {
@@ -26,9 +23,7 @@ export function TargetBar({ entries, activeId, onLoad, language }: Props) {
 
   if (entries.length === 0) return null
 
-  const recent = [...entries]
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .slice(0, LIMIT)
+  const recent = recentEntries(entries)
 
   return (
     <div className="mt-4">

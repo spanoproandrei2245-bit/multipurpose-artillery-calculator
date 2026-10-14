@@ -1,15 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { ArtilleryCalculator } from '../components/ArtilleryCalculator'
 import { ModelSelector } from '../components/ModelSelector'
 import { ShotJournal } from '../components/ShotJournal'
 import { TargetBar } from '../components/TargetBar'
 import { isModelId, type ModelId } from '../data/models'
+import { onHotkey } from '../lib/desktop'
 import {
+  neighbourEntry,
+  recentEntries,
   useJournal,
   type JournalDraft,
   type JournalEntry,
 } from '../lib/journal'
+import { useHotkeys } from '../lib/useHotkeys'
 import type { Language } from '../types/settings'
 
 interface DashboardPageProps {
@@ -64,6 +68,33 @@ export function DashboardPage({
       nonce: (previous?.nonce ?? 0) + 1,
     }))
   }
+
+  // Переключение сохранённых целей: N / P в окне, Ctrl+Alt+N / P в игре
+  function cycleTarget(direction: 1 | -1) {
+    const list = recentEntries(journal.entries).filter((e) =>
+      isModelId(e.modelId)
+    )
+    const next = neighbourEntry(list, activeId, direction)
+    if (next) handleLoad(next)
+  }
+
+  useHotkeys({
+    KeyN: () => cycleTarget(1),
+    KeyP: () => cycleTarget(-1),
+  })
+
+  const cycleRef = useRef(cycleTarget)
+  useEffect(() => {
+    cycleRef.current = cycleTarget
+  })
+  useEffect(
+    () =>
+      onHotkey((action) => {
+        if (action === 'next-target') cycleRef.current(1)
+        if (action === 'previous-target') cycleRef.current(-1)
+      }),
+    []
+  )
 
   function handleSave(draft: JournalDraft) {
     setActiveId(journal.add(draft).id)

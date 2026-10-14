@@ -16,7 +16,12 @@ export const isOverlayWindow =
   typeof window !== 'undefined' && window.location.hash === '#overlay'
 
 /** Глобальные горячие клавиши (src-tauri/src/main.rs). */
-export type HotkeyAction = 'fire' | 'overlay' | 'mode'
+export type HotkeyAction =
+  | 'fire'
+  | 'overlay'
+  | 'mode'
+  | 'next-target'
+  | 'previous-target'
 
 export const GLOBAL_HOTKEYS: readonly {
   keys: string
@@ -25,6 +30,8 @@ export const GLOBAL_HOTKEYS: readonly {
   { keys: 'Ctrl + Alt + F', action: 'fire' },
   { keys: 'Ctrl + Alt + O', action: 'overlay' },
   { keys: 'Ctrl + Alt + M', action: 'mode' },
+  { keys: 'Ctrl + Alt + N', action: 'next-target' },
+  { keys: 'Ctrl + Alt + P', action: 'previous-target' },
 ]
 
 /** Что показывает оверлей. null — решения нет. */
