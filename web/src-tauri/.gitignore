@@ -1,0 +1,3 @@
+# Сборка Rust и сгенерированные схемы Tauri
+/target/
+/gen/schemas

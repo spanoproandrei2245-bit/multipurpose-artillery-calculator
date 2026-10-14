@@ -23,7 +23,7 @@ export function Header({ language }: HeaderProps) {
         </div>
 
         <span className="rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
-          {t.status}
+          {t.status} · v{__APP_VERSION__}
         </span>
       </div>
     </header>

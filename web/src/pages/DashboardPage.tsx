@@ -1,54 +1,154 @@
-import { ArtilleryReferencePanel } from '../components/ArtilleryReferencePanel'
-import { Mk6Prototype } from '../components/Mk6Prototype'
+import { useEffect, useRef, useState } from 'react'
+
+import { ArtilleryCalculator } from '../components/ArtilleryCalculator'
 import { ModelSelector } from '../components/ModelSelector'
-import { ModelDetails } from '../components/ModelDetails'
-import { models, type ModelId } from '../data/models'
-import { translations } from '../i18n/translations'
+import { ShotJournal } from '../components/ShotJournal'
+import { TargetBar } from '../components/TargetBar'
+import { isModelId, type ModelId } from '../data/models'
+import { onHotkey } from '../lib/desktop'
+import {
+  neighbourEntry,
+  recentEntries,
+  useJournal,
+  type JournalDraft,
+  type JournalEntry,
+} from '../lib/journal'
+import { useHotkeys } from '../lib/useHotkeys'
 import type { Language } from '../types/settings'
 
 interface DashboardPageProps {
   selectedModel: ModelId
   onModelChange: (model: ModelId) => void
   language: Language
+  gridInput: boolean
+  mapInput: boolean
+}
+
+interface LoadRequest {
+  entry: JournalEntry
+  nonce: number
 }
 
 export function DashboardPage({
   selectedModel,
   onModelChange,
   language,
+  gridInput,
+  mapInput,
 }: DashboardPageProps) {
-  const model = models[selectedModel]
-  const t = translations[language].dashboard
+  const journal = useJournal()
+  const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
+    null
+  )
+  // Цель, с которой сейчас работает калькулятор (загружена или
+  // только что сохранена) — её можно обновить.
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const activeEntry =
+    journal.entries.find(
+      (e) => e.id === activeId && e.modelId === selectedModel
+    ) ?? null
+
+  // Ручная смена модели сбрасывает ранее загруженную запись.
+  function handleModelChange(id: ModelId) {
+    setLoadRequest(null)
+    setActiveId(null)
+    onModelChange(id)
+  }
+
+  // Загрузка записи журнала: переключаем модель и восстанавливаем вводные.
+  function handleLoad(entry: JournalEntry) {
+    if (!isModelId(entry.modelId)) return
+
+    if (entry.modelId !== selectedModel) onModelChange(entry.modelId)
+    setActiveId(entry.id)
+
+    setLoadRequest((previous) => ({
+      entry,
+      nonce: (previous?.nonce ?? 0) + 1,
+    }))
+  }
+
+  // Переключение сохранённых целей: N / P в окне, Ctrl+Alt+N / P в игре
+  function cycleTarget(direction: 1 | -1) {
+    const list = recentEntries(journal.entries).filter((e) =>
+      isModelId(e.modelId)
+    )
+    const next = neighbourEntry(list, activeId, direction)
+    if (next) handleLoad(next)
+  }
+
+  useHotkeys({
+    KeyN: () => cycleTarget(1),
+    KeyP: () => cycleTarget(-1),
+  })
+
+  const cycleRef = useRef(cycleTarget)
+  useEffect(() => {
+    cycleRef.current = cycleTarget
+  })
+  useEffect(
+    () =>
+      onHotkey((action) => {
+        if (action === 'next-target') cycleRef.current(1)
+        if (action === 'previous-target') cycleRef.current(-1)
+      }),
+    []
+  )
+
+  function handleSave(draft: JournalDraft) {
+    setActiveId(journal.add(draft).id)
+  }
+
+  function handleUpdate(id: string, draft: JournalDraft) {
+    journal.update(id, draft)
+  }
+
+  const initial =
+    loadRequest && loadRequest.entry.modelId === selectedModel
+      ? loadRequest.entry
+      : null
+
+  const selector = (
+    <ModelSelector
+      value={selectedModel}
+      onChange={handleModelChange}
+      language={language}
+    />
+  )
 
   return (
     <section>
-      <h2 className="text-2xl font-bold text-app-text">
-        {t.title}
-      </h2>
-
-      <p className="mt-2 text-app-muted">
-        {t.description}
-      </p>
-
-      <div className="mt-8 max-w-xl rounded-xl border border-app-border bg-app-surface p-6">
-        <ModelSelector
-          value={selectedModel}
-          onChange={onModelChange}
-          language={language}
-        />
-
-        <ModelDetails
-          model={model}
-          modelId={selectedModel}
-          language={language}
-        />
-      </div>
-      {selectedModel === 'mk6' && (
-       <Mk6Prototype language={language} />
-        )}
-        <ArtilleryReferencePanel
+      <ArtilleryCalculator
+        key={`${selectedModel}-${loadRequest?.nonce ?? 0}`}
         modelId={selectedModel}
+        modelSelector={selector}
+        targetBar={
+          <TargetBar
+            entries={journal.entries}
+            activeId={activeEntry?.id ?? null}
+            onLoad={handleLoad}
+            language={language}
+          />
+        }
         language={language}
+        initial={initial}
+        gridInput={gridInput}
+        mapInput={mapInput}
+        activeEntry={activeEntry}
+        onSave={handleSave}
+        onUpdate={handleUpdate}
+      />
+
+      <ShotJournal
+        entries={journal.entries}
+        language={language}
+        activeId={activeEntry?.id ?? null}
+        onLoad={handleLoad}
+        onRename={journal.rename}
+        onRemove={journal.remove}
+        onClearDay={journal.clearDay}
+        onImport={journal.importEntries}
       />
     </section>
   )

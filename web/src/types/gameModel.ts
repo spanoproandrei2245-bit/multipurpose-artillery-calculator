@@ -1,12 +1,14 @@
 export type GameMode = 'HIGH' | 'LOW'
 
-export type ImportStatus = 'screenshots' | 'verified'
+// Класс орудия: определяет иконку и цвет рамки в интерфейсе.
+//   mortar — миномёт, towed — буксируемое орудие (пушка, гаубица),
+//   spg — самоходная артиллерийская установка, mlrs — РСЗО.
+export type ArtilleryCategory = 'mortar' | 'towed' | 'spg' | 'mlrs'
 
 export interface GameModel {
   name: string
   mod: string
+  category: ArtilleryCategory
   modes: readonly GameMode[]
-  source: string
-  importStatus: ImportStatus
   notes: string
 }

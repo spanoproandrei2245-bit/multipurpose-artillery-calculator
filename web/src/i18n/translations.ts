@@ -1,6 +1,5 @@
 
 import type { Language } from '../types/settings'
-import type { ModelId } from '../data/models'
 
 type Translation = {
   header: {
@@ -10,32 +9,19 @@ type Translation = {
   }
   navigation: {
     dashboard: string
+    sync: string
     models: string
     settings: string
-  }
-  dashboard: {
-    title: string
-    description: string
   }
   modelsPage: {
     title: string
     description: string
     modes: string
-    source: string
     openDashboard: string
   }
   modelSelector: {
     label: string
   }
-  modelDetails: {
-    modification: string
-    availableModes: string
-    dataSource: string
-    importStatus: string
-    screenshots: string
-    verified: string
-  }
-  modelNotes: Record<ModelId, string>
   settings: {
     title: string
     description: string
@@ -45,6 +31,25 @@ type Translation = {
     theme: string
     light: string
     dark: string
+    experimental: string
+    experimentalDescription: string
+    gridInput: string
+    gridInputDescription: string
+    mapInput: string
+    mapInputDescription: string
+    keepAwake: string
+    keepAwakeDescription: string
+    keepAwakeUnsupported: string
+    openOnPhone: string
+    openOnPhoneDescription: string
+    desktop: string
+    desktopDescription: string
+    toggleOverlay: string
+    hotkeys: Record<
+      'fire' | 'overlay' | 'input' | 'mode' | 'next-target' | 'previous-target',
+      string
+    >
+    armaDisplayMode: string
   }
 }
 
@@ -52,39 +57,23 @@ export const translations: Record<Language, Translation> = {
   en: {
     header: {
       title: 'Multipurpose Artillery Calculator',
-      subtitle: 'Game Companion',
+      subtitle: 'made by Heis',
       status: 'Alpha',
     },
     navigation: {
       dashboard: 'Dashboard',
+      sync: 'Link',
       models: 'Models',
       settings: 'Settings',
-    },
-    dashboard: {
-      title: 'Dashboard',
-      description: 'Select a game model to view its information.',
     },
     modelsPage: {
       title: 'Game Models',
       description: 'Select a model to open its dashboard.',
       modes: 'Modes',
-      source: 'Source',
       openDashboard: 'Open Dashboard',
     },
     modelSelector: {
       label: 'Game Model',
-    },
-    modelDetails: {
-      modification: 'Modification',
-      availableModes: 'Available modes',
-      dataSource: 'Data source',
-      importStatus: 'Import status',
-      screenshots: 'Screenshots collected',
-      verified: 'Verified',
-    },
-    modelNotes: {
-      mk6: 'Vanilla 82mm mortar.',
-      m252: 'RHSUSAF 81mm mortar.',
     },
     settings: {
       title: 'Settings',
@@ -95,45 +84,58 @@ export const translations: Record<Language, Translation> = {
       theme: 'Appearance',
       light: 'Light',
       dark: 'Dark',
+      experimental: 'Experimental features',
+      experimentalDescription: 'May change or be removed in future versions.',
+      mapInput: 'Map with heights',
+      mapInputDescription:
+        'Export terrain heights from the game with a script, then click the gun and the target: distance, azimuth and both heights are filled in.',
+      gridInput: 'Grid coordinate input',
+      gridInputDescription:
+        'Distance and azimuth from the gun and target grid references (6, 8 or 10 digits).',
+      keepAwake: 'Keep the screen on',
+      keepAwakeDescription:
+        'While the app is open — handy for a phone next to the keyboard. The combat screen always keeps it on.',
+      keepAwakeUnsupported: 'Not supported by this browser.',
+      desktop: 'Desktop app',
+      desktopDescription:
+        'An overlay window stays on top of the game; global shortcuts work while Arma is focused.',
+      toggleOverlay: 'Show / hide overlay',
+      hotkeys: {
+        fire: 'Fire — start the timer',
+        overlay: 'Show / hide the overlay',
+        mode: 'Switch HIGH / LOW',
+        'next-target': 'Next saved target',
+        'previous-target': 'Previous saved target',
+        input: 'Type in the overlay (distance field)',
+      },
+      armaDisplayMode:
+        'In Arma 3 set Display Mode to "Fullscreen Window" or "Window": the overlay cannot be drawn over exclusive fullscreen.',
+      openOnPhone: 'Open on a phone',
+      openOnPhoneDescription:
+        'Scan the code to open the calculator on your phone. It can be installed as an app and works offline.',
     },
   },
 
   ru: {
     header: {
       title: 'Multipurpose Artillery Calculator',
-      subtitle: 'Игровой помощник',
+      subtitle: 'made by Heis',
       status: 'Альфа',
     },
     navigation: {
       dashboard: 'Главная',
+      sync: 'Связка',
       models: 'Модели',
       settings: 'Настройки',
-    },
-    dashboard: {
-      title: 'Главная панель',
-      description: 'Выберите игровую модель для просмотра информации.',
     },
     modelsPage: {
       title: 'Игровые модели',
       description: 'Выберите модель, чтобы открыть её панель.',
       modes: 'Режимы',
-      source: 'Источник',
       openDashboard: 'Открыть панель',
     },
     modelSelector: {
       label: 'Игровая модель',
-    },
-    modelDetails: {
-      modification: 'Модификация',
-      availableModes: 'Доступные режимы',
-      dataSource: 'Источник данных',
-      importStatus: 'Статус импорта',
-      screenshots: 'Скриншоты получены',
-      verified: 'Проверено',
-    },
-    modelNotes: {
-      mk6: 'Стандартный 82-мм миномёт.',
-      m252: '81-мм миномёт из RHSUSAF.',
     },
     settings: {
       title: 'Настройки',
@@ -144,6 +146,35 @@ export const translations: Record<Language, Translation> = {
       theme: 'Тема оформления',
       light: 'Светлая',
       dark: 'Тёмная',
+      experimental: 'Экспериментальные функции',
+      experimentalDescription: 'Могут измениться или исчезнуть в следующих версиях.',
+      mapInput: 'Карта с высотами',
+      mapInputDescription:
+        'Выгрузите высоты карты скриптом из игры, затем кликните орудие и цель — дистанция, азимут и обе высоты подставятся сами.',
+      gridInput: 'Ввод по координатам сетки',
+      gridInputDescription:
+        'Дистанция и азимут по координатам орудия и цели (6, 8 или 10 цифр).',
+      keepAwake: 'Не гасить экран',
+      keepAwakeDescription:
+        'Пока приложение открыто — удобно для телефона рядом с клавиатурой. Боевой экран не даёт экрану гаснуть всегда.',
+      keepAwakeUnsupported: 'Этот браузер не поддерживает.',
+      desktop: 'Программа для ПК',
+      desktopDescription:
+        'Окно-оверлей держится поверх игры, глобальные клавиши работают, пока в фокусе Arma.',
+      toggleOverlay: 'Показать / скрыть оверлей',
+      hotkeys: {
+        fire: 'Огонь — запустить таймер',
+        overlay: 'Показать / скрыть оверлей',
+        mode: 'Переключить HIGH / LOW',
+        'next-target': 'Следующая сохранённая цель',
+        'previous-target': 'Предыдущая сохранённая цель',
+        input: 'Ввод в оверлее (поле дистанции)',
+      },
+      armaDisplayMode:
+        'В Arma 3 поставьте режим экрана «Полноэкранный в окне» (Fullscreen Window) или «Оконный»: поверх эксклюзивного полноэкранного режима оверлей не рисуется.',
+      openOnPhone: 'Открыть на телефоне',
+      openOnPhoneDescription:
+        'Отсканируйте код, чтобы открыть калькулятор на телефоне. Его можно установить как приложение — работает без интернета.',
     },
   },
 }
