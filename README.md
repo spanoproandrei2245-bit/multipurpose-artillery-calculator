@@ -10,12 +10,14 @@ corrections and fire adjustment.
 > азимут и время полёта по таблицам ACE из игры, с погодными поправками
 > и корректировкой огня. Интерфейс на русском и английском.
 
-**Status:** alpha (v0.9). Made by Heis.
+**Status:** alpha (v0.10). Made by Heis.
 
 ## Features
 
 - **Supported weapons:** Mk6 (82 mm, vanilla), M252 (81 mm, RHSUSAF),
-  M29 (81 mm), M2 (60 mm) and M101 (105 mm) from S.O.G. Prairie Fire
+  M29 (81 mm), M2 (60 mm) and M101 (105 mm) from S.O.G. Prairie Fire,
+  Seara / M5 Sandstorm MLRS (227 mm, vanilla)
+- **HIGH and LOW** (high- and low-angle) tables where the game has both
 - **Firing solution for every charge**, with interpolation between table rows
 - **Height difference correction** (the ACE "D ELEV per 100 m" rule)
 - **Weather corrections** for ACE advanced corrections: wind (speed and
