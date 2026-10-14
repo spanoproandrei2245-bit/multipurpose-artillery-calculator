@@ -77,7 +77,9 @@ Then open http://localhost:5173.
 The same app runs as a desktop program (Tauri 2) with an **overlay window**
 that stays on top of Arma 3 and **global shortcuts** that work while the game
 is focused: `Ctrl+Alt+F` fire (start the timer), `Ctrl+Alt+O` show/hide the
-overlay, `Ctrl+Alt+M` switch HIGH/LOW. Set Arma's display mode to
+overlay, `Ctrl+Alt+D` type in the overlay (distance, azimuth, heights,
+charge, impact reports) without switching windows, `Ctrl+Alt+M` switch
+HIGH/LOW. Set Arma's display mode to
 *Fullscreen Window* or *Window*: nothing can be drawn over exclusive fullscreen.
 
 - **Download:** the installer is attached to each

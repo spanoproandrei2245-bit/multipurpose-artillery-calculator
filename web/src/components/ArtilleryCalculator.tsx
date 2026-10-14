@@ -23,15 +23,17 @@ import {
   readStored,
   writeStored,
 } from '../lib/input'
-import { sumAdjustments } from '../lib/adjust'
+import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
 import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
 import {
   onHotkey,
+  onOverlayCommand,
   onSolutionRequest,
   publishSolution,
   type HotkeyAction,
-  type OverlaySolution,
+  type OverlayCommand,
+  type OverlayState,
 } from '../lib/desktop'
 import { useHotkeys, type HotkeyMap } from '../lib/useHotkeys'
 import { useWeatherInputs } from '../lib/useWeatherInputs'
@@ -441,23 +443,35 @@ export function ArtilleryCalculator({
       : []
 
   // ---- программа для ПК: оверлей поверх игры и глобальные клавиши ----
-  const overlaySolution: OverlaySolution | null =
-    solution && activeResult
-      ? {
-          language,
-          title: reference.name,
-          targetName: activeEntry?.name ?? null,
-          charge: activeResult.charge,
-          mode,
-          elevation: solution.elevation,
-          azimuth:
-            firingAzimuth === null ? null : formatAzimuth(firingAzimuth),
-          azimuthUnit: unitAzimuth,
-          tof: solution.tof,
-        }
-      : null
+  const overlayState: OverlayState = {
+    language,
+    title: reference.name,
+    targetName: activeEntry?.name ?? null,
+    mode,
+    modes: profileModes,
+    charges: applicable.map((r) => r.charge),
+    azimuthUnit: unitAzimuth,
+    fields: { distance, azimuth, ownHeight, targetHeight },
+    adjust: {
+      range: rangeAdjust,
+      lateral: lateralAdjust,
+      count: adjustHistory.length,
+    },
+    solution:
+      solution && activeResult
+        ? {
+            charge: activeResult.charge,
+            mode,
+            elevation: solution.elevation,
+            azimuth:
+              firingAzimuth === null ? null : formatAzimuth(firingAzimuth),
+            azimuthUnit: unitAzimuth,
+            tof: solution.tof,
+          }
+        : null,
+  }
   // Строка — чтобы отправлять в оверлей только реальные изменения
-  const overlayJson = JSON.stringify(overlaySolution)
+  const overlayJson = JSON.stringify(overlayState)
   const overlayJsonRef = useRef(overlayJson)
 
   useEffect(() => {
@@ -482,6 +496,67 @@ export function ArtilleryCalculator({
     }
   })
   useEffect(() => onHotkey((action) => globalHotkeyRef.current(action)), [])
+
+  // Ввод из оверлея — те же действия, что и в основном окне
+  function describeSpot(over: number, right: number): string {
+    const parts: string[] = []
+    if (over !== 0) {
+      const side =
+        over > 0 ? (ru ? 'перелёт' : 'over') : ru ? 'недолёт' : 'short'
+      parts.push(`${side} ${Math.abs(over)}`)
+    }
+    if (right !== 0) {
+      const side =
+        right > 0 ? (ru ? 'правее' : 'right') : ru ? 'левее' : 'left'
+      parts.push(`${side} ${Math.abs(right)}`)
+    }
+    return `${parts.join(', ')} (${ru ? 'оверлей' : 'overlay'})`
+  }
+
+  const overlayCommandRef = useRef<(command: OverlayCommand) => void>(
+    () => {}
+  )
+  useEffect(() => {
+    overlayCommandRef.current = (command) => {
+      switch (command.type) {
+        case 'field': {
+          const setters = {
+            distance: setDistance,
+            azimuth: setAzimuth,
+            ownHeight: setOwnHeight,
+            targetHeight: setTargetHeight,
+          }
+          edited(setters[command.field])(command.value)
+          break
+        }
+        case 'charge':
+          selectCharge(command.charge)
+          break
+        case 'mode':
+          hotkeys.KeyM()
+          break
+        case 'spot':
+          if (command.over === 0 && command.right === 0) break
+          setAdjustHistory((list) => [
+            ...list,
+            {
+              ...reportToAdjustment(command),
+              label: describeSpot(command.over, command.right),
+            },
+          ])
+          markEdited()
+          break
+        case 'undo-adjust':
+          setAdjustHistory((list) => list.slice(0, -1))
+          markEdited()
+          break
+      }
+    }
+  })
+  useEffect(
+    () => onOverlayCommand((command) => overlayCommandRef.current(command)),
+    []
+  )
 
   return (
     <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">
