@@ -3,6 +3,8 @@ import QRCode from 'qrcode'
 
 import { CombatScreen } from '../components/CombatScreen'
 import { FireTimer, type FireTimerHandle } from '../components/FireTimer'
+import { TotPanel } from '../components/TotPanel'
+import { fireMoment } from '../lib/tot'
 import { SectionHeading, Toggle } from '../components/FormControls'
 import { PageIntro } from '../components/PageIntro'
 import {
@@ -446,6 +448,8 @@ function GunnerView({ language }: Props) {
         }
       : null,
     readOnly: true,
+    fireAt:
+      solution?.tot != null ? fireMoment(solution.tot, solution.tof) : null,
   }
   const overlayJson = JSON.stringify(overlayState)
   const overlayJsonRef = useRef(overlayJson)
@@ -552,6 +556,16 @@ function GunnerView({ language }: Props) {
           onFire={handleFire}
         />
       )}
+
+      <TotPanel
+        tof={solution.tof}
+        impactAt={solution.tot ?? null}
+        onFireMoment={() => {
+          timerRef.current?.remoteFire()
+          notifyOverlayShot()
+        }}
+        language={language}
+      />
 
       <button
         type="button"

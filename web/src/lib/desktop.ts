@@ -72,6 +72,8 @@ export interface OverlayState {
   solution: FiringSolution | null
   // Решение пришло от наводчика по связке: ввод в оверлее не нужен
   readOnly?: boolean
+  // Огонь по времени: момент выстрела, мс; null — нет
+  fireAt?: number | null
 }
 
 /** Команда из оверлея в основное окно. */

@@ -57,6 +57,8 @@ import { GridInput } from './GridInput'
 import { MapPicker } from './MapPicker'
 import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
+import { TotPanel } from './TotPanel'
+import { fireMoment } from '../lib/tot'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -144,6 +146,9 @@ export function ArtilleryCalculator({
   )
   const { range: rangeAdjust, lateral: lateralAdjust } =
     sumAdjustments(adjustHistory)
+
+  // Огонь по времени: момент разрыва, мс
+  const [totAt, setTotAt] = useState<number | null>(null)
 
   const [chosenCharge, setChosenCharge] = useState<number | null>(
     initial?.charge ?? null
@@ -497,6 +502,8 @@ export function ArtilleryCalculator({
       lateral: lateralAdjust,
       count: adjustHistory.length,
     },
+    fireAt:
+      totAt !== null && solution ? fireMoment(totAt, solution.tof) : null,
     solution:
       solution && activeResult
         ? {
@@ -609,6 +616,7 @@ export function ArtilleryCalculator({
         ...overlayState.solution,
         title: reference.name,
         targetName: activeEntry?.name ?? null,
+        tot: totAt,
       }
     : null
   const syncJson = JSON.stringify(syncSolution)
@@ -984,6 +992,18 @@ export function ArtilleryCalculator({
                   {ru ? 'Боевой экран' : 'Combat screen'}
                   <span className="kbd hidden sm:inline-block">B</span>
                 </button>
+
+                <TotPanel
+                  tof={solution.tof}
+                  impactAt={totAt}
+                  onImpactChange={setTotAt}
+                  onFireMoment={() => {
+                    // Только у себя: стрелки по связке ведут свой отсчёт
+                    timerRef.current?.remoteFire()
+                    notifyOverlayShot()
+                  }}
+                  language={language}
+                />
 
                 {combatOpen && (
                   <CombatScreen

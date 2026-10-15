@@ -42,6 +42,8 @@ export interface SyncSolution {
   azimuth: string | null
   azimuthUnit: string
   tof: number
+  // Огонь по времени: момент разрыва, мс (часы устройства); null — нет
+  tot?: number | null
 }
 
 export type SyncMessage =
@@ -220,7 +222,8 @@ function parseSolution(value: unknown): SyncSolution | null | undefined {
     (s.azimuth === null || isString(s.azimuth)) &&
     isString(s.azimuthUnit) &&
     isNumber(s.tof) &&
-    s.tof > 0
+    s.tof > 0 &&
+    (s.tot === undefined || s.tot === null || isNumber(s.tot))
   if (!valid) return undefined
   return {
     title: s.title as string,
@@ -231,6 +234,7 @@ function parseSolution(value: unknown): SyncSolution | null | undefined {
     azimuth: s.azimuth as string | null,
     azimuthUnit: s.azimuthUnit as string,
     tof: s.tof as number,
+    tot: (s.tot as number | null | undefined) ?? null,
   }
 }
 

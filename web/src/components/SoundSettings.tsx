@@ -19,8 +19,14 @@ const LABELS: Record<SoundEvent, { ru: string; en: string }> = {
   fire: { ru: 'Выстрел (нажали «Огонь»)', en: 'Fire (button pressed)' },
   splash: { ru: 'Сплэш — 5 с до разрыва', en: 'Splash — 5 s to impact' },
   impact: { ru: 'Разрыв', en: 'Impact' },
-  mrsiTick: { ru: 'MRSI: отсчёт 3-2-1', en: 'MRSI: 3-2-1 countdown' },
-  mrsiFire: { ru: 'MRSI: «огонь»', en: 'MRSI: fire' },
+  mrsiTick: {
+    ru: 'Отсчёт 3-2-1 (MRSI, по времени)',
+    en: '3-2-1 countdown (MRSI, on time)',
+  },
+  mrsiFire: {
+    ru: '«Огонь» (MRSI, по времени)',
+    en: 'Fire (MRSI, on time)',
+  },
   syncUpdate: {
     ru: 'Связка: новые установки',
     en: 'Link: new settings',

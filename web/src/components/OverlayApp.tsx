@@ -147,6 +147,19 @@ export function OverlayApp() {
     return () => window.clearInterval(interval)
   }, [shot])
 
+  // Огонь по времени: отсчёт до выстрела
+  const fireAt = state?.fireAt ?? null
+  useEffect(() => {
+    if (fireAt === null) return
+    const interval = window.setInterval(() => {
+      const current = Date.now()
+      setNow(current)
+      if (current - fireAt > 4000) window.clearInterval(interval)
+    }, 100)
+    return () => window.clearInterval(interval)
+  }, [fireAt])
+  const totLeft = fireAt === null ? null : (fireAt - now) / 1000
+
   const ru = (state?.language ?? 'ru') === 'ru'
   const solution = state?.solution ?? null
   const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null
@@ -277,6 +290,28 @@ export function OverlayApp() {
             : ru
               ? 'Введите дистанцию — здесь (Ввод) или в основном окне.'
               : 'Enter a distance — here (Input) or in the main window.'}
+        </p>
+      )}
+
+      {totLeft !== null && totLeft > -3 && !shot && (
+        <p
+          className={[
+            'mt-2 flex items-baseline justify-between border px-2 py-1',
+            totLeft <= 5 ? 'border-accent text-accent' : 'border-white/15',
+          ].join(' ')}
+        >
+          <span className="label text-current">
+            {totLeft <= 0
+              ? ru
+                ? 'Огонь!'
+                : 'Fire!'
+              : ru
+                ? 'Выстрел по времени'
+                : 'Fire on time'}
+          </span>
+          <span className="mono-num text-lg">
+            T−{Math.max(0, totLeft).toFixed(1)}
+          </span>
         </p>
       )}
 
