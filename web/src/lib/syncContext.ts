@@ -92,10 +92,10 @@ export function syncStatusText(status: SyncStatus, ru: boolean): string {
 
 export function syncStatusColor(status: SyncStatus): string {
   return status === 'online'
-    ? 'bg-emerald-500'
+    ? 'bg-ok'
     : status === 'connecting'
-      ? 'bg-amber-500'
+      ? 'bg-warn'
       : status === 'off'
-        ? 'bg-app-muted'
-        : 'bg-red-500'
+        ? 'bg-app-faint'
+        : 'bg-danger'
 }

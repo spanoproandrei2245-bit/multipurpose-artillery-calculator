@@ -57,25 +57,26 @@ export function WeatherSection({
   return (
     <details
       open={defaultOpen}
-      className="mt-4 rounded-lg border border-app-border bg-app-bg p-4"
+      className="disclosure panel ticks p-4 sm:p-5"
     >
-      <summary className="cursor-pointer font-semibold text-app-text">
-        {ru ? 'Погодные поправки' : 'Weather corrections'}
+      <summary>
+        <span className="index">[05]</span>
+        <span className="label text-app-text">
+          {ru ? 'Погодные поправки' : 'Weather corrections'}
+        </span>
         {w.entered && (
-          <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
-            {summary()}
-          </span>
+          <span className="tag tag-accent truncate">{summary()}</span>
         )}
       </summary>
 
-      <p className="mt-3 text-xs text-app-muted">
+      <p className="mt-4 text-xs text-app-muted">
         {ru
           ? 'Нужны, только если на сервере включены продвинутые поправки (advanced corrections). Пустое поле — стандартные условия. Данные — с Kestrel 4500.'
           : 'Only needed when advanced corrections are enabled on the server. An empty field means standard conditions. Read the values from the Kestrel 4500.'}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-app-muted">{ru ? 'Ветер' : 'Wind'}</span>
+        <span className="label">{ru ? 'Ветер' : 'Wind'}</span>
         <Toggle
           label={ru ? 'Способ ввода ветра' : 'Wind input'}
           value={w.windMode}
@@ -177,9 +178,9 @@ export function WeatherSection({
         />
       </div>
 
-      <div className="mt-3 space-y-1 text-xs text-app-muted">
+      <div className="mt-3 space-y-1 font-mono text-[11px] text-app-muted">
         {w.windMode === 'vector' && w.windIncomplete && (
-          <p className="text-app-text">
+          <p className="border-l-2 border-warn pl-2 font-sans text-xs text-warn">
             {ru
               ? 'Для ветра укажите направление и азимут на цель — пока ветер не учитывается.'
               : 'Enter the wind direction and the azimuth to target — wind is not applied yet.'}
@@ -218,7 +219,7 @@ export function WeatherSection({
               w.reset()
               onEdit()
             }}
-            className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1 text-xs text-app-text"
+            className="btn btn-sm btn-danger"
           >
             {ru ? 'Сбросить погоду' : 'Reset weather'}
           </button>

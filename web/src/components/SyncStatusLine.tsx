@@ -10,9 +10,9 @@ export function SyncStatusLine({ language }: { language: Language }) {
   const gunners = sync.peers.filter((peer) => peer.role === 'gunner').length
 
   return (
-    <p className="mt-2 flex items-center gap-2 text-xs text-app-muted">
+    <p className="label mt-2 flex items-center gap-2">
       <span
-        className={`inline-block h-2 w-2 shrink-0 rounded-full ${syncStatusColor(sync.status)}`}
+        className={`inline-block h-1.5 w-1.5 shrink-0 ${syncStatusColor(sync.status)}`}
       />
       <span>
         {ru ? 'Связка' : 'Link'} {sync.code} · {syncStatusText(sync.status, ru)}

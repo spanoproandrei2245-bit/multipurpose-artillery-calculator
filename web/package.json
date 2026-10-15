@@ -16,6 +16,8 @@
     "desktop:build": "tauri build"
   },
   "dependencies": {
+    "@fontsource-variable/inter-tight": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.12.3",
     "mqtt": "^5.16.0",

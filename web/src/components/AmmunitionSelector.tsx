@@ -38,7 +38,7 @@ export function AmmunitionSelector({
     <div>
       <label
         htmlFor={selectId}
-        className="mb-2 block text-sm font-medium text-app-muted"
+        className="label mb-1.5 block"
       >
         {ru ? 'Боеприпас' : 'Ammunition'}
       </label>
@@ -50,7 +50,7 @@ export function AmmunitionSelector({
             : 'No ammunition data'}
         </p>
       ) : ammunition.length === 1 ? (
-        <div className="flex min-h-14 items-center rounded-lg border border-app-border bg-app-bg px-4 text-app-text">
+        <div className="field flex min-h-14 items-center text-[17px]">
           {formatLabel(ammunition[0])}
         </div>
       ) : (
@@ -58,7 +58,7 @@ export function AmmunitionSelector({
           id={selectId}
           value={selected?.id ?? ''}
           onChange={(event) => onSelect(event.target.value)}
-          className="min-h-14 w-full rounded-lg border border-app-border bg-app-bg px-4 text-app-text"
+          className="field min-h-14 cursor-pointer text-[17px]"
         >
           {ammunition.map((item) => (
             <option key={item.id} value={item.id}>

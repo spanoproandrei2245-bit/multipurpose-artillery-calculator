@@ -24,7 +24,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && !isDesktop) {
 if (!isOverlayWindow) void loadCustomSounds()
 
 // Окно-оверлей прозрачное: фон страницы не закрашиваем.
-if (isOverlayWindow) document.documentElement.classList.add('overlay')
+// Поверх игры — всегда тёмная тема, независимо от настроек основного окна.
+if (isOverlayWindow) document.documentElement.classList.add('overlay', 'dark')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

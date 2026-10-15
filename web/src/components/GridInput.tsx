@@ -51,10 +51,12 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-dashed border-app-border bg-app-bg p-4">
-      <p className="text-sm font-semibold text-app-text">
-        {ru ? 'По координатам сетки' : 'From grid coordinates'}
-        <span className="ml-2 rounded bg-amber-500/15 px-2 py-0.5 text-xs font-normal text-amber-700 dark:text-amber-300">
+    <div className="mt-5 border border-dashed border-app-line-strong bg-app-bg p-4">
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="label text-app-text">
+          {ru ? 'По координатам сетки' : 'From grid coordinates'}
+        </span>
+        <span className="tag tag-warn">
           {ru ? 'эксперимент' : 'experimental'}
         </span>
       </p>
@@ -84,7 +86,7 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
 
       {vector && distance !== null && azimuth !== null && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-app-text">
+          <p className="mono-num text-sm text-app-text">
             {distance} {ru ? 'м' : 'm'} · {azimuth}{' '}
             {azimuthUnit === 'mil' ? (ru ? 'мил' : 'mil') : '°'}
             <span className="ml-2 text-xs text-app-muted">
@@ -95,7 +97,7 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
           <button
             type="button"
             onClick={() => onApply(distance, azimuth)}
-            className="cursor-pointer rounded-lg border border-emerald-600 px-3 py-1 text-sm text-emerald-700 hover:bg-emerald-600 hover:text-white dark:text-emerald-300"
+            className="btn btn-primary btn-sm"
           >
             {ru ? 'Подставить' : 'Apply'}
           </button>

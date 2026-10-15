@@ -2,14 +2,13 @@ import type { ArtilleryCategory } from '../types/gameModel'
 import type { Language } from '../types/settings'
 import { categoryLabels } from '../data/categories'
 
-// Цвет рамки по классу орудия:
-// миномёт — зелёный, буксируемое орудие — жёлтый,
-// САУ — красный, РСЗО — фиолетовый. Сам значок нейтральный.
-const frameStyles: Record<ArtilleryCategory, string> = {
-  mortar: 'border-emerald-500/70',
-  towed: 'border-yellow-500/70',
-  spg: 'border-red-500/70',
-  mlrs: 'border-violet-500/70',
+// Класс орудия — цветная засечка в углу рамки:
+// миномёт — зелёная, буксируемое — жёлтая, САУ — красная, РСЗО — синяя.
+const categoryMarks: Record<ArtilleryCategory, string> = {
+  mortar: 'bg-ok',
+  towed: 'bg-warn',
+  spg: 'bg-danger',
+  mlrs: 'bg-info',
 }
 
 // Линейные значки в сетке 24×24: контур 1.5, скруглённые стыки.
@@ -70,11 +69,14 @@ export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
     <span
       title={categoryLabels[category][language]}
       className={[
-        'inline-flex shrink-0 items-center justify-center rounded-md border bg-app-surface text-app-text',
+        'relative inline-flex shrink-0 items-center justify-center border border-app-line-strong bg-app-surface text-app-text',
         size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',
-        frameStyles[category],
       ].join(' ')}
     >
+      <span
+        aria-hidden="true"
+        className={`absolute -top-px -left-px h-1.5 w-1.5 ${categoryMarks[category]}`}
+      />
       <svg
         viewBox="0 0 24 24"
         fill="none"

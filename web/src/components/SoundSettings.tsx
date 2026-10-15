@@ -13,6 +13,7 @@ import {
   type SoundEvent,
 } from '../lib/sound'
 import type { Language } from '../types/settings'
+import { SectionHeading } from './FormControls'
 
 const LABELS: Record<SoundEvent, { ru: string; en: string }> = {
   fire: { ru: 'Выстрел (нажали «Огонь»)', en: 'Fire (button pressed)' },
@@ -62,22 +63,19 @@ export function SoundSettings({ language }: { language: Language }) {
     }
   }
 
-  const button =
-    'cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text hover:border-emerald-500'
+  const button = 'btn btn-sm'
 
   return (
-    <div className="rounded-xl border border-app-border bg-app-surface p-6">
-      <h3 className="text-lg font-semibold text-app-text">
-        {ru ? 'Звуки' : 'Sounds'}
-      </h3>
-      <p className="mt-1 text-sm text-app-muted">
+    <div className="panel ticks p-4 sm:p-5">
+      <SectionHeading index="02" title={ru ? 'Звуки' : 'Sounds'} />
+      <p className="mt-3 text-sm text-app-muted">
         {ru
           ? 'Свой файл на каждое событие (MP3, WAV, OGG до 2 МБ). Файлы хранятся только на этом устройстве.'
           : 'Your own file for each event (MP3, WAV, OGG up to 2 MB). Files stay on this device.'}
       </p>
 
-      <label className="mt-4 flex items-center gap-3 text-sm text-app-text">
-        {ru ? 'Громкость' : 'Volume'}
+      <label className="mt-4 flex items-center gap-3">
+        <span className="label">{ru ? 'Громкость' : 'Volume'}</span>
         <input
           type="range"
           min={0}
@@ -86,21 +84,29 @@ export function SoundSettings({ language }: { language: Language }) {
           value={volume}
           onChange={(event) => changeVolume(Number(event.target.value))}
           onPointerUp={() => playSound('splash')}
-          className="w-48 accent-emerald-600"
+          className="w-48 accent-[var(--color-accent)]"
         />
-        <span className="w-10 text-app-muted tabular-nums">
+        <span className="mono-num w-10 text-[12px] text-app-muted">
           {Math.round(volume * 100)}%
         </span>
       </label>
 
-      <ul className="mt-4 divide-y divide-app-border">
+      <ul className="mt-4 divide-y divide-app-border border border-app-border">
         {SOUND_EVENTS.map((event) => (
-          <li key={event} className="flex flex-wrap items-center gap-2 py-2">
+          <li
+            key={event}
+            className="flex flex-wrap items-center gap-2 bg-app-raised px-3 py-2"
+          >
             <div className="min-w-0 flex-1">
               <p className="text-sm text-app-text">
                 {ru ? LABELS[event].ru : LABELS[event].en}
               </p>
-              <p className="truncate text-xs text-app-muted">
+              <p
+                className={[
+                  'truncate font-mono text-[11px]',
+                  names[event] ? 'text-accent' : 'text-app-faint',
+                ].join(' ')}
+              >
                 {names[event] ?? (ru ? 'стандартный сигнал' : 'default beep')}
               </p>
             </div>
@@ -144,7 +150,9 @@ export function SoundSettings({ language }: { language: Language }) {
       </ul>
 
       {error && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-2 border-l-2 border-danger pl-2 text-sm text-danger">
+          {error}
+        </p>
       )}
     </div>
   )

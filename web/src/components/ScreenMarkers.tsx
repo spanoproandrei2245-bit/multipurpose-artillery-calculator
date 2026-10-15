@@ -308,18 +308,19 @@ export function ScreenMarkers({ world, author, language }: Props) {
     )
   }
 
-  const buttonClass =
-    'cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1 text-xs text-app-text hover:border-emerald-500 disabled:cursor-default disabled:opacity-40'
+  const buttonClass = 'btn btn-sm'
 
   return (
     <details
-      className="mt-4 rounded-lg border border-app-border bg-app-surface p-3"
+      className="disclosure mt-4 border border-app-border bg-app-surface p-3"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-sm font-semibold text-app-text">
-        {ru ? 'Метки с экрана игры' : 'Markers from the game screen'}
-        <span className="ml-2 rounded bg-amber-500/15 px-2 py-0.5 text-xs font-normal text-amber-700 dark:text-amber-300">
+      <summary>
+        <span className="label text-app-text">
+          {ru ? 'Метки с экрана игры' : 'Markers from the game screen'}
+        </span>
+        <span className="tag tag-warn">
           {ru ? 'эксперимент' : 'experimental'}
         </span>
       </summary>
@@ -395,7 +396,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
             </button>
             <button
               type="button"
-              className={`${buttonClass} border-emerald-600`}
+              className="btn btn-primary btn-sm"
               disabled={!calibration || calibrating}
               onClick={() => apply(shot, excluded)}
             >
@@ -408,7 +409,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
                   checked={auto}
                   disabled={!calibration}
                   onChange={(event) => setAuto(event.target.checked)}
-                  className="accent-emerald-600"
+                  className="accent-[var(--color-accent)]"
                 />
                 {ru ? 'Обновлять каждые 10 с' : 'Refresh every 10 s'}
               </label>
@@ -416,7 +417,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
           </div>
 
           {calibrating && (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+            <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
               {ru
                 ? `Точка ${points.length + 1} из 2: кликните пересечение линий сетки и введите его координату (например 045 078). Точки — подальше друг от друга.`
                 : `Point ${points.length + 1} of 2: click a grid line intersection and enter its grid (e.g. 045 078). Keep the points far apart.`}
@@ -444,7 +445,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
                 }}
                 placeholder="045 078"
                 inputMode="numeric"
-                className="w-32 rounded-lg border border-app-border bg-app-bg px-2 py-1 font-mono text-app-text outline-none focus:border-emerald-500"
+                className="field w-32 py-1 font-mono text-xs"
               />
               <button
                 type="button"
@@ -460,7 +461,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
           <div
             onClick={onImageClick}
             className={[
-              'relative mt-3 w-full overflow-hidden rounded-md border border-app-border',
+              'relative mt-3 w-full overflow-hidden border border-app-border',
               calibrating ? 'cursor-crosshair' : 'cursor-pointer',
             ].join(' ')}
           >
@@ -482,7 +483,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
                 />
               ))}
               {[...points, ...(pending ? [pending] : [])].map((point, index) => (
-                <g key={`p${index}`} stroke="#10b981" strokeWidth={Math.max(2, shot.image.width / 600)}>
+                <g key={`p${index}`} stroke="var(--color-accent)" strokeWidth={Math.max(2, shot.image.width / 600)}>
                   <line x1={point.px - 14} y1={point.py} x2={point.px + 14} y2={point.py} />
                   <line x1={point.px} y1={point.py - 14} x2={point.px} y2={point.py + 14} />
                 </g>

@@ -103,7 +103,7 @@ export function ModelSelector({
       <label
         id={`${id}-label`}
         htmlFor={`${id}-button`}
-        className="mb-2 block text-sm font-medium text-app-muted"
+        className="label mb-1.5 block"
       >
         {t.label}
       </label>
@@ -122,13 +122,15 @@ export function ModelSelector({
             openList()
           }
         }}
-        className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-lg border border-app-border bg-app-bg px-3 py-2 text-left text-app-text outline-none focus:border-emerald-500"
+        className="field flex min-h-14 cursor-pointer items-center gap-3 text-left"
       >
         <ArtilleryIcon category={current.category} language={language} />
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{current.name}</span>
-          <span className="block truncate text-xs text-app-muted">
+          <span className="block truncate text-[17px] font-medium">
+            {current.name}
+          </span>
+          <span className="label block truncate text-[9.5px]">
             {current.mod}
           </span>
         </span>
@@ -154,7 +156,7 @@ export function ModelSelector({
           aria-labelledby={`${id}-label`}
           aria-activedescendant={`${id}-opt-${active}`}
           onKeyDown={handleListKey}
-          className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-app-border bg-app-surface p-1 shadow-lg outline-none"
+          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto border border-app-line-strong bg-app-raised p-1 shadow-2xl shadow-black/40 outline-none"
         >
           {modelIds.map((modelId, index) => {
             const model = models[modelId]
@@ -169,26 +171,23 @@ export function ModelSelector({
                 onPointerEnter={() => setActive(index)}
                 onClick={() => choose(index)}
                 className={[
-                  'flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-app-text',
-                  index === active ? 'bg-app-bg' : '',
-                  selected ? 'font-semibold' : '',
+                  'flex cursor-pointer items-center gap-3 border-l-2 px-2 py-2 text-app-text',
+                  index === active ? 'bg-app-surface' : '',
+                  selected ? 'border-accent' : 'border-transparent',
                 ].join(' ')}
               >
                 <ArtilleryIcon category={model.category} language={language} />
 
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{model.name}</span>
-                  <span className="block truncate text-xs font-normal text-app-muted">
+                  <span className="label block truncate text-[9.5px]">
                     {model.mod}
                   </span>
                 </span>
 
                 {selected && (
-                  <span
-                    aria-hidden="true"
-                    className="text-emerald-600 dark:text-emerald-400"
-                  >
-                    ✓
+                  <span aria-hidden="true" className="index">
+                    ●
                   </span>
                 )}
               </li>

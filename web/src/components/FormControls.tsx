@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 
 import { isInvalid } from '../lib/input'
 
-export const inputClass =
-  'w-full rounded-lg border border-app-border bg-app-bg px-4 py-3 text-lg text-app-text outline-none focus:border-emerald-500'
+export const inputClass = 'field field-lg'
 
 interface FieldProps {
   id: string
@@ -41,8 +40,8 @@ export function NumberField({
     <div className={className}>
       {/* Фиксированная высота строки подписи: поля в соседних
           колонках выравниваются, даже если у одного есть переключатель. */}
-      <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
-        <label htmlFor={id} className="block text-sm text-app-muted">
+      <div className="mb-1.5 flex min-h-7 items-center justify-between gap-2">
+        <label htmlFor={id} className="label">
           {label}
         </label>
         {aside}
@@ -64,10 +63,10 @@ export function NumberField({
         }
         placeholder={placeholder}
         aria-invalid={invalid}
-        className={[inputClass, invalid ? 'border-red-500' : ''].join(' ')}
+        className={inputClass}
       />
 
-      {hint && <p className="mt-2 text-xs text-app-muted">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-app-muted">{hint}</p>}
     </div>
   )
 }
@@ -86,11 +85,7 @@ export function Toggle<T extends string>({
   label,
 }: ToggleProps<T>) {
   return (
-    <div
-      role="group"
-      aria-label={label}
-      className="inline-flex overflow-hidden rounded-lg border border-app-border"
-    >
+    <div role="group" aria-label={label} className="seg">
       {options.map((option) => (
         <button
           key={option.value}
@@ -98,19 +93,116 @@ export function Toggle<T extends string>({
           disabled={option.disabled}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
-          className={[
-            'whitespace-nowrap px-2.5 py-1 text-xs',
-            option.value === value
-              ? 'bg-emerald-600 text-white'
-              : 'bg-app-bg text-app-text',
-            option.disabled
-              ? 'cursor-not-allowed opacity-40'
-              : 'cursor-pointer',
-          ].join(' ')}
         >
           {option.label}
         </button>
       ))}
     </div>
+  )
+}
+
+/** Заголовок раздела: [02] ЦЕЛЬ ─────── (справа — необязательный элемент). */
+export function SectionHeading({
+  index,
+  title,
+  aside,
+  as: Tag = 'h3',
+}: {
+  index?: string
+  title: string
+  aside?: ReactNode
+  as?: 'h2' | 'h3' | 'h4'
+}) {
+  return (
+    <div className="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-2">
+      {index && <span className="index">[{index}]</span>}
+      <Tag className="label text-app-text">{title}</Tag>
+      <span className="hidden h-px min-w-6 flex-1 bg-app-border sm:block" />
+      {aside}
+    </div>
+  )
+}
+
+/**
+ * Сегментная шкала: progress 0…1 зажигает сегменты слева направо.
+ * alert — красные сегменты (сплэш, разрыв).
+ */
+export function SegmentBar({
+  progress,
+  count = 40,
+  alert = false,
+  className = '',
+}: {
+  progress: number
+  count?: number
+  alert?: boolean
+  className?: string
+}) {
+  const lit = Math.round(Math.min(1, Math.max(0, progress)) * count)
+  return (
+    <div
+      className={`segments ${className}`}
+      data-alert={alert}
+      role="presentation"
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i} data-on={i < lit} />
+      ))}
+    </div>
+  )
+}
+
+/** Переключатель «вкл/выкл» с подписью и пояснением. */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled = false,
+}: {
+  checked: boolean
+  onChange: (value: boolean) => void
+  label: string
+  description?: ReactNode
+  disabled?: boolean
+}) {
+  return (
+    <label
+      className={[
+        'flex items-start gap-3',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+      ].join(' ')}
+    >
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden="true"
+        className={[
+          'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center border transition-colors peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
+          checked ? 'border-accent bg-accent-soft' : 'border-app-line-strong',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'absolute h-3 w-3 transition-all',
+            checked ? 'left-[19px] bg-accent' : 'left-[3px] bg-app-muted',
+          ].join(' ')}
+        />
+      </span>
+      <span>
+        <span className="block text-sm text-app-text">{label}</span>
+        {description && (
+          <span className="mt-0.5 block text-xs leading-relaxed text-app-muted">
+            {description}
+          </span>
+        )}
+      </span>
+    </label>
   )
 }

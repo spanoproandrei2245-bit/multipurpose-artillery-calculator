@@ -149,14 +149,17 @@ export function ShotJournal({
       )
   }
 
-  const buttonClass =
-    'cursor-pointer rounded-md border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40'
+  const buttonClass = 'btn btn-sm'
 
   return (
-    <section className="mt-6 rounded-xl border border-app-border bg-app-surface p-6">
+    <section className="panel ticks mt-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-app-text">
-          {ru ? 'Журнал' : 'Journal'}
+        <h2 className="flex items-center gap-3">
+          <span className="index">[07]</span>
+          <span className="label text-app-text">
+            {ru ? 'Журнал целей' : 'Target journal'}
+          </span>
+          <span className="tag">{entries.length}</span>
         </h2>
 
         <div className="flex gap-2">
@@ -190,7 +193,7 @@ export function ShotJournal({
       </div>
 
       {notice && (
-        <p className="mt-3 text-sm text-app-text" role="status">
+        <p className="mt-3 border-l-2 border-accent pl-2 text-sm text-app-text" role="status">
           {notice}
         </p>
       )}
@@ -206,7 +209,7 @@ export function ShotJournal({
               ? 'Поиск: название, модель, дистанция'
               : 'Search: name, model, distance'
           }
-          className="mt-4 w-full rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text outline-none focus:border-emerald-500"
+          className="field mt-4 text-sm"
         />
       )}
 
@@ -228,13 +231,13 @@ export function ShotJournal({
         {days.map((day) => (
           <div key={day.dayKey}>
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm text-app-muted">
+              <h3 className="label">
                 {ru ? 'от' : 'from'} {formatDayKey(day.dayKey)}
               </h3>
 
               <button
                 type="button"
-                className={buttonClass}
+                className="btn btn-sm btn-ghost btn-danger"
                 onClick={() => {
                   const message = ru
                     ? `Удалить все записи за ${formatDayKey(day.dayKey)}?`
@@ -246,15 +249,15 @@ export function ShotJournal({
               </button>
             </div>
 
-            <ul className="mt-2 space-y-2">
+            <ul className="mt-2 divide-y divide-app-border border border-app-border">
               {day.entries.map((entry) => (
                 <li
                   key={entry.id}
                   className={[
-                    'rounded-lg border bg-app-bg p-3',
+                    'border-l-2 bg-app-raised p-3',
                     entry.id === activeId
-                      ? 'border-emerald-500'
-                      : 'border-app-border',
+                      ? 'border-l-accent'
+                      : 'border-l-transparent',
                   ].join(' ')}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -272,15 +275,15 @@ export function ShotJournal({
                           if (event.key === 'Escape') setEditingId(null)
                         }}
                         aria-label={ru ? 'Название метки' : 'Mark name'}
-                        className="min-w-0 flex-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-base text-app-text outline-none focus:border-emerald-500"
+                        className="field min-w-0 flex-1 py-1 text-base"
                       />
                     ) : (
-                      <p className="min-w-0 break-words text-lg font-semibold text-app-text">
+                      <p className="min-w-0 break-words text-lg font-light text-app-text">
                         {entry.name}
                       </p>
                     )}
 
-                    <span className="text-xs text-app-muted">
+                    <span className="mono-num text-[11px] text-app-muted">
                       {formatTime(entry.createdAt)}
                     </span>
                   </div>
@@ -289,7 +292,7 @@ export function ShotJournal({
                     {describe(entry)}
                   </p>
 
-                  <p className="mt-1 text-sm text-app-text">
+                  <p className="mono-num mt-1 text-[13px] text-app-text">
                     {Math.round(entry.elevation)} {ru ? 'мил' : 'mil'} ·{' '}
                     {entry.tof.toFixed(1)} {ru ? 'с' : 's'}
                     {entry.firingAzimuth !== undefined &&

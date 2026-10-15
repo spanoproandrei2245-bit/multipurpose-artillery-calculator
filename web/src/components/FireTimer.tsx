@@ -8,6 +8,7 @@ import {
 
 import { readStored, writeStored } from '../lib/input'
 import { playSound } from '../lib/sound'
+import { SegmentBar } from './FormControls'
 import type { Language } from '../types/settings'
 
 /** Управление таймером снаружи (горячие клавиши). */
@@ -122,91 +123,82 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           ? 'splash'
           : 'flight'
 
+  const alert = phase === 'splash' || phase === 'impact'
+  const phaseLabel = {
+    idle: ru ? 'Готов' : 'Ready',
+    flight: ru ? 'Полёт' : 'In flight',
+    splash: ru ? 'Сплэш' : 'Splash',
+    impact: ru ? 'Разрыв' : 'Impact',
+  }[phase]
+
   return (
-    <div className="mt-5 rounded-lg border border-app-border bg-app-surface p-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mt-4 border border-app-border bg-app-raised">
+      <div className="flex items-stretch">
         <button
           type="button"
           onClick={fire}
-          className="cursor-pointer rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-3 bg-accent px-4 py-3 font-mono text-[13px] font-semibold uppercase tracking-[0.22em] text-on-accent transition-colors hover:bg-accent-strong"
         >
           {shot
             ? ru
               ? 'Огонь ещё'
               : 'Fire again'
             : ru
-              ? 'Огонь!'
-              : 'Fire!'}
+              ? 'Огонь'
+              : 'Fire'}
+          <span className="hidden border border-current px-1 text-[10px] tracking-normal opacity-70 sm:inline">
+            F
+          </span>
         </button>
 
-        <div className="ml-auto flex gap-2">
-          {shot && (
-            <button
-              type="button"
-              onClick={() => setShot(null)}
-              className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text"
-            >
-              {ru ? 'Стоп' : 'Stop'}
-            </button>
-          )}
-
+        {shot && (
           <button
             type="button"
-            aria-pressed={sound}
-            onClick={() => setSound((value) => !value)}
-            title={ru ? 'Звуковой сигнал' : 'Sound'}
-            className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text"
+            onClick={() => setShot(null)}
+            className="btn btn-ghost border-l border-app-border"
           >
-            {sound
-              ? ru
-                ? 'Звук вкл.'
-                : 'Sound on'
-              : ru
-                ? 'Звук выкл.'
-                : 'Sound off'}
+            {ru ? 'Стоп' : 'Stop'}
           </button>
-        </div>
+        )}
+
+        <button
+          type="button"
+          aria-pressed={sound}
+          onClick={() => setSound((value) => !value)}
+          title={ru ? 'Звуковой сигнал' : 'Sound'}
+          className={[
+            'btn btn-ghost border-l border-app-border',
+            sound ? 'text-app-text' : 'text-app-faint line-through',
+          ].join(' ')}
+        >
+          {ru ? 'Звук' : 'Sound'}
+        </button>
       </div>
 
-      <div className="mt-2" aria-live="polite">
-        {phase === 'idle' && (
-          <p className="text-xs text-app-muted">
-            {ru
-              ? `Нажмите в момент выстрела: отсчёт ${tof.toFixed(1)} с до разрыва, сигнал за ${SPLASH_WARNING_S} с.`
-              : `Press when the round is fired: ${tof.toFixed(1)} s to impact, beep ${SPLASH_WARNING_S} s before.`}
-          </p>
-        )}
-
-        {phase !== 'idle' && left !== null && (
-          <>
-            <p
-              className={[
-                'text-lg font-semibold tabular-nums',
-                phase === 'splash' || phase === 'impact'
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-app-text',
-              ].join(' ')}
-            >
-              {phase === 'impact'
-                ? ru
-                  ? 'Разрыв!'
-                  : 'Impact!'
-                : `${ru ? 'До разрыва' : 'Impact in'} ${left.toFixed(1)} ${ru ? 'с' : 's'}${
-                    phase === 'splash' ? (ru ? ' — сплэш' : ' — splash') : ''
-                  }`}
-            </p>
-
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-app-bg">
-              <div
-                className={[
-                  'h-full rounded-full',
-                  phase === 'flight' ? 'bg-emerald-500' : 'bg-red-500',
-                ].join(' ')}
-                style={{ width: `${progress * 100}%` }}
-              />
-            </div>
-          </>
-        )}
+      <div className="border-t border-app-border px-3 py-2.5" aria-live="polite">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
+            {phaseLabel}
+            {phase === 'idle' &&
+              ` · ${ru ? 'сигнал за' : 'beep at'} ${SPLASH_WARNING_S} ${ru ? 'с' : 's'}`}
+          </span>
+          <span
+            className={[
+              'mono-num text-xl',
+              alert ? 'text-danger' : 'text-app-text',
+            ].join(' ')}
+          >
+            {left === null
+              ? `T ${tof.toFixed(1)}`
+              : phase === 'impact'
+                ? 'T 0.0'
+                : `T−${left.toFixed(1)}`}
+            <span className="ml-1 text-[11px] text-app-muted">
+              {ru ? 'с' : 's'}
+            </span>
+          </span>
+        </div>
+        <SegmentBar progress={progress} alert={alert} className="mt-2" />
       </div>
     </div>
   )

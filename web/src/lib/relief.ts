@@ -2,15 +2,39 @@ import type { Heightmap } from './heightmap'
 
 type Rgb = readonly [number, number, number]
 
-// Цвета по высоте: море — синие, суша — от зелёного к светло-бурому.
-const SEA_DEEP: Rgb = [28, 58, 102]
-const SEA_SHALLOW: Rgb = [72, 128, 176]
-const LAND_STOPS: readonly (readonly [number, Rgb])[] = [
-  [0, [118, 150, 92]],
-  [150, [150, 160, 98]],
-  [400, [176, 160, 112]],
-  [800, [196, 186, 162]],
-]
+/** day — цветная карта (светлая тема), night — тёмный монохром. */
+export type ReliefPalette = 'day' | 'night'
+
+interface Palette {
+  seaDeep: Rgb
+  seaShallow: Rgb
+  land: readonly (readonly [number, Rgb])[]
+}
+
+// day: море — синие, суша — от зелёного к светло-бурому.
+// night: тёплые серые оттенки, море темнее суши — как ночной прицел.
+const PALETTES: Record<ReliefPalette, Palette> = {
+  day: {
+    seaDeep: [28, 58, 102],
+    seaShallow: [72, 128, 176],
+    land: [
+      [0, [118, 150, 92]],
+      [150, [150, 160, 98]],
+      [400, [176, 160, 112]],
+      [800, [196, 186, 162]],
+    ],
+  },
+  night: {
+    seaDeep: [10, 13, 16],
+    seaShallow: [20, 26, 31],
+    land: [
+      [0, [44, 43, 40]],
+      [150, [56, 54, 50]],
+      [400, [70, 67, 61]],
+      [800, [88, 84, 77]],
+    ],
+  },
+}
 
 // Свет с северо-запада, сверху (x — восток, y — север, z — вверх)
 const LIGHT = (() => {
@@ -27,23 +51,30 @@ function mix(a: Rgb, b: Rgb, t: number): Rgb {
   ]
 }
 
-export function heightColor(height: number): Rgb {
+export function heightColor(
+  height: number,
+  palette: ReliefPalette = 'day'
+): Rgb {
+  const { seaDeep, seaShallow, land } = PALETTES[palette]
   if (height <= 0) {
-    return mix(SEA_SHALLOW, SEA_DEEP, Math.min(1, -height / 60))
+    return mix(seaShallow, seaDeep, Math.min(1, -height / 60))
   }
-  for (let k = 1; k < LAND_STOPS.length; k += 1) {
-    const [h1, c1] = LAND_STOPS[k]
-    const [h0, c0] = LAND_STOPS[k - 1]
+  for (let k = 1; k < land.length; k += 1) {
+    const [h1, c1] = land[k]
+    const [h0, c0] = land[k - 1]
     if (height <= h1) return mix(c0, c1, (height - h0) / (h1 - h0))
   }
-  return LAND_STOPS[LAND_STOPS.length - 1][1]
+  return land[land.length - 1][1]
 }
 
 /**
  * Цветной рельеф с отмывкой: RGBA, по пикселю на узел сетки.
  * Строка 0 изображения — север (как на карте).
  */
-export function renderRelief(map: Heightmap): Uint8ClampedArray<ArrayBuffer> {
+export function renderRelief(
+  map: Heightmap,
+  palette: ReliefPalette = 'day'
+): Uint8ClampedArray<ArrayBuffer> {
   const { size, step, heights } = map
   const pixels = new Uint8ClampedArray(size * size * 4)
   const at = (i: number, j: number) =>
@@ -55,7 +86,7 @@ export function renderRelief(map: Heightmap): Uint8ClampedArray<ArrayBuffer> {
   for (let j = 0; j < size; j += 1) {
     for (let i = 0; i < size; i += 1) {
       const h = at(i, j)
-      const color = heightColor(h)
+      const color = heightColor(h, palette)
 
       let brightness = 1
       if (h > 0) {

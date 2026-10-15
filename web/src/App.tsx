@@ -1,70 +1,69 @@
-
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 import { Header } from './components/Header'
 import { Navigation, type PageId } from './components/Navigation'
-
 import { DashboardPage } from './pages/DashboardPage'
-import { ModelsPage } from './pages/ModelsPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { SyncPage } from './pages/SyncPage'
 
-import { models, type ModelId } from './data/models'
+import { isModelId, type ModelId } from './data/models'
 import { onHotkey, toggleOverlay } from './lib/desktop'
 import { readInvite } from './lib/sync'
+import { usePersistentState } from './lib/usePersistentState'
 import { useWakeLock } from './lib/useWakeLock'
 import type { Language, Theme } from './types/settings'
 
+// Второстепенные страницы грузятся по требованию: главный экран
+// открывается быстрее, особенно на телефоне.
+const SyncPage = lazy(() =>
+  import('./pages/SyncPage').then((m) => ({ default: m.SyncPage }))
+)
+const ModelsPage = lazy(() =>
+  import('./pages/ModelsPage').then((m) => ({ default: m.ModelsPage }))
+)
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+)
+
+// Язык по умолчанию — как у системы
+function defaultLanguage(): Language {
+  return typeof navigator !== 'undefined' &&
+    navigator.language.toLowerCase().startsWith('ru')
+    ? 'ru'
+    : 'en'
+}
+
+const parseFlag = (fallback: boolean) => (raw: string | null) =>
+  raw === null ? fallback : raw === 'true'
+
 function App() {
-  // Выбранная игровая модель
-  const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
-    const savedModel = localStorage.getItem('selectedModel')
+  const [selectedModel, setSelectedModel] = usePersistentState<ModelId>(
+    'selectedModel',
+    (raw) => (raw && isModelId(raw) ? raw : 'mk6')
+  )
 
-    if (
-      savedModel &&
-      Object.prototype.hasOwnProperty.call(models, savedModel)
-    ) {
-      return savedModel as ModelId
-    }
-
-    return 'mk6'
-  })
-
-  // Активная страница; по ссылке-приглашению стрелка — сразу «Связка»
+  // По ссылке-приглашению стрелка — сразу «Связка»
   const [activePage, setActivePage] = useState<PageId>(() =>
     readInvite(window.location.search) ? 'sync' : 'dashboard'
   )
 
-  // Язык приложения
-  const [language, setLanguage] = useState<Language>(() => {
-    const savedLanguage = localStorage.getItem('language')
-
-    return savedLanguage === 'ru' ? 'ru' : 'en'
-  })
-
-  // НОВОЕ: Тема приложения
-  const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem('theme')
-
-    return savedTheme === 'light' ? 'light' : 'dark'
-  })
-
+  const [language, setLanguage] = usePersistentState<Language>(
+    'language',
+    (raw) => (raw === 'ru' || raw === 'en' ? raw : defaultLanguage())
+  )
+  const [theme, setTheme] = usePersistentState<Theme>('theme', (raw) =>
+    raw === 'light' ? 'light' : 'dark'
+  )
   // Не гасить экран (телефон у орудия)
-  const [keepAwake, setKeepAwake] = useState(() => {
-    try {
-      return localStorage.getItem('keepAwake') === 'true'
-    } catch {
-      return false
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('keepAwake', String(keepAwake))
-    } catch {
-      // Хранилище недоступно — настройка живёт до перезагрузки.
-    }
-  }, [keepAwake])
+  const [keepAwake, setKeepAwake] = usePersistentState(
+    'keepAwake',
+    parseFlag(false)
+  )
+  // Экспериментальный ввод по координатам сетки
+  const [gridInput, setGridInput] = usePersistentState(
+    'experimentalGrid',
+    parseFlag(false)
+  )
+  // Карта с метками и высотами
+  const [mapInput, setMapInput] = usePersistentState('showMap', parseFlag(true))
 
   useWakeLock(keepAwake)
 
@@ -77,77 +76,37 @@ function App() {
     []
   )
 
-  // Экспериментальный ввод по координатам сетки
-  const [gridInput, setGridInput] = useState(() => {
-    try {
-      return localStorage.getItem('experimentalGrid') === 'true'
-    } catch {
-      return false
-    }
-  })
-
   useEffect(() => {
-    try {
-      localStorage.setItem('experimentalGrid', String(gridInput))
-    } catch {
-      // Хранилище недоступно — настройка живёт до перезагрузки.
-    }
-  }, [gridInput])
-
-  // Карта с метками и высотами (по умолчанию включена)
-  const [mapInput, setMapInput] = useState(() => {
-    try {
-      return localStorage.getItem('showMap') !== 'false'
-    } catch {
-      return true
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('showMap', String(mapInput))
-    } catch {
-      // Хранилище недоступно — настройка живёт до перезагрузки.
-    }
-  }, [mapInput])
-
-  // Сохраняем выбранную модель
-  useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel)
-  }, [selectedModel])
-
-  // Сохраняем язык
-  useEffect(() => {
-    localStorage.setItem('language', language)
+    document.documentElement.lang = language
   }, [language])
 
-  // НОВОЕ: Применяем и сохраняем тему
   useEffect(() => {
-    document.documentElement.classList.toggle(
-      'dark',
-      theme === 'dark'
-    )
-
-    localStorage.setItem('theme', theme)
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#eceae4')
   }, [theme])
 
-  // Выбор модели со страницы Models
+  // Выбор орудия со страницы «Орудия»
   function handleModelSelect(id: ModelId) {
     setSelectedModel(id)
     setActivePage('dashboard')
   }
 
+  const ru = language === 'ru'
+
   return (
-    <div className="min-h-screen bg-app-bg text-app-text">
-      <Header language={language} />
+    <div className="flex min-h-screen flex-col text-app-text">
+      <header className="sticky top-0 z-40 border-b border-app-border bg-app-bg/90 backdrop-blur-md">
+        <Header language={language} />
+        <Navigation
+          activePage={activePage}
+          onPageChange={setActivePage}
+          language={language}
+        />
+      </header>
 
-      <Navigation
-        activePage={activePage}
-        onPageChange={setActivePage}
-        language={language}
-      />
-
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
         {activePage === 'dashboard' && (
           <DashboardPage
             selectedModel={selectedModel}
@@ -158,30 +117,43 @@ function App() {
           />
         )}
 
-        {activePage === 'sync' && <SyncPage language={language} />}
+        <Suspense
+          fallback={
+            <p className="label py-16 text-center">
+              {ru ? 'Загрузка…' : 'Loading…'}
+            </p>
+          }
+        >
+          {activePage === 'sync' && <SyncPage language={language} />}
 
-        {activePage === 'models' && (
-          <ModelsPage
-            onSelectModel={handleModelSelect}
-            language={language}
-          />
-        )}
+          {activePage === 'models' && (
+            <ModelsPage onSelectModel={handleModelSelect} language={language} />
+          )}
 
-        {activePage === 'settings' && (
-          <SettingsPage
-            language={language}
-            onLanguageChange={setLanguage}
-            theme={theme}
-            onThemeChange={setTheme}
-            gridInput={gridInput}
-            onGridInputChange={setGridInput}
-            mapInput={mapInput}
-            onMapInputChange={setMapInput}
-            keepAwake={keepAwake}
-            onKeepAwakeChange={setKeepAwake}
-          />
-        )}
+          {activePage === 'settings' && (
+            <SettingsPage
+              language={language}
+              onLanguageChange={setLanguage}
+              theme={theme}
+              onThemeChange={setTheme}
+              gridInput={gridInput}
+              onGridInputChange={setGridInput}
+              mapInput={mapInput}
+              onMapInputChange={setMapInput}
+              keepAwake={keepAwake}
+              onKeepAwakeChange={setKeepAwake}
+            />
+          )}
+        </Suspense>
       </main>
+
+      <footer className="border-t border-app-border">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-4">
+          <span className="label">MAC · v{__APP_VERSION__}</span>
+          <span className="label">Arma 3 · ACE3</span>
+          <span className="label ml-auto">made by Heis</span>
+        </div>
+      </footer>
     </div>
   )
 }

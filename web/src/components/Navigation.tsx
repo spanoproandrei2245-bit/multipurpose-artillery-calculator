@@ -1,4 +1,3 @@
-
 import type { Language } from '../types/settings'
 import { translations } from '../i18n/translations'
 
@@ -10,12 +9,7 @@ interface NavigationProps {
   language: Language
 }
 
-const pages: PageId[] = [
-  'dashboard',
-  'sync',
-  'models',
-  'settings',
-]
+const pages: PageId[] = ['dashboard', 'sync', 'models', 'settings']
 
 export function Navigation({
   activePage,
@@ -25,9 +19,9 @@ export function Navigation({
   const t = translations[language].navigation
 
   return (
-    <nav className="border-b border-app-border bg-app-surface">
-      <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4">
-        {pages.map((page) => {
+    <nav className="border-t border-app-border">
+      <div className="mx-auto flex max-w-6xl overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {pages.map((page, index) => {
           const isActive = activePage === page
 
           return (
@@ -36,13 +30,27 @@ export function Navigation({
               type="button"
               onClick={() => onPageChange(page)}
               aria-current={isActive ? 'page' : undefined}
-              className={`cursor-pointer border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={[
+                'group relative flex shrink-0 cursor-pointer items-baseline gap-2 px-3 py-3 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors first:pl-0',
                 isActive
-                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                  : 'border-transparent text-app-muted hover:text-app-text'
-              }`}
+                  ? 'text-app-text'
+                  : 'text-app-muted hover:text-app-text',
+              ].join(' ')}
             >
+              <span
+                className={
+                  isActive ? 'text-accent' : 'text-app-faint group-hover:text-accent'
+                }
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
               {t[page]}
+              <span
+                className={[
+                  'absolute inset-x-3 -bottom-px h-px group-first:left-0',
+                  isActive ? 'bg-accent' : 'bg-transparent',
+                ].join(' ')}
+              />
             </button>
           )
         })}

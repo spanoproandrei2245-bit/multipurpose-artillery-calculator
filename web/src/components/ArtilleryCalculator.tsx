@@ -47,7 +47,7 @@ import { AmmunitionSelector } from './AmmunitionSelector'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
-import { NumberField, Toggle } from './FormControls'
+import { NumberField, SectionHeading, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MapPicker } from './MapPicker'
 import { MrsiPanel } from './MrsiPanel'
@@ -594,26 +594,30 @@ export function ArtilleryCalculator({
   }
 
   return (
-    <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">
-      {/* ---- Модель и боеприпас ---- */}
-      <div className="grid items-end gap-4 sm:grid-cols-2">
-        {modelSelector}
-        <AmmunitionSelector
-          ammunition={ammunition}
-          selectedId={ammoId}
-          onSelect={handleAmmoChange}
-          language={language}
-        />
-      </div>
+    <section>
+      {/* ---- Орудие и боеприпас ---- */}
+      <div className="panel ticks p-4 sm:p-5">
+        <SectionHeading index="01" title={ru ? 'Орудие' : 'Weapon'} />
+        <div className="mt-3 grid items-end gap-4 sm:grid-cols-2">
+          {modelSelector}
+          <AmmunitionSelector
+            ammunition={ammunition}
+            selectedId={ammoId}
+            onSelect={handleAmmoChange}
+            language={language}
+          />
+        </div>
 
-      {targetBar}
+        {targetBar}
+      </div>
 
       {/* Мобильный порядок: цель → результат → корректировка → погода.
           На широком экране результат справа и не уезжает при прокрутке. */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
         {/* ---- Цель ---- */}
-        <div className="lg:col-start-1 lg:row-start-1">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="panel ticks p-4 sm:p-5 lg:col-start-1 lg:row-start-1">
+          <SectionHeading index="02" title={ru ? 'Цель' : 'Target'} />
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <NumberField
               id="calc-distance"
               label={ru ? 'Дистанция (м)' : 'Distance (m)'}
@@ -656,12 +660,14 @@ export function ArtilleryCalculator({
           </div>
 
           <p className="mt-3 text-sm text-app-muted">
-            {ru ? 'Разница высот' : 'Height difference'}:{' '}
-            <span className="font-semibold text-app-text">
+            <span className="label">
+              {ru ? 'Разница высот' : 'Height difference'}
+            </span>{' '}
+            <span className="mono-num ml-1 text-app-text">
               {formatSigned(heightDifference, 0)} {unitM}
             </span>
             {heightIncomplete && (
-              <span className="ml-2">
+              <span className="ml-2 text-xs">
                 {ru
                   ? '— введите обе высоты (поправка пока не применяется)'
                   : '— enter both heights (no correction applied yet)'}
@@ -670,7 +676,7 @@ export function ArtilleryCalculator({
           </p>
 
           {invalidInputs && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+            <p className="mt-2 border-l-2 border-danger pl-2 text-xs text-danger">
               {ru
                 ? 'Некоторые значения не распознаны (подсвечены) и не применяются.'
                 : 'Some values were not recognised (highlighted) and are not applied.'}
@@ -710,34 +716,34 @@ export function ArtilleryCalculator({
 
         {/* ---- Результат ---- */}
         <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="rounded-lg border border-app-border bg-app-bg p-4 lg:sticky lg:top-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-semibold text-app-text">
-                {ru ? 'Установки наведения' : 'Firing solution'}
-              </h3>
-
-              {profileModes.length > 1 && (
-                <Toggle
-                  label={ru ? 'Режим траектории' : 'Trajectory mode'}
-                  value={mode}
-                  onChange={changeMode}
-                  options={profileModes.map((item) => ({
-                    value: item,
-                    label:
-                      item === 'HIGH'
-                        ? ru
-                          ? 'HIGH · навесная'
-                          : 'HIGH · high angle'
-                        : ru
-                          ? 'LOW · настильная'
-                          : 'LOW · low angle',
-                  }))}
-                />
-              )}
-            </div>
+          <div className="panel ticks ticks-accent p-4 sm:p-5 lg:sticky lg:top-28">
+            <SectionHeading
+              index="03"
+              title={ru ? 'Установки наведения' : 'Firing solution'}
+              aside={
+                profileModes.length > 1 && (
+                  <Toggle
+                    label={ru ? 'Режим траектории' : 'Trajectory mode'}
+                    value={mode}
+                    onChange={changeMode}
+                    options={profileModes.map((item) => ({
+                      value: item,
+                      label:
+                        item === 'HIGH'
+                          ? ru
+                            ? 'HIGH · навес'
+                            : 'HIGH'
+                          : ru
+                            ? 'LOW · настил'
+                            : 'LOW',
+                    }))}
+                  />
+                )
+              }
+            />
 
             {!profile && (
-              <p className="mt-3 text-sm text-app-muted">
+              <p className="mt-4 text-sm text-app-muted">
                 {ru
                   ? 'Для этого боеприпаса нет таблиц.'
                   : 'No tables for this ammunition.'}
@@ -745,15 +751,26 @@ export function ArtilleryCalculator({
             )}
 
             {profile && !validDistance && (
-              <p className="mt-3 text-sm text-app-muted">
-                {ru
-                  ? 'Введите дистанцию до цели.'
-                  : 'Enter the distance to the target.'}
-              </p>
+              <div className="mt-4 grid grid-cols-2 gap-px border border-app-border bg-app-border">
+                {[
+                  ru ? 'Возвышение' : 'Elevation',
+                  ru ? 'Азимут' : 'Azimuth',
+                ].map((title) => (
+                  <div key={title} className="bg-app-surface p-3">
+                    <p className="label">{title}</p>
+                    <p className="readout mt-2 text-5xl text-app-faint">——</p>
+                  </div>
+                ))}
+                <p className="col-span-2 bg-app-surface px-3 py-2 text-sm text-app-muted">
+                  {ru
+                    ? 'Введите дистанцию до цели.'
+                    : 'Enter the distance to the target.'}
+                </p>
+              </div>
             )}
 
             {profile && validDistance && applicable.length === 0 && range && (
-              <p className="mt-3 text-sm text-app-text">
+              <p className="mt-4 border-l-2 border-warn pl-3 text-sm text-app-text">
                 {rangeAdjust !== 0
                   ? ru
                     ? `Дальность ${baseRange} м (дистанция ${distanceValue} м, корректировка ${formatSigned(rangeAdjust, 0)} м) вне таблиц. Доступно: ${range.min}–${range.max} м.`
@@ -770,60 +787,55 @@ export function ArtilleryCalculator({
 
             {solution && activeResult && w && (
               <>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-app-muted">
-                      {ru ? 'Возвышение' : 'Elevation'}
+                {/* Показания прибора: ячейки через волосяные линии */}
+                <div className="mt-4 grid grid-cols-2 gap-px border border-app-border bg-app-border">
+                  <div className="bg-app-surface p-3">
+                    <p className="label">
+                      {ru ? 'Возвышение' : 'Elevation'} · {unitMil}
                     </p>
-                    <p className="text-5xl font-bold tabular-nums text-app-text">
-                      {Math.round(solution.elevation)}{' '}
-                      <span className="text-base font-normal text-app-muted">
-                        {unitMil}
-                      </span>
+                    <p className="readout mt-2 text-[clamp(2.75rem,9vw,3.75rem)]">
+                      {Math.round(solution.elevation)}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-app-muted">
+                  <div className="bg-app-surface p-3">
+                    <p className="label">
                       {ru ? 'Азимут' : 'Azimuth'}
+                      {firingAzimuth !== null && ` · ${unitAzimuth}`}
                     </p>
-                    <p className="text-5xl font-bold tabular-nums text-app-text">
-                      {firingAzimuth === null ? (
-                        <span className="text-app-muted">—</span>
-                      ) : (
-                        <>
-                          {formatAzimuth(firingAzimuth)}{' '}
-                          <span className="text-base font-normal text-app-muted">
-                            {unitAzimuth}
-                          </span>
-                        </>
+                    <p
+                      className={[
+                        'readout mt-2 text-[clamp(2.75rem,9vw,3.75rem)]',
+                        firingAzimuth === null ? 'text-app-faint' : '',
+                      ].join(' ')}
+                    >
+                      {firingAzimuth === null
+                        ? '——'
+                        : formatAzimuth(firingAzimuth)}
+                    </p>
+                  </div>
+
+                  <div className="bg-app-surface p-3">
+                    <p className="label">{ru ? 'Заряд' : 'Charge'}</p>
+                    <p className="readout mt-2 flex items-baseline gap-2 text-4xl">
+                      {String(activeResult.charge).padStart(2, '0')}
+                      {mode === 'LOW' && (
+                        <span className="tag tag-warn">LOW</span>
                       )}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-app-muted">
-                      {ru ? 'Заряд' : 'Charge'}
+                  <div className="bg-app-surface p-3">
+                    <p className="label">
+                      {ru ? 'Полёт' : 'Flight'} · {unitS}
                     </p>
-                    <p className="text-2xl font-semibold text-app-text">
-                      {activeResult.charge}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-app-muted">
-                      {ru ? 'Время полёта' : 'Time of flight'}
-                    </p>
-                    <p className="text-2xl font-semibold tabular-nums text-app-text">
-                      {solution.tof.toFixed(1)}{' '}
-                      <span className="text-base font-normal text-app-muted">
-                        {unitS}
-                      </span>
+                    <p className="readout mt-2 text-4xl">
+                      {solution.tof.toFixed(1)}
                     </p>
                   </div>
                 </div>
 
-                <ul className="mt-4 space-y-1 text-xs text-app-muted">
+                <ul className="mt-3 space-y-1 font-mono text-[11px] leading-relaxed text-app-muted">
                   <li>
                     {ru ? 'По таблице' : 'Table value'}:{' '}
                     {solution.baseElevation.toFixed(1)} {unitMil}
@@ -864,7 +876,7 @@ export function ArtilleryCalculator({
                 </ul>
 
                 {w.missing && (
-                  <p className="mt-2 text-xs text-app-text">
+                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
                     {ru
                       ? 'На этой дальности в таблице нет части погодных поправок (прочерк «-»). Они не применены.'
                       : 'The table lacks some weather corrections at this range ("-"). They are not applied.'}
@@ -872,7 +884,7 @@ export function ArtilleryCalculator({
                 )}
 
                 {solution.heightCorrectionMissing && (
-                  <p className="mt-2 text-xs text-app-text">
+                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
                     {ru
                       ? 'На этой дальности в таблице игры нет поправки на высоту (прочерк «-»). Результат дан без неё.'
                       : 'The game table has no height correction at this range ("-"). The result is shown without it.'}
@@ -880,7 +892,7 @@ export function ArtilleryCalculator({
                 )}
 
                 {activeResult.nearEdge && (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
                     {ru
                       ? `Заряд ${activeResult.charge} у края своей таблицы: поправки на погоду и высоту здесь менее надёжны. Если есть заряд выше — лучше взять его.`
                       : `Charge ${activeResult.charge} is at the edge of its table: weather and height corrections are less reliable here. Prefer a higher charge if available.`}
@@ -888,7 +900,7 @@ export function ArtilleryCalculator({
                 )}
 
                 {activeResult.wideGap && (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
                     {ru
                       ? 'В таблице игры здесь пропущены строки: значение интерполировано по далёким соседям, точность ниже. Сверьте с таблицей ниже.'
                       : 'The game table skips rows here: the value is interpolated between distant rows, accuracy is lower. Check the table below.'}
@@ -896,7 +908,7 @@ export function ArtilleryCalculator({
                 )}
 
                 {isLargeCorrection(solution) && (
-                  <p className="mt-2 text-xs text-app-text">
+                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
                     {ru
                       ? 'Большая разница высот: поправка линейная, точность снижена.'
                       : 'Large height difference: the correction is linear, accuracy is reduced.'}
@@ -917,12 +929,10 @@ export function ArtilleryCalculator({
                 <button
                   type="button"
                   onClick={() => setCombatOpen(true)}
-                  className="mt-2 w-full cursor-pointer rounded-lg border border-app-border bg-app-surface px-4 py-2 text-sm text-app-text hover:border-emerald-500"
+                  className="btn mt-2 w-full"
                 >
                   {ru ? 'Боевой экран' : 'Combat screen'}
-                  <span className="ml-2 hidden text-xs text-app-muted sm:inline">
-                    B
-                  </span>
+                  <span className="kbd hidden sm:inline-block">B</span>
                 </button>
 
                 {combatOpen && (
@@ -960,13 +970,13 @@ export function ArtilleryCalculator({
                     placeholder={
                       ru ? 'Название метки' : 'Mark name'
                     }
-                    className="min-w-0 flex-1 rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-text outline-none focus:border-emerald-500"
+                    className="field min-w-0 flex-1 text-sm"
                   />
 
                   <button
                     type="button"
                     onClick={handleSave}
-                    className="cursor-pointer rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                    className="btn btn-primary"
                   >
                     {justSaved === 'saved'
                       ? ru
@@ -982,7 +992,7 @@ export function ArtilleryCalculator({
                   <button
                     type="button"
                     onClick={handleUpdate}
-                    className="mt-2 w-full cursor-pointer truncate rounded-lg border border-emerald-600 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-600 hover:text-white dark:text-emerald-300"
+                    className="btn mt-2 w-full truncate border-accent text-accent"
                   >
                     {justSaved === 'updated'
                       ? ru
@@ -1000,7 +1010,7 @@ export function ArtilleryCalculator({
             {results.length > 0 && (
               <div className="mt-5 border-t border-app-border pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-sm font-semibold text-app-text">
+                  <h4 className="label text-app-text">
                     {ru ? 'Заряды' : 'Charges'}
                   </h4>
 
@@ -1037,20 +1047,30 @@ export function ArtilleryCalculator({
                           markEdited()
                         }}
                         className={[
-                          'rounded-lg border px-3 py-2 text-left text-sm',
+                          'border px-3 py-2 text-left text-sm transition-colors',
                           active
-                            ? 'border-emerald-500 bg-app-surface text-app-text'
-                            : 'border-app-border bg-app-bg text-app-text',
+                            ? 'border-accent bg-accent-soft text-app-text'
+                            : 'border-app-border bg-app-raised text-app-text',
                           usable
-                            ? 'cursor-pointer'
-                            : 'cursor-not-allowed opacity-50',
+                            ? 'cursor-pointer hover:border-app-line-strong'
+                            : 'cursor-not-allowed opacity-40',
                         ].join(' ')}
                       >
-                        <span className="block font-semibold">
-                          {ru ? 'Заряд' : 'Charge'} {result.charge}
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="label text-app-text">
+                            {ru ? 'Заряд' : 'Charge'}
+                          </span>
+                          <span
+                            className={[
+                              'readout text-2xl',
+                              active ? 'text-accent' : '',
+                            ].join(' ')}
+                          >
+                            {String(result.charge).padStart(2, '0')}
+                          </span>
                         </span>
 
-                        <span className="block text-xs text-app-muted">
+                        <span className="mono-num mt-1 block text-[11px] text-app-muted">
                           {result.solution
                             ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
                             : `${result.minRange}–${result.maxRange} ${unitM}`}
@@ -1059,10 +1079,8 @@ export function ArtilleryCalculator({
                         {result.solution && result.metersPerMil !== null && (
                           <span
                             className={[
-                              'block text-xs',
-                              result.nearEdge
-                                ? 'text-amber-700 dark:text-amber-300'
-                                : 'text-app-muted',
+                              'mono-num block text-[11px]',
+                              result.nearEdge ? 'text-warn' : 'text-app-muted',
                             ].join(' ')}
                           >
                             1 {unitMil} ≈ {result.metersPerMil.toFixed(1)}{' '}
@@ -1092,7 +1110,7 @@ export function ArtilleryCalculator({
         </div>
 
         {/* ---- Корректировка и погода ---- */}
-        <div className="lg:col-start-1 lg:row-start-2">
+        <div className="space-y-4 lg:col-start-1 lg:row-start-2">
           <AdjustFire
             history={adjustHistory}
             onAdd={(entry) => {
@@ -1121,7 +1139,7 @@ export function ArtilleryCalculator({
             />
           ) : (
             profile && (
-              <p className="mt-4 text-xs text-app-muted">
+              <p className="panel px-4 py-3 text-xs text-app-muted">
                 {ru
                   ? 'Погодные поправки недоступны: в таблицах этой модели погодные столбцы пустые («-»).'
                   : 'Weather corrections are unavailable: the weather columns of this model’s tables are empty ("-").'}
@@ -1144,10 +1162,8 @@ export function ArtilleryCalculator({
       )}
 
       {showKeys && (
-        <div className="mt-6 rounded-lg border border-app-border bg-app-bg p-4">
-          <h3 className="font-semibold text-app-text">
-            {ru ? 'Горячие клавиши' : 'Keyboard shortcuts'}
-          </h3>
+        <div className="panel ticks mt-4 p-4 sm:p-5">
+          <SectionHeading title={ru ? 'Горячие клавиши' : 'Keyboard shortcuts'} />
           <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             {[
               ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
@@ -1164,9 +1180,7 @@ export function ArtilleryCalculator({
             ].map(([key, text]) => (
               <div key={key} className="flex items-baseline gap-3">
                 <dt className="min-w-12">
-                  <kbd className="rounded border border-app-border bg-app-surface px-1.5 py-0.5 font-mono text-xs text-app-text">
-                    {key}
-                  </kbd>
+                  <kbd className="kbd">{key}</kbd>
                 </dt>
                 <dd className="text-app-muted">{text}</dd>
               </div>
@@ -1180,20 +1194,21 @@ export function ArtilleryCalculator({
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-2">
+      <div className="mt-4 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setShowKeys((value) => !value)}
           aria-expanded={showKeys}
-          className="hidden cursor-pointer rounded-lg px-2 py-2 text-xs text-app-muted hover:text-app-text sm:inline-block"
+          className="btn btn-ghost hidden sm:inline-flex"
         >
-          {ru ? 'Горячие клавиши (?)' : 'Shortcuts (?)'}
+          {ru ? 'Горячие клавиши' : 'Shortcuts'}
+          <span className="kbd">?</span>
         </button>
 
         <button
           type="button"
           onClick={resetForm}
-          className="ml-auto cursor-pointer rounded-lg border border-app-border bg-app-bg px-4 py-2 text-sm text-app-text"
+          className="btn btn-danger ml-auto"
         >
           {ru ? 'Очистить поля' : 'Clear inputs'}
         </button>

@@ -172,19 +172,20 @@ export function AdjustFire({
     <details
       id="adjust-fire"
       open={hasTotal}
-      className="rounded-lg border border-app-border bg-app-bg p-4"
+      className="disclosure panel ticks p-4 sm:p-5"
     >
-      <summary className="cursor-pointer font-semibold text-app-text">
-        {ru ? 'Корректировка огня' : 'Adjust fire'}
+      <summary>
+        <span className="index">[04]</span>
+        <span className="label text-app-text">
+          {ru ? 'Корректировка огня' : 'Adjust fire'}
+        </span>
         {hasTotal && (
-          <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
-            {describe(total)}
-          </span>
+          <span className="tag tag-accent truncate">{describe(total)}</span>
         )}
       </summary>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-app-muted">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <span className="label">
           {ru ? 'Доклад по линии' : 'Report along'}
         </span>
         <Toggle
@@ -266,18 +267,10 @@ export function AdjustFire({
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         {hasTotal && (
           <>
-            <button
-              type="button"
-              onClick={onUndo}
-              className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-text"
-            >
+            <button type="button" onClick={onUndo} className="btn">
               {ru ? 'Отменить последний' : 'Undo last'}
             </button>
-            <button
-              type="button"
-              onClick={onReset}
-              className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-text"
-            >
+            <button type="button" onClick={onReset} className="btn btn-danger">
               {ru ? 'Сбросить' : 'Reset'}
             </button>
           </>
@@ -286,22 +279,23 @@ export function AdjustFire({
           type="button"
           disabled={!canAdd}
           onClick={add}
-          className="cursor-pointer rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="btn btn-primary"
         >
           {ru ? 'Учесть разрыв' : 'Apply'}
+          <span className="hidden opacity-70 sm:inline">↵</span>
         </button>
       </div>
 
       {hasTotal && (
         <div className="mt-4 border-t border-app-border pt-3">
-          <p className="text-sm text-app-muted">
-            {ru ? 'Итого для орудия' : 'Total for the gun'}:{' '}
-            <span className="font-semibold text-app-text">
-              {describe(total)}
-            </span>
+          <p className="text-sm">
+            <span className="label">
+              {ru ? 'Итого для орудия' : 'Total for the gun'}
+            </span>{' '}
+            <span className="mono-num ml-1 text-accent">{describe(total)}</span>
           </p>
 
-          <ol className="mt-2 space-y-1 text-xs text-app-muted">
+          <ol className="mt-2 space-y-1 font-mono text-[11px] text-app-muted">
             {history.map((entry, index) => (
               <li key={index} className="flex flex-wrap justify-between gap-2">
                 <span>
