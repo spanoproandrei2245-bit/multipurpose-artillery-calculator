@@ -26,7 +26,7 @@ import {
   type MarkerColor,
 } from '../lib/markers'
 import { useSync } from '../lib/syncContext'
-import type { AngleUnit } from '../lib/journal'
+import type { AngleUnit, MapTarget } from '../lib/journal'
 import {
   deleteHeightmap,
   listHeightmaps,
@@ -45,12 +45,28 @@ export interface MapSelection {
   azimuthMil: number
   ownHeight: number
   targetHeight: number
+  // Точка цели — сохраняется в журнал
+  target: MapTarget
+}
+
+/** Цель из журнала, поставленная на карте. */
+export interface JournalMapTarget {
+  id: string
+  name: string
+  target: MapTarget
+  // Цель, с которой сейчас работает калькулятор
+  active: boolean
 }
 
 interface Props {
   azimuthUnit: AngleUnit
   language: Language
   onApply: (selection: MapSelection) => void
+  // Цели журнала: показываются на карте, клик — загрузить цель
+  journalTargets?: readonly JournalMapTarget[]
+  onPickJournalTarget?: (id: string) => void
+  // Точка текущей цели (например, загруженной из журнала)
+  currentTarget?: MapTarget | null
 }
 
 interface View {
@@ -130,7 +146,14 @@ function fitView(map: Heightmap, width: number, height: number): View {
  * Экспериментально: карта по сетке высот из игры. Клик ставит орудие
  * и цель — дистанция, азимут и высоты подставляются в калькулятор.
  */
-export function MapPicker({ azimuthUnit, language, onApply }: Props) {
+export function MapPicker({
+  azimuthUnit,
+  language,
+  onApply,
+  journalTargets = [],
+  onPickJournalTarget,
+  currentTarget = null,
+}: Props) {
   const ru = language === 'ru'
   const unitM = ru ? 'м' : 'm'
 
@@ -230,7 +253,11 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
         writeStored('mapWorld', world)
         setMap(loaded)
         setGun(readGun(world))
-        setTarget(null)
+        setTarget(
+          currentTarget?.world === world
+            ? { x: currentTarget.x, y: currentTarget.y }
+            : null
+        )
         setPlacing(readGun(world) ? 'target' : 'gun')
         setView(null)
         setAdding(false)
@@ -462,6 +489,33 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
     }
     ctx.globalAlpha = 1
 
+    // Цели журнала: перекрестие в рамке и название
+    ctx.font = `11px ${mono}`
+    for (const saved of journalTargets) {
+      if (saved.target.world !== map.world) continue
+      const p = toScreen(saved.target)
+      if (p.x < -40 || p.y < -40 || p.x > size.width + 40 || p.y > size.height + 40) continue
+      const color = saved.active ? accent : ink.text
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(p.x - 6.5, p.y - 6.5, 13, 13)
+      ctx.beginPath()
+      ctx.moveTo(p.x - 11, p.y)
+      ctx.lineTo(p.x - 3, p.y)
+      ctx.moveTo(p.x + 3, p.y)
+      ctx.lineTo(p.x + 11, p.y)
+      ctx.moveTo(p.x, p.y - 11)
+      ctx.lineTo(p.x, p.y - 3)
+      ctx.moveTo(p.x, p.y + 3)
+      ctx.lineTo(p.x, p.y + 11)
+      ctx.stroke()
+      const width = ctx.measureText(saved.name).width
+      ctx.fillStyle = ink.plate
+      ctx.fillRect(p.x - width / 2 - 4, p.y + 13, width + 8, 16)
+      ctx.fillStyle = color
+      ctx.fillText(saved.name, p.x - width / 2, p.y + 25)
+    }
+
     if (draft) {
       const p = toScreen(draft.point)
       ctx.strokeStyle = MARKER_RGB[draft.color]
@@ -524,7 +578,7 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
       ctx.lineTo(p.x, p.y + 13)
       ctx.stroke()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -605,6 +659,19 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
       return
     }
 
+    // Клик по цели журнала — загрузить её
+    const journalHit = journalTargets.find(
+      (t) =>
+        t.target.world === map.world &&
+        Math.hypot(t.target.x - point.x, t.target.y - point.y) *
+          drag.view.scale <=
+          MARKER_HIT_PX
+    )
+    if (journalHit && placing !== 'gun' && onPickJournalTarget) {
+      onPickJournalTarget(journalHit.id)
+      return
+    }
+
     // Клик по метке — цель ставится точно в неё
     const hit = markers.find(
       (m) =>
@@ -638,11 +705,13 @@ export function MapPicker({ azimuthUnit, language, onApply }: Props) {
 
   function apply() {
     if (!line || gunHeight === null || targetHeight === null) return
+    if (!map || !target) return
     onApply({
       distance: line.distance,
       azimuthMil: line.azimuthMil,
       ownHeight: gunHeight,
       targetHeight,
+      target: { world: map.world, x: target.x, y: target.y },
     })
     setNotice(ru ? 'Подставлено в калькулятор.' : 'Applied to the calculator.')
   }

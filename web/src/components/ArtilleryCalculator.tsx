@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { artilleryRegistry } from '../data/artillery/registry'
 import type { ModelId } from '../data/models'
@@ -25,7 +25,12 @@ import {
 } from '../lib/input'
 import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
-import type { AngleUnit, JournalDraft, JournalEntry } from '../lib/journal'
+import type {
+  AngleUnit,
+  JournalDraft,
+  JournalEntry,
+  MapTarget,
+} from '../lib/journal'
 import {
   notifyOverlayShot,
   onHotkey,
@@ -71,6 +76,9 @@ interface Props {
   targetBar?: ReactNode
   // Цель из журнала, с которой сейчас работаем: её можно обновить
   activeEntry?: Pick<JournalEntry, 'id' | 'name'> | null
+  // Все цели журнала — для отметок на карте
+  journalEntries?: readonly JournalEntry[]
+  onLoadEntry?: (id: string) => void
   onSave: (draft: JournalDraft) => void
   onUpdate?: (id: string, draft: JournalDraft) => void
 }
@@ -84,6 +92,8 @@ export function ArtilleryCalculator({
   modelSelector,
   targetBar,
   activeEntry = null,
+  journalEntries = [],
+  onLoadEntry,
   onSave,
   onUpdate,
 }: Props) {
@@ -110,6 +120,11 @@ export function ArtilleryCalculator({
     numberToField(initial?.targetHeight)
   )
   const [azimuth, setAzimuth] = useState(numberToField(initial?.azimuth))
+  // Точка цели на карте, если цель ставили на карте; ручная правка
+  // дистанции или азимута её сбрасывает.
+  const [mapTarget, setMapTarget] = useState<MapTarget | null>(
+    initial?.target ?? null
+  )
   const [azimuthUnit, setAzimuthUnit] = useState<AngleUnit>(
     () =>
       initial?.azimuthUnit ??
@@ -327,6 +342,7 @@ export function ArtilleryCalculator({
   }
 
   function resetForm() {
+    setMapTarget(null)
     setDistance('')
     setOwnHeight('')
     setTargetHeight('')
@@ -376,6 +392,7 @@ export function ArtilleryCalculator({
       firingAzimuth,
       weather: weatherInputs.toJournal(),
       mode,
+      target: mapTarget,
     }
   }
 
@@ -445,6 +462,25 @@ export function ArtilleryCalculator({
           )
         )
       : []
+
+  // ---- цели журнала, поставленные на карте ----
+  const activeEntryId = activeEntry?.id ?? null
+  const journalTargets = useMemo(
+    () =>
+      journalEntries.flatMap((entry) =>
+        entry.target
+          ? [
+              {
+                id: entry.id,
+                name: entry.name,
+                target: entry.target,
+                active: entry.id === activeEntryId,
+              },
+            ]
+          : []
+      ),
+    [journalEntries, activeEntryId]
+  )
 
   // ---- программа для ПК: оверлей поверх игры и глобальные клавиши ----
   const overlayState: OverlayState = {
@@ -531,6 +567,9 @@ export function ArtilleryCalculator({
             targetHeight: setTargetHeight,
           }
           edited(setters[command.field])(command.value)
+          if (command.field === 'distance' || command.field === 'azimuth') {
+            setMapTarget(null)
+          }
           break
         }
         case 'charge':
@@ -622,14 +661,20 @@ export function ArtilleryCalculator({
               id="calc-distance"
               label={ru ? 'Дистанция (м)' : 'Distance (m)'}
               value={distance}
-              onChange={edited(setDistance)}
+              onChange={edited((value) => {
+                setDistance(value)
+                setMapTarget(null)
+              })}
             />
 
             <NumberField
               id="calc-azimuth"
               label={ru ? 'Азимут на цель' : 'Azimuth to target'}
               value={azimuth}
-              onChange={edited(setAzimuth)}
+              onChange={edited((value) => {
+                setAzimuth(value)
+                setMapTarget(null)
+              })}
               placeholder={ru ? 'необязательно' : 'optional'}
               aside={
                 <Toggle
@@ -690,6 +735,7 @@ export function ArtilleryCalculator({
               onApply={(gridDistance, gridAzimuth) => {
                 setDistance(String(gridDistance))
                 setAzimuth(String(gridAzimuth))
+                setMapTarget(null)
                 markEdited()
               }}
             />
@@ -699,6 +745,9 @@ export function ArtilleryCalculator({
             <MapPicker
               azimuthUnit={azimuthUnit}
               language={language}
+              currentTarget={mapTarget}
+              journalTargets={journalTargets}
+              onPickJournalTarget={onLoadEntry}
               onApply={(selection) => {
                 setDistance(String(Math.round(selection.distance)))
                 setAzimuth(
@@ -708,6 +757,7 @@ export function ArtilleryCalculator({
                 )
                 setOwnHeight(String(Math.round(selection.ownHeight)))
                 setTargetHeight(String(Math.round(selection.targetHeight)))
+                setMapTarget(selection.target)
                 markEdited()
               }}
             />
