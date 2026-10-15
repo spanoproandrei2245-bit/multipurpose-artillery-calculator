@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 
 import { artilleryRegistry } from '../data/artillery/registry'
 import type { ModelId } from '../data/models'
@@ -54,7 +62,6 @@ import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import { NumberField, SectionHeading, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
-import { MapPicker } from './MapPicker'
 import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
@@ -62,6 +69,12 @@ import { fireMoment } from '../lib/tot'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
+
+// Карта с рельефом и распознаванием экрана — отдельным чанком:
+// расчёт открывается раньше, карта догружается следом.
+const MapPicker = lazy(() =>
+  import('./MapPicker').then((m) => ({ default: m.MapPicker }))
+)
 
 interface Props {
   modelId: ModelId
@@ -750,25 +763,33 @@ export function ArtilleryCalculator({
           )}
 
           {mapInput && (
-            <MapPicker
-              azimuthUnit={azimuthUnit}
-              language={language}
-              currentTarget={mapTarget}
-              journalTargets={journalTargets}
-              onPickJournalTarget={onLoadEntry}
-              onApply={(selection) => {
-                setDistance(String(Math.round(selection.distance)))
-                setAzimuth(
-                  azimuthUnit === 'mil'
-                    ? String(Math.round(selection.azimuthMil))
-                    : String(Math.round(milToDeg(selection.azimuthMil) * 10) / 10)
-                )
-                setOwnHeight(String(Math.round(selection.ownHeight)))
-                setTargetHeight(String(Math.round(selection.targetHeight)))
-                setMapTarget(selection.target)
-                markEdited()
-              }}
-            />
+            <Suspense
+              fallback={
+                <p className="label mt-5 border border-app-border p-4">
+                  {ru ? 'Загрузка карты…' : 'Loading the map…'}
+                </p>
+              }
+            >
+              <MapPicker
+                azimuthUnit={azimuthUnit}
+                language={language}
+                currentTarget={mapTarget}
+                journalTargets={journalTargets}
+                onPickJournalTarget={onLoadEntry}
+                onApply={(selection) => {
+                  setDistance(String(Math.round(selection.distance)))
+                  setAzimuth(
+                    azimuthUnit === 'mil'
+                      ? String(Math.round(selection.azimuthMil))
+                      : String(Math.round(milToDeg(selection.azimuthMil) * 10) / 10)
+                  )
+                  setOwnHeight(String(Math.round(selection.ownHeight)))
+                  setTargetHeight(String(Math.round(selection.targetHeight)))
+                  setMapTarget(selection.target)
+                  markEdited()
+                }}
+              />
+            </Suspense>
           )}
         </div>
 

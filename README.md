@@ -18,7 +18,7 @@ Calculator for elevation, azimuth and charge (and more) for mortars and artiller
 | `main`    | [spanoproandrei2245-bit.github.io/multipurpose-artillery-calculator](https://spanoproandrei2245-bit.github.io/multipurpose-artillery-calculator/) |
 | `develop` | in development                                                                                                                                     |
 
-Weapons: Mk6, M252, M29, M2, M101, M5 Sandstorm (Seara). Works in the browser, installs on a phone and runs as a Windows app with an overlay on top of the game.
+Weapons: Mk6, M252, M29, M2, M101, M5 Sandstorm (Seara). Works in the browser, installs on a phone and runs as a Windows app with an overlay on top of the game. A fire direction computer can share the solution, map markers and a time on target with gunners in real time.
 
 ## Download
 

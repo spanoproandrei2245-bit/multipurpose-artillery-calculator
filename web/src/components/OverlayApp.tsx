@@ -22,7 +22,7 @@ const IMPACT_HOLD_MS = 4000
 // Размер окна: только установки / с панелью ввода
 const WIDTH = 340
 const COMPACT_HEIGHT = 250
-const EDITING_HEIGHT = 500
+const EDITING_HEIGHT = 580
 
 const FIELDS: readonly OverlayField[] = [
   'distance',
