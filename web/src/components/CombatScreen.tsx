@@ -1,4 +1,5 @@
 import { useEffect, type Ref } from 'react'
+import { createPortal } from 'react-dom'
 
 import { useWakeLock } from '../lib/useWakeLock'
 import type { ArtilleryMode } from '../types/artillery'
@@ -52,89 +53,88 @@ export function CombatScreen({
     }
   }, [])
 
-  const big = 'font-bold leading-none tabular-nums text-app-text'
+  const cell = 'rounded-xl bg-app-surface p-5 sm:p-7'
+  const caption = 'text-[15px] font-medium text-app-muted'
 
-  return (
+  // Портал в <body>: экран не зависит от контекста наложения родителя.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label={ru ? 'Боевой экран' : 'Combat screen'}
-      className="fixed inset-0 z-50 flex flex-col overflow-auto bg-app-bg p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex flex-col overflow-auto bg-app-bg p-3 sm:p-6"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-app-text">
+          <p className="truncate text-xl font-semibold text-app-text sm:text-2xl">
             {targetName ?? title}
           </p>
           {targetName && (
-            <p className="truncate text-sm text-app-muted">{title}</p>
+            <p className="mt-0.5 truncate text-[15px] text-app-muted">{title}</p>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="shrink-0 cursor-pointer rounded-lg border border-app-border bg-app-surface px-4 py-2 text-sm text-app-text"
-        >
+        <button type="button" onClick={onClose} className="btn shrink-0">
           {ru ? 'Закрыть' : 'Close'}
+          <span className="kbd hidden sm:inline-block">Esc</span>
         </button>
       </div>
 
-      <div className="grid flex-1 content-center gap-8 py-6 sm:grid-cols-2">
-        <div>
-          <p className="text-base text-app-muted sm:text-lg">
-            {ru ? 'Возвышение, мил' : 'Elevation, mil'}
+      <div className="mt-4 grid flex-1 gap-3 sm:grid-cols-2">
+        <div className={cell}>
+          <p className={caption}>
+            {ru ? 'Возвышение' : 'Elevation'}, {ru ? 'мил' : 'mil'}
           </p>
-          <p className={`${big} text-[clamp(4.5rem,22vw,11rem)]`}>
+          <p className="readout mt-3 text-[clamp(5rem,24vw,12rem)] font-semibold">
             {Math.round(elevation)}
           </p>
         </div>
 
-        <div>
-          <p className="text-base text-app-muted sm:text-lg">
+        <div className={cell}>
+          <p className={caption}>
             {ru ? 'Азимут' : 'Azimuth'}
             {azimuth !== null && `, ${azimuthUnit}`}
           </p>
           <p
-            className={`${big} text-[clamp(4.5rem,22vw,11rem)] ${azimuth === null ? 'text-app-muted' : ''}`}
+            className={[
+              'readout mt-3 text-[clamp(5rem,24vw,12rem)] font-semibold',
+              azimuth === null ? 'text-app-faint' : '',
+            ].join(' ')}
           >
             {azimuth ?? '—'}
           </p>
         </div>
 
-        <div className="flex gap-10">
+        <div className={`${cell} flex items-end gap-12`}>
           <div>
-            <p className="text-base text-app-muted">
-              {ru ? 'Заряд' : 'Charge'}
-            </p>
-            <p className={`${big} text-6xl`}>
+            <p className={caption}>{ru ? 'Заряд' : 'Charge'}</p>
+            <p className="readout mt-3 flex items-baseline gap-3 text-7xl font-semibold">
               {charge}
-              {mode === 'LOW' && (
-                <span className="ml-2 align-middle text-2xl text-amber-600 dark:text-amber-300">
-                  LOW
-                </span>
-              )}
+              {mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
             </p>
           </div>
           <div>
-            <p className="text-base text-app-muted">
-              {ru ? 'Полёт, с' : 'Flight, s'}
+            <p className={caption}>
+              {ru ? 'Полёт' : 'Flight'}, {ru ? 'с' : 's'}
             </p>
-            <p className={`${big} text-6xl`}>{tof.toFixed(1)}</p>
+            <p className="readout mt-3 text-7xl font-semibold">{tof.toFixed(1)}</p>
           </div>
+        </div>
+
+        <div className={`${cell} flex flex-col justify-center`}>
+          <FireTimer
+            ref={timerRef}
+            tof={tof}
+            language={language}
+            onFire={onFire}
+          />
         </div>
       </div>
 
-      <FireTimer
-        ref={timerRef}
-        tof={tof}
-        language={language}
-        onFire={onFire}
-      />
-
-      <p className="mt-3 hidden text-center text-xs text-app-muted sm:block">
-        {ru ? 'F — огонь · Esc — закрыть' : 'F — fire · Esc — close'}
+      <p className="label mt-3 hidden text-center sm:block">
+        F — {ru ? 'огонь' : 'fire'} · Esc — {ru ? 'закрыть' : 'close'}
       </p>
-    </div>
+    </div>,
+    document.body
   )
 }

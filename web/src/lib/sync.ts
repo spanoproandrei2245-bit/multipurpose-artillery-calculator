@@ -1,4 +1,5 @@
 import type { ArtilleryMode } from '../types/artillery'
+import { parseMarker, type MapMarker } from './markers'
 
 /**
  * Связка наводчик ↔ стрелок: общее для всех устройств.
@@ -41,6 +42,8 @@ export interface SyncSolution {
   azimuth: string | null
   azimuthUnit: string
   tof: number
+  // Огонь по времени: момент разрыва, мс (часы устройства); null — нет
+  tot?: number | null
 }
 
 export type SyncMessage =
@@ -51,6 +54,8 @@ export type SyncMessage =
   | { kind: 'shot'; from: string; sentAt: number }
   // «Я в сети» — раз в несколько секунд
   | { kind: 'hello'; from: string; sentAt: number; role: SyncRole }
+  // Метка на карте; хранится на брокере (retain) в своём канале
+  | { kind: 'marker'; from: string; sentAt: number; marker: MapMarker }
 
 // Без похожих символов: 0/O, 1/I/L — код диктуют голосом.
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
@@ -217,7 +222,8 @@ function parseSolution(value: unknown): SyncSolution | null | undefined {
     (s.azimuth === null || isString(s.azimuth)) &&
     isString(s.azimuthUnit) &&
     isNumber(s.tof) &&
-    s.tof > 0
+    s.tof > 0 &&
+    (s.tot === undefined || s.tot === null || isNumber(s.tot))
   if (!valid) return undefined
   return {
     title: s.title as string,
@@ -228,6 +234,7 @@ function parseSolution(value: unknown): SyncSolution | null | undefined {
     azimuth: s.azimuth as string | null,
     azimuthUnit: s.azimuthUnit as string,
     tof: s.tof as number,
+    tot: (s.tot as number | null | undefined) ?? null,
   }
 }
 
@@ -245,6 +252,10 @@ export function parseMessage(value: unknown): SyncMessage | null {
     }
     case 'shot':
       return { kind: 'shot', ...base }
+    case 'marker': {
+      const marker = parseMarker(m.marker)
+      return marker ? { kind: 'marker', ...base, marker } : null
+    }
     case 'hello':
       return m.role === 'computer' || m.role === 'gunner'
         ? { kind: 'hello', ...base, role: m.role }

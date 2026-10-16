@@ -2,23 +2,6 @@
 import type { Language } from '../types/settings'
 
 type Translation = {
-  header: {
-    title: string
-    subtitle: string
-    status: string
-  }
-  navigation: {
-    dashboard: string
-    sync: string
-    models: string
-    settings: string
-  }
-  modelsPage: {
-    title: string
-    description: string
-    modes: string
-    openDashboard: string
-  }
   modelSelector: {
     label: string
   }
@@ -46,7 +29,13 @@ type Translation = {
     desktopDescription: string
     toggleOverlay: string
     hotkeys: Record<
-      'fire' | 'overlay' | 'input' | 'mode' | 'next-target' | 'previous-target',
+      | 'fire'
+      | 'overlay'
+      | 'input'
+      | 'screen-markers'
+      | 'mode'
+      | 'next-target'
+      | 'previous-target',
       string
     >
     armaDisplayMode: string
@@ -55,29 +44,12 @@ type Translation = {
 
 export const translations: Record<Language, Translation> = {
   en: {
-    header: {
-      title: 'Multipurpose Artillery Calculator',
-      subtitle: 'made by Heis',
-      status: 'Alpha',
-    },
-    navigation: {
-      dashboard: 'Dashboard',
-      sync: 'Link',
-      models: 'Models',
-      settings: 'Settings',
-    },
-    modelsPage: {
-      title: 'Game Models',
-      description: 'Select a model to open its dashboard.',
-      modes: 'Modes',
-      openDashboard: 'Open Dashboard',
-    },
     modelSelector: {
       label: 'Game Model',
     },
     settings: {
       title: 'Settings',
-      description: 'Customize your application.',
+      description: 'Interface, sounds and devices.',
       preferences: 'Preferences',
       language: 'Interface language',
       autoSave: 'Your preferences are saved automatically.',
@@ -86,9 +58,9 @@ export const translations: Record<Language, Translation> = {
       dark: 'Dark',
       experimental: 'Experimental features',
       experimentalDescription: 'May change or be removed in future versions.',
-      mapInput: 'Map with heights',
+      mapInput: 'Map with markers and heights',
       mapInputDescription:
-        'Export terrain heights from the game with a script, then click the gun and the target: distance, azimuth and both heights are filled in.',
+        'Export terrain heights from the game with a script, then click the gun and the target: distance, azimuth and both heights are filled in. Markers are shared with everyone in the link room.',
       gridInput: 'Grid coordinate input',
       gridInputDescription:
         'Distance and azimuth from the gun and target grid references (6, 8 or 10 digits).',
@@ -107,6 +79,7 @@ export const translations: Record<Language, Translation> = {
         'next-target': 'Next saved target',
         'previous-target': 'Previous saved target',
         input: 'Type in the overlay (distance field)',
+        'screen-markers': 'Take the map markers from the screen',
       },
       armaDisplayMode:
         'In Arma 3 set Display Mode to "Fullscreen Window" or "Window": the overlay cannot be drawn over exclusive fullscreen.',
@@ -117,29 +90,12 @@ export const translations: Record<Language, Translation> = {
   },
 
   ru: {
-    header: {
-      title: 'Multipurpose Artillery Calculator',
-      subtitle: 'made by Heis',
-      status: 'Альфа',
-    },
-    navigation: {
-      dashboard: 'Главная',
-      sync: 'Связка',
-      models: 'Модели',
-      settings: 'Настройки',
-    },
-    modelsPage: {
-      title: 'Игровые модели',
-      description: 'Выберите модель, чтобы открыть её панель.',
-      modes: 'Режимы',
-      openDashboard: 'Открыть панель',
-    },
     modelSelector: {
       label: 'Игровая модель',
     },
     settings: {
       title: 'Настройки',
-      description: 'Настройте приложение под себя.',
+      description: 'Интерфейс, звуки и устройства.',
       preferences: 'Основные настройки',
       language: 'Язык интерфейса',
       autoSave: 'Настройки сохраняются автоматически.',
@@ -148,9 +104,9 @@ export const translations: Record<Language, Translation> = {
       dark: 'Тёмная',
       experimental: 'Экспериментальные функции',
       experimentalDescription: 'Могут измениться или исчезнуть в следующих версиях.',
-      mapInput: 'Карта с высотами',
+      mapInput: 'Карта с метками и высотами',
       mapInputDescription:
-        'Выгрузите высоты карты скриптом из игры, затем кликните орудие и цель — дистанция, азимут и обе высоты подставятся сами.',
+        'Выгрузите высоты карты скриптом из игры, затем кликните орудие и цель — дистанция, азимут и обе высоты подставятся сами. Метки видят все в комнате связки.',
       gridInput: 'Ввод по координатам сетки',
       gridInputDescription:
         'Дистанция и азимут по координатам орудия и цели (6, 8 или 10 цифр).',
@@ -169,6 +125,7 @@ export const translations: Record<Language, Translation> = {
         'next-target': 'Следующая сохранённая цель',
         'previous-target': 'Предыдущая сохранённая цель',
         input: 'Ввод в оверлее (поле дистанции)',
+        'screen-markers': 'Забрать метки с экрана карты',
       },
       armaDisplayMode:
         'В Arma 3 поставьте режим экрана «Полноэкранный в окне» (Fullscreen Window) или «Оконный»: поверх эксклюзивного полноэкранного режима оверлей не рисуется.',

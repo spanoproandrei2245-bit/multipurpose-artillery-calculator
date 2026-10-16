@@ -3,7 +3,10 @@ import QRCode from 'qrcode'
 
 import { CombatScreen } from '../components/CombatScreen'
 import { FireTimer, type FireTimerHandle } from '../components/FireTimer'
-import { Toggle } from '../components/FormControls'
+import { TotPanel } from '../components/TotPanel'
+import { fireMoment } from '../lib/tot'
+import { Row, SectionHeading, Toggle } from '../components/FormControls'
+import { PageIntro } from '../components/PageIntro'
 import {
   isDesktop,
   notifyOverlayShot,
@@ -12,7 +15,7 @@ import {
   publishSolution,
   type OverlayState,
 } from '../lib/desktop'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
 import {
   generateRoomCode,
   inviteLink,
@@ -58,17 +61,18 @@ export function SyncPage({ language }: Props) {
   const sync = useSync()
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-app-text">
-          {ru ? 'Связка наводчик ↔ стрелок' : 'Fire direction ↔ gunner link'}
-        </h2>
-        <p className="mt-1 text-sm text-app-muted">
-          {ru
-            ? 'Наводчик считает в калькуляторе — у стрелков установки обновляются сами. «Выстрел» на любом устройстве запускает отсчёт до разрыва у всех. Нужен интернет на обоих устройствах.'
-            : 'The fire direction computer works in the calculator; gunners see the settings update live. "Fire" on any device starts the impact countdown everywhere. Both devices need internet.'}
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageIntro
+        title={
+          ru
+            ? 'Наводчик считает — стрелок видит сразу.'
+            : 'The FDC computes — gunners see it live.'
+        }
+      >
+        {ru
+          ? 'Установки уходят стрелкам при каждом изменении. «Огонь» на любом устройстве запускает отсчёт до разрыва у всех. Данные шифруются кодом комнаты. Нужен интернет на всех устройствах.'
+          : 'Settings go to the gunners on every change. "Fire" on any device starts the impact countdown everywhere. Data is encrypted with the room code. All devices need internet.'}
+      </PageIntro>
 
       <RoomCard language={language} />
 
@@ -131,10 +135,23 @@ function RoomCard({ language }: Props) {
   ]
 
   return (
-    <section className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6">
-      <div className="flex flex-wrap items-end gap-4">
+    <section className="panel p-4 sm:p-5">
+      <SectionHeading
+        index="01"
+        title={ru ? 'Комната' : 'Room'}
+        aside={
+          <span className="label flex items-center gap-2">
+            <span
+              className={`inline-block h-1.5 w-1.5 ${syncStatusColor(sync.status)}`}
+            />
+            {syncStatusText(sync.status, ru)}
+          </span>
+        }
+      />
+
+      <div className="mt-4 flex flex-wrap items-end gap-4">
         <div>
-          <p className="mb-1 text-sm text-app-muted">
+          <p className="label mb-1.5">
             {ru ? 'Я на этом устройстве' : 'On this device I am'}
           </p>
           <Toggle
@@ -146,7 +163,7 @@ function RoomCard({ language }: Props) {
         </div>
 
         <label className="block">
-          <span className="mb-1 block text-sm text-app-muted">
+          <span className="label mb-1.5 block">
             {ru ? 'Код комнаты' : 'Room code'}
           </span>
           <input
@@ -158,69 +175,84 @@ function RoomCard({ language }: Props) {
             autoCapitalize="characters"
             spellCheck={false}
             maxLength={12}
-            className={[
-              'w-40 rounded-lg border bg-app-bg px-3 py-2 font-mono text-lg tracking-wider text-app-text uppercase outline-none focus:border-emerald-500',
-              sync.code && !validCode ? 'border-red-500' : 'border-app-border',
-            ].join(' ')}
+            aria-invalid={sync.code !== '' && !validCode}
+            className="field w-44 text-lg"
           />
         </label>
 
-        <button
-          type="button"
-          onClick={() => sync.setCode(generateRoomCode())}
-          className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text hover:border-emerald-500"
-        >
-          {ru ? 'Новый код' : 'New code'}
-        </button>
+        <label className="block">
+          <span className="label mb-1.5 block">
+            {ru ? 'Позывной' : 'Callsign'}
+          </span>
+          <input
+            type="text"
+            value={sync.callsign}
+            onChange={(event) => sync.setCallsign(event.target.value)}
+            placeholder={ru ? 'для меток' : 'for markers'}
+            maxLength={24}
+            className="field w-36 py-2 text-sm"
+          />
+        </label>
 
-        {sync.enabled ? (
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={sync.disconnect}
-            className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-4 py-2 text-sm font-semibold text-app-text hover:border-red-500"
+            onClick={() => sync.setCode(generateRoomCode())}
+            className="btn"
           >
-            {ru ? 'Отключиться' : 'Disconnect'}
+            {ru ? 'Новый код' : 'New code'}
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={sync.connect}
-            disabled={!validCode}
-            className="cursor-pointer rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-default disabled:opacity-40"
-          >
-            {ru ? 'Подключиться' : 'Connect'}
-          </button>
-        )}
+
+          {sync.enabled ? (
+            <button
+              type="button"
+              onClick={sync.disconnect}
+              className="btn btn-danger"
+            >
+              {ru ? 'Отключиться' : 'Disconnect'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={sync.connect}
+              disabled={!validCode}
+              className="btn btn-primary"
+            >
+              {ru ? 'Подключиться' : 'Connect'}
+            </button>
+          )}
+        </div>
       </div>
 
-      <p className="mt-3 flex items-center gap-2 text-sm text-app-muted">
-        <span
-          className={`inline-block h-2.5 w-2.5 rounded-full ${syncStatusColor(sync.status)}`}
-        />
-        {syncStatusText(sync.status, ru)}
-        {sync.status === 'online' && (
-          <span>
-            · {ru ? 'в комнате ещё' : 'others in the room'}:{' '}
-            {sync.peers.length === 0
-              ? ru
-                ? 'никого'
-                : 'nobody'
-              : sync.peers
-                  .map((peer) =>
-                    peer.role === 'gunner'
-                      ? ru
-                        ? 'стрелок'
-                        : 'gunner'
-                      : ru
-                        ? 'наводчик'
-                        : 'FDC'
-                  )
-                  .join(', ')}
+      {sync.status === 'online' && (
+        <p className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="label">
+            {ru ? 'В комнате ещё' : 'Also in the room'}
           </span>
-        )}
-      </p>
+          {sync.peers.length === 0 ? (
+            <span className="label text-app-faint">
+              {ru ? 'никого' : 'nobody'}
+            </span>
+          ) : (
+            sync.peers.map((peer) => (
+              <span
+                key={peer.id}
+                className={`tag ${peer.role === 'gunner' ? 'tag-ok' : 'tag-accent'}`}
+              >
+                {peer.role === 'gunner'
+                  ? ru
+                    ? 'стрелок'
+                    : 'gunner'
+                  : ru
+                    ? 'наводчик'
+                    : 'FDC'}
+              </span>
+            ))
+          )}
+        </p>
+      )}
       {!validCode && (
-        <p className="mt-2 text-xs text-app-muted">
+        <p className="mt-3 text-xs text-app-muted">
           {ru
             ? 'Наводчик жмёт «Новый код» и сообщает его стрелкам (или даёт QR-код). Все вводят один и тот же код.'
             : 'The FDC presses "New code" and gives it to the gunners (or shows the QR code). Everyone enters the same code.'}
@@ -228,25 +260,29 @@ function RoomCard({ language }: Props) {
       )}
 
       {link && sync.role === 'computer' && (
-        <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-app-border pt-4">
+        <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-app-border pt-5">
           {qr?.link === link && (
-            <img
-              src={qr.image}
-              width={128}
-              height={128}
-              alt={ru ? 'QR-код приглашения для стрелка' : 'Gunner invite QR code'}
-              className="rounded-lg bg-white p-1"
-            />
+            <div className="p-2">
+              <img
+                src={qr.image}
+                width={128}
+                height={128}
+                alt={ru ? 'QR-код приглашения для стрелка' : 'Gunner invite QR code'}
+                className="block bg-white p-1"
+              />
+            </div>
           )}
           <div className="min-w-0 flex-1 text-sm">
             <p className="text-app-text">
               {ru ? 'Приглашение для стрелка' : 'Invite for a gunner'}
             </p>
-            <p className="mt-1 break-all text-xs text-app-muted">{link}</p>
+            <p className="mt-2 text-[12.5px] break-all text-app-muted">
+              {link}
+            </p>
             <button
               type="button"
               onClick={() => void copyLink()}
-              className="mt-2 cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text hover:border-emerald-500"
+              className="btn btn-sm mt-3"
             >
               {copied
                 ? ru
@@ -256,7 +292,7 @@ function RoomCard({ language }: Props) {
                   ? 'Копировать ссылку'
                   : 'Copy link'}
             </button>
-            <p className="mt-2 text-xs text-app-muted">
+            <p className="mt-3 text-xs text-app-muted">
               {ru
                 ? 'Стрелок сканирует QR-код телефоном — приложение откроется сразу в комнате.'
                 : 'The gunner scans the QR code — the app opens straight in the room.'}
@@ -265,17 +301,17 @@ function RoomCard({ language }: Props) {
         </div>
       )}
 
-      <details className="mt-4 text-sm">
-        <summary className="cursor-pointer text-app-muted">
-          {ru ? 'Сервер связи' : 'Relay server'}
+      <details className="disclosure mt-5 border-t border-app-border pt-4 text-sm">
+        <summary>
+          <span className="label">{ru ? 'Сервер связи' : 'Relay server'}</span>
         </summary>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <select
             value={sync.server}
             onChange={(event) =>
               sync.setServer(event.target.value as SyncServerId)
             }
-            className="rounded-lg border border-app-border bg-app-bg px-3 py-1.5 text-app-text"
+            className="field w-auto py-1.5 text-xs"
           >
             {SYNC_SERVERS.map((server) => (
               <option key={server.id} value={server.id}>
@@ -301,22 +337,24 @@ function ComputerView({ language }: Props) {
   const gunners = sync.peers.filter((peer) => peer.role === 'gunner').length
 
   return (
-    <section className="rounded-xl border border-app-border bg-app-surface p-4 text-sm sm:p-6">
-      <p className="text-app-text">
-        {ru ? 'Стрелков на связи' : 'Gunners online'}:{' '}
-        <span className="font-semibold">{gunners}</span>
-      </p>
-      <p className="mt-1 text-app-muted">
-        {sync.lastSharedAt
-          ? `${ru ? 'Установки отправлены' : 'Settings sent'} ${ago(now - sync.lastSharedAt, ru)}`
-          : ru
-            ? 'Установки ещё не отправлялись.'
-            : 'Nothing sent yet.'}
-      </p>
+    <section className="panel p-4 sm:p-5">
+      <SectionHeading index="02" title={ru ? 'Наводчик' : 'Fire direction'} />
+      <dl className="mt-2">
+        <Row label={ru ? 'Стрелков на связи' : 'Gunners online'}>
+          <span className="text-xl font-semibold text-app-text">{gunners}</span>
+        </Row>
+        <Row label={ru ? 'Последняя отправка' : 'Last sent'}>
+          {sync.lastSharedAt
+            ? ago(now - sync.lastSharedAt, ru)
+            : ru
+              ? 'ещё нет'
+              : 'not yet'}
+        </Row>
+      </dl>
       <p className="mt-3 text-xs text-app-muted">
         {ru
-          ? 'Работайте на вкладке «Главная»: каждое изменение возвышения, азимута или заряда сразу уходит стрелкам. Когда стрелок жмёт «Выстрел», у вас запускается отсчёт до разрыва.'
-          : 'Work on the Dashboard tab: every change of elevation, azimuth or charge goes to the gunners at once. When a gunner presses "Fire", your impact countdown starts.'}
+          ? 'Работайте на вкладке «Расчёт»: каждое изменение возвышения, азимута или заряда сразу уходит стрелкам. Когда стрелок жмёт «Огонь», у вас запускается отсчёт до разрыва.'
+          : 'Work on the Solution tab: every change of elevation, azimuth or charge goes to the gunners at once. When a gunner presses "Fire", your impact countdown starts.'}
       </p>
     </section>
   )
@@ -340,7 +378,7 @@ function GunnerView({ language }: Props) {
   // Новые установки — короткий сигнал
   const receivedAt = remote?.solution ? remote.receivedAt : null
   useEffect(() => {
-    if (receivedAt !== null) beep(1200, 80)
+    if (receivedAt !== null) playSound('syncUpdate')
   }, [receivedAt])
 
   const { onShot, sendShot } = sync
@@ -396,6 +434,8 @@ function GunnerView({ language }: Props) {
         }
       : null,
     readOnly: true,
+    fireAt:
+      solution?.tot != null ? fireMoment(solution.tot, solution.tof) : null,
   }
   const overlayJson = JSON.stringify(overlayState)
   const overlayJsonRef = useRef(overlayJson)
@@ -415,86 +455,77 @@ function GunnerView({ language }: Props) {
 
   if (!sync.active || !solution) {
     return (
-      <section className="rounded-xl border border-app-border bg-app-surface p-6 text-center text-app-muted">
-        {!sync.active
-          ? ru
-            ? 'Нет связи с сервером — установки не обновляются.'
-            : 'No connection — settings are not updating.'
-          : ru
-            ? 'Ждём установки от наводчика…'
-            : 'Waiting for the fire direction data…'}
+      <section className="panel p-10 text-center">
+        <p className="label">
+          {!sync.active
+            ? ru
+              ? 'Нет связи с сервером — установки не обновляются'
+              : 'No connection — settings are not updating'
+            : ru
+              ? 'Ждём установки от наводчика…'
+              : 'Waiting for the fire direction data…'}
+        </p>
       </section>
     )
   }
 
-  const big = 'font-bold leading-none tabular-nums text-app-text'
-
   return (
     <section
       className={[
-        'rounded-xl border bg-app-surface p-4 transition-colors sm:p-6',
-        fresh ? 'border-emerald-500' : 'border-app-border',
+        'panel p-4 transition-shadow sm:p-5',
+        fresh ? 'ring-2 ring-accent-solid' : '',
       ].join(' ')}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-lg font-semibold text-app-text">
-          {solution.targetName ?? solution.title}
-          {solution.targetName && (
-            <span className="ml-2 text-sm font-normal text-app-muted">
-              {solution.title}
-            </span>
-          )}
-        </p>
-        <p
-          className={[
-            'text-xs',
-            fresh ? 'text-emerald-600 dark:text-emerald-400' : 'text-app-muted',
-          ].join(' ')}
-        >
-          {ru ? 'обновлено' : 'updated'} {ago(now - remote!.receivedAt, ru)}
-        </p>
-      </div>
+      <SectionHeading
+        index="02"
+        title={ru ? 'Установки от наводчика' : 'Settings from the FDC'}
+        aside={
+          <span className={`tag ${fresh ? 'tag-accent' : ''}`}>
+            {ru ? 'обновлено' : 'updated'} {ago(now - remote!.receivedAt, ru)}
+          </span>
+        }
+      />
+      <p className="mt-1 text-[15px] text-app-muted">
+        {solution.targetName ?? solution.title}
+        {solution.targetName && ` · ${solution.title}`}
+      </p>
 
-      <div className="mt-4 grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="text-sm text-app-muted">
-            {ru ? 'Возвышение, мил' : 'Elevation, mil'}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-app-raised p-4">
+          <p className="text-[15px] font-medium text-app-muted">
+            {ru ? 'Возвышение' : 'Elevation'}, {ru ? 'мил' : 'mil'}
           </p>
-          <p className={`${big} text-[clamp(3.5rem,16vw,7rem)]`}>
+          <p className="readout mt-2 text-[clamp(4rem,18vw,7rem)] font-semibold">
             {Math.round(solution.elevation)}
           </p>
         </div>
-        <div>
-          <p className="text-sm text-app-muted">
+        <div className="rounded-xl bg-app-raised p-4">
+          <p className="text-[15px] font-medium text-app-muted">
             {ru ? 'Азимут' : 'Azimuth'}
             {solution.azimuth !== null && `, ${solution.azimuthUnit}`}
           </p>
           <p
-            className={`${big} text-[clamp(3.5rem,16vw,7rem)] ${solution.azimuth === null ? 'text-app-muted' : ''}`}
+            className={[
+              'readout mt-2 text-[clamp(4rem,18vw,7rem)] font-semibold',
+              solution.azimuth === null ? 'text-app-faint' : '',
+            ].join(' ')}
           >
             {solution.azimuth ?? '—'}
           </p>
         </div>
-        <div className="flex gap-10">
-          <div>
-            <p className="text-sm text-app-muted">{ru ? 'Заряд' : 'Charge'}</p>
-            <p className={`${big} text-5xl`}>
-              {solution.charge}
-              {solution.mode === 'LOW' && (
-                <span className="ml-2 align-middle text-xl text-amber-600 dark:text-amber-300">
-                  LOW
-                </span>
-              )}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-app-muted">
-              {ru ? 'Полёт, с' : 'Flight, s'}
-            </p>
-            <p className={`${big} text-5xl`}>{solution.tof.toFixed(1)}</p>
-          </div>
-        </div>
       </div>
+
+      <dl className="mt-2">
+        <Row label={ru ? 'Заряд' : 'Charge'}>
+          <span className="text-xl font-semibold text-app-text">
+            {solution.charge}
+          </span>
+          {solution.mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
+        </Row>
+        <Row label={ru ? 'Время полёта' : 'Time of flight'}>
+          {solution.tof.toFixed(1)} {ru ? 'с' : 's'}
+        </Row>
+      </dl>
 
       {!combatOpen && (
         <FireTimer
@@ -505,13 +536,24 @@ function GunnerView({ language }: Props) {
         />
       )}
 
+      <TotPanel
+        className="mt-3 rounded-lg bg-app-raised p-3"
+        tof={solution.tof}
+        impactAt={solution.tot ?? null}
+        onFireMoment={() => {
+          timerRef.current?.remoteFire()
+          notifyOverlayShot()
+        }}
+        language={language}
+      />
+
       <button
         type="button"
         onClick={() => setCombatOpen(true)}
-        className="mt-2 w-full cursor-pointer rounded-lg border border-app-border bg-app-surface px-4 py-2 text-sm text-app-text hover:border-emerald-500"
+        className="btn mt-2 w-full"
       >
         {ru ? 'Боевой экран' : 'Combat screen'}
-        <span className="ml-2 hidden text-xs text-app-muted sm:inline">B</span>
+        <span className="kbd hidden sm:inline-block">B</span>
       </button>
 
       {combatOpen && (

@@ -13,6 +13,7 @@ import {
   type OverlayState,
 } from '../lib/desktop'
 import { formatSigned, isInvalid, parseNumber } from '../lib/input'
+import { ProgressBar } from './FormControls'
 
 // Предупреждение «сплэш» за столько секунд до разрыва (как в FireTimer)
 const SPLASH_WARNING_S = 5
@@ -21,7 +22,7 @@ const IMPACT_HOLD_MS = 4000
 // Размер окна: только установки / с панелью ввода
 const WIDTH = 340
 const COMPACT_HEIGHT = 250
-const EDITING_HEIGHT = 500
+const EDITING_HEIGHT = 580
 
 const FIELDS: readonly OverlayField[] = [
   'distance',
@@ -146,6 +147,19 @@ export function OverlayApp() {
     return () => window.clearInterval(interval)
   }, [shot])
 
+  // Огонь по времени: отсчёт до выстрела
+  const fireAt = state?.fireAt ?? null
+  useEffect(() => {
+    if (fireAt === null) return
+    const interval = window.setInterval(() => {
+      const current = Date.now()
+      setNow(current)
+      if (current - fireAt > 4000) window.clearInterval(interval)
+    }, 100)
+    return () => window.clearInterval(interval)
+  }, [fireAt])
+  const totLeft = fireAt === null ? null : (fireAt - now) / 1000
+
   const ru = (state?.language ?? 'ru') === 'ru'
   const solution = state?.solution ?? null
   const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null
@@ -185,40 +199,37 @@ export function OverlayApp() {
   return (
     <div
       data-tauri-drag-region
-      className="flex h-screen select-none flex-col overflow-y-auto rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white"
+      className="flex h-screen select-none flex-col overflow-y-auto rounded-xl bg-black/80 p-3 text-app-text-2"
     >
-      <div data-tauri-drag-region className="flex items-start gap-2">
+      <div data-tauri-drag-region className="flex items-center gap-2">
+        <span data-tauri-drag-region className="h-2 w-2 shrink-0 rounded-full bg-gun" />
         <p
           data-tauri-drag-region
-          className="min-w-0 flex-1 truncate text-sm font-semibold"
+          className="min-w-0 flex-1 truncate text-[15px] font-semibold text-app-text"
         >
           {state ? (state.targetName ?? state.title) : ru ? 'Нет данных' : 'No data'}
         </p>
         {state?.readOnly ? (
-          <span className="rounded bg-sky-500/20 px-1.5 text-xs text-sky-300">
-            {ru ? 'от наводчика' : 'from FDC'}
-          </span>
+          <span className="tag tag-info">{ru ? 'от наводчика' : 'from FDC'}</span>
         ) : (
-        <button
-          type="button"
-          onClick={() => setEditing((value) => !value)}
-          aria-pressed={editing}
-          title={ru ? 'Ввод (Ctrl+Alt+D)' : 'Input (Ctrl+Alt+D)'}
-          className={[
-            'cursor-pointer rounded px-1.5 text-xs',
-            editing
-              ? 'bg-white/20 text-white'
-              : 'text-white/60 hover:bg-white/10 hover:text-white',
-          ].join(' ')}
-        >
-          {ru ? 'Ввод' : 'Input'}
-        </button>
+          <button
+            type="button"
+            onClick={() => setEditing((value) => !value)}
+            aria-pressed={editing}
+            title={ru ? 'Ввод (Ctrl+Alt+D)' : 'Input (Ctrl+Alt+D)'}
+            className={[
+              'btn btn-sm min-h-7 px-2.5',
+              editing ? 'bg-app-raised-hover text-app-text' : '',
+            ].join(' ')}
+          >
+            {ru ? 'Ввод' : 'Input'}
+          </button>
         )}
         <button
           type="button"
           onClick={() => void hideCurrentWindow()}
           aria-label={ru ? 'Скрыть оверлей' : 'Hide overlay'}
-          className="cursor-pointer rounded px-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+          className="cursor-pointer rounded-md px-2 text-lg leading-none text-app-muted hover:bg-app-raised hover:text-app-text"
         >
           ×
         </button>
@@ -228,43 +239,47 @@ export function OverlayApp() {
         <div
           data-tauri-drag-region
           className={[
-            'mt-1 grid grid-cols-2 content-center gap-x-4 gap-y-1',
+            'mt-2 grid grid-cols-2 content-center gap-x-4 gap-y-2',
             canEdit ? '' : 'flex-1',
           ].join(' ')}
         >
           <div data-tauri-drag-region>
-            <p className="text-xs text-white/60">
-              {ru ? 'Возвышение, мил' : 'Elevation, mil'}
+            <p className="label">
+              {ru ? 'Возвышение' : 'Elevation'} · {ru ? 'мил' : 'mil'}
             </p>
-            <p className="text-4xl font-bold leading-tight tabular-nums">
+            <p className="readout mt-1 text-5xl font-semibold">
               {Math.round(solution.elevation)}
             </p>
           </div>
           <div data-tauri-drag-region>
-            <p className="text-xs text-white/60">
+            <p className="label">
               {ru ? 'Азимут' : 'Azimuth'}
-              {solution.azimuth !== null && `, ${solution.azimuthUnit}`}
+              {solution.azimuth !== null && ` · ${solution.azimuthUnit}`}
             </p>
-            <p className="text-4xl font-bold leading-tight tabular-nums">
-              {solution.azimuth ?? '—'}
+            <p
+              className={[
+                'readout mt-1 text-5xl font-semibold',
+                solution.azimuth === null ? 'text-app-faint' : '',
+              ].join(' ')}
+            >
+              {solution.azimuth ?? '——'}
             </p>
           </div>
-          <p className="text-sm text-white/80">
-            {ru ? 'Заряд' : 'Charge'} {solution.charge}
-            {solution.mode === 'LOW' && (
-              <span className="ml-1 text-amber-300">LOW</span>
-            )}
+          <p className="flex items-center gap-2 text-[15px] text-app-text tabular-nums">
+            <span className="label">{ru ? 'Заряд' : 'Charge'}</span>
+            {String(solution.charge).padStart(2, '0')}
+            {solution.mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
           </p>
-          <p className="text-sm text-white/80 tabular-nums">
-            {ru ? 'Полёт' : 'Flight'} {solution.tof.toFixed(1)}{' '}
-            {ru ? 'с' : 's'}
+          <p className="flex items-center gap-2 text-[15px] text-app-text tabular-nums">
+            <span className="label">{ru ? 'Полёт' : 'Flight'}</span>
+            {solution.tof.toFixed(1)} {ru ? 'с' : 's'}
           </p>
         </div>
       ) : (
         <p
           data-tauri-drag-region
           className={[
-            'flex items-center py-2 text-sm text-white/60',
+            'label flex items-center py-2',
             canEdit ? '' : 'flex-1',
           ].join(' ')}
         >
@@ -278,43 +293,67 @@ export function OverlayApp() {
         </p>
       )}
 
+      {totLeft !== null && totLeft > -3 && !shot && (
+        <p
+          className={[
+            'mt-2 flex items-baseline justify-between rounded-lg px-3 py-1.5',
+            totLeft <= 5 ? 'bg-accent-solid text-white' : 'bg-app-raised',
+          ].join(' ')}
+        >
+          <span className="text-[13px] font-medium">
+            {totLeft <= 0
+              ? ru
+                ? 'Огонь!'
+                : 'Fire!'
+              : ru
+                ? 'Выстрел по времени'
+                : 'Fire on time'}
+          </span>
+          <span className="text-lg font-semibold tabular-nums">
+            T−{Math.max(0, totLeft).toFixed(1)}
+          </span>
+        </p>
+      )}
+
       {left !== null && shot && (
-        <div className="mt-1">
+        <div className="mt-2">
           <p
             className={[
-              'text-sm font-semibold tabular-nums',
-              left <= SPLASH_WARNING_S ? 'text-red-400' : 'text-white',
+              'flex items-baseline justify-between',
+              left <= SPLASH_WARNING_S ? 'text-danger' : 'text-app-text',
             ].join(' ')}
           >
-            {left <= 0
-              ? ru
-                ? 'Разрыв!'
-                : 'Impact!'
-              : `${ru ? 'До разрыва' : 'Impact in'} ${left.toFixed(1)} ${ru ? 'с' : 's'}`}
+            <span className="text-[13px] font-medium">
+              {left <= 0
+                ? ru
+                  ? 'Разрыв'
+                  : 'Impact'
+                : left <= SPLASH_WARNING_S
+                  ? ru
+                    ? 'Сплэш'
+                    : 'Splash'
+                  : ru
+                    ? 'До разрыва'
+                    : 'Impact in'}
+            </span>
+            <span className="text-lg font-semibold tabular-nums">
+              T−{Math.max(0, left).toFixed(1)}
+            </span>
           </p>
-          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={
-                left <= SPLASH_WARNING_S
-                  ? 'h-full bg-red-500'
-                  : 'h-full bg-emerald-500'
-              }
-              style={{
-                width: `${Math.min(100, Math.max(0, (1 - left / shot.tof) * 100))}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            progress={1 - left / shot.tof}
+            alert={left <= SPLASH_WARNING_S}
+            className="mt-1.5"
+          />
         </div>
       )}
 
       {canEdit && (
-        <div className="mt-2 flex flex-1 flex-col gap-2 border-t border-white/10 pt-2">
+        <div className="mt-3 flex flex-1 flex-col gap-2.5 border-t border-app-line-strong pt-3">
           <div className="grid grid-cols-2 gap-2">
             {FIELDS.map((field) => (
               <label key={field} className="block">
-                <span className="text-[11px] text-white/60">
-                  {labels[field]}
-                </span>
+                <span className="label">{labels[field]}</span>
                 <input
                   ref={(element) => {
                     if (element) inputsRef.current[field] = element
@@ -325,12 +364,8 @@ export function OverlayApp() {
                   value={draft[field]}
                   onChange={(event) => changeField(field, event.target.value)}
                   onKeyDown={(event) => handleFieldKey(event, field)}
-                  className={[
-                    'mt-0.5 w-full rounded border bg-black/40 px-2 py-1 text-base tabular-nums outline-none focus:border-emerald-400',
-                    isInvalid(draft[field])
-                      ? 'border-red-500'
-                      : 'border-white/15',
-                  ].join(' ')}
+                  aria-invalid={isInvalid(draft[field])}
+                  className="field mt-1 px-2 py-1 text-base"
                 />
               </label>
             ))}
@@ -342,7 +377,7 @@ export function OverlayApp() {
         </div>
       )}
 
-      <p data-tauri-drag-region className="mt-1 text-[10px] text-white/40">
+      <p data-tauri-drag-region className="mt-2 text-[11.5px] leading-relaxed text-app-faint">
         Ctrl+Alt+F — {ru ? 'огонь' : 'fire'} · Ctrl+Alt+D —{' '}
         {ru ? 'ввод' : 'input'} · Ctrl+Alt+O — {ru ? 'скрыть' : 'hide'} ·
         Ctrl+Alt+M — HIGH/LOW · Ctrl+Alt+N/P — {ru ? 'цели' : 'targets'}
@@ -357,19 +392,17 @@ function ChargeRow({ state, ru }: { state: OverlayState; ru: boolean }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <span className="mr-1 text-[11px] text-white/60">
-        {ru ? 'Заряд' : 'Charge'}
-      </span>
+      <span className="label mr-1">{ru ? 'Заряд' : 'Charge'}</span>
       {state.charges.map((charge) => (
         <button
           key={charge}
           type="button"
           onClick={() => sendOverlayCommand({ type: 'charge', charge })}
           className={[
-            'min-w-7 cursor-pointer rounded px-1.5 py-0.5 text-sm tabular-nums',
+            'min-w-8 cursor-pointer rounded-md px-2 py-0.5 text-[14px] tabular-nums',
             state.solution?.charge === charge
-              ? 'bg-emerald-500 text-black'
-              : 'bg-white/10 hover:bg-white/20',
+              ? 'bg-accent-solid text-white'
+              : 'bg-app-raised hover:bg-app-raised-hover',
           ].join(' ')}
         >
           {charge}
@@ -379,13 +412,9 @@ function ChargeRow({ state, ru }: { state: OverlayState; ru: boolean }) {
         <button
           type="button"
           onClick={() => sendOverlayCommand({ type: 'mode' })}
-          className="ml-auto cursor-pointer rounded bg-white/10 px-2 py-0.5 text-sm hover:bg-white/20"
+          className="btn btn-sm ml-auto min-h-7 px-2.5"
         >
-          {state.mode === 'LOW' ? (
-            <span className="text-amber-300">LOW</span>
-          ) : (
-            'HIGH'
-          )}
+          {state.mode === 'LOW' ? <span className="text-warn">LOW</span> : 'HIGH'}
         </button>
       )}
     </div>
@@ -427,10 +456,10 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
 
   return (
     <div>
-      <p className="text-[11px] text-white/60">
-        {ru ? 'Разрыв (по линии орудия)' : 'Impact (gun–target line)'}
+      <p className="label">
+        {ru ? 'Разрыв · по линии орудия' : 'Impact · gun–target line'}
       </p>
-      <div className="mt-0.5 grid grid-cols-2 gap-2">
+      <div className="mt-1 grid grid-cols-2 gap-2">
         <SpotInput
           value={range}
           onChange={setRange}
@@ -459,7 +488,7 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           type="button"
           onClick={add}
           disabled={!canAdd}
-          className="cursor-pointer rounded bg-emerald-500 px-2 py-0.5 text-sm font-semibold text-black disabled:cursor-default disabled:opacity-40"
+          className="btn btn-primary btn-sm min-h-7 px-2.5"
         >
           {ru ? 'Учесть' : 'Apply'}
         </button>
@@ -467,11 +496,11 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           type="button"
           onClick={() => sendOverlayCommand({ type: 'undo-adjust' })}
           disabled={adjust.count === 0}
-          className="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-sm hover:bg-white/20 disabled:cursor-default disabled:opacity-40"
+          className="btn btn-sm min-h-7 px-2.5"
         >
           {ru ? 'Отменить' : 'Undo'}
         </button>
-        <p className="min-w-0 flex-1 truncate text-right text-[11px] text-white/60 tabular-nums">
+        <p className="min-w-0 flex-1 truncate text-right text-[12.5px] text-app-muted tabular-nums">
           {adjust.count === 0
             ? ru
               ? 'без поправок'
@@ -510,10 +539,8 @@ function SpotInput<T extends string>({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        className={[
-          'w-full rounded border bg-black/40 px-2 py-1 text-base tabular-nums outline-none focus:border-emerald-400',
-          isInvalid(value) ? 'border-red-500' : 'border-white/15',
-        ].join(' ')}
+        aria-invalid={isInvalid(value)}
+        className="field px-2 py-1 text-base"
       />
       <div className="mt-1 flex gap-1">
         {sides.map(([id, label]) => (
@@ -522,8 +549,10 @@ function SpotInput<T extends string>({
             type="button"
             onClick={() => onSide(id)}
             className={[
-              'flex-1 cursor-pointer rounded px-1 py-0.5 text-[11px]',
-              side === id ? 'bg-white/25' : 'bg-white/5 hover:bg-white/10',
+              'flex-1 cursor-pointer rounded-md px-1 py-0.5 text-[12.5px] font-medium',
+              side === id
+                ? 'bg-app-raised-hover text-app-text'
+                : 'bg-app-raised text-app-muted hover:text-app-text',
             ].join(' ')}
           >
             {label}

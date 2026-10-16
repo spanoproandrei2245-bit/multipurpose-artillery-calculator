@@ -29,6 +29,7 @@ const solution: SyncMessage = {
     azimuth: '3218',
     azimuthUnit: 'мил',
     tof: 24.3,
+    tot: null,
   },
 }
 
@@ -100,6 +101,22 @@ describe('parseMessage', () => {
     expect(
       parseMessage({ kind: 'hello', from: 'a', sentAt: 1, role: 'gunner' })
     ).toEqual({ kind: 'hello', from: 'a', sentAt: 1, role: 'gunner' })
+  })
+
+  it('reads the time on target and fills it in for older senders', () => {
+    const fields = (solution as Extract<SyncMessage, { kind: 'solution' }>)
+      .solution!
+    const message = (tot: unknown) => ({
+      ...solution,
+      solution: { ...fields, tot },
+    })
+
+    expect(parseMessage(message(1_700_000_060_000))).toEqual(
+      message(1_700_000_060_000)
+    )
+    // Версии до 0.12 не присылают tot
+    expect(parseMessage(message(undefined))).toEqual(solution)
+    expect(parseMessage(message('now'))).toBeNull()
   })
 
   it('drops extra fields', () => {

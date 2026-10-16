@@ -7,7 +7,8 @@ import {
 } from 'react'
 
 import { readStored, writeStored } from '../lib/input'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
+import { ProgressBar } from './FormControls'
 import type { Language } from '../types/settings'
 
 /** Управление таймером снаружи (горячие клавиши). */
@@ -69,11 +70,11 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
 
       if (!splashSignaled.current && left <= SPLASH_WARNING_S) {
         splashSignaled.current = true
-        if (sound && shot.tof > SPLASH_WARNING_S) beep(880, 150)
+        if (sound && shot.tof > SPLASH_WARNING_S) playSound('splash')
       }
       if (!impactSignaled.current && left <= 0) {
         impactSignaled.current = true
-        if (sound) beep(660, 600)
+        if (sound) playSound('impact')
       }
       if (left * 1000 < -IMPACT_HOLD_MS) {
         setShot(null)
@@ -104,7 +105,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
     setShot({ firedAt, tof })
     // Короткий щелчок подтверждает нажатие и разблокирует звук
     // в браузере (AudioContext запускается только после жеста).
-    if (sound) beep(440, 60)
+    if (sound) playSound('fire')
   }
 
   const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null
@@ -122,91 +123,75 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           ? 'splash'
           : 'flight'
 
+  const alert = phase === 'splash' || phase === 'impact'
+  const phaseLabel = {
+    idle: ru ? 'Готов' : 'Ready',
+    flight: ru ? 'Полёт' : 'In flight',
+    splash: ru ? 'Сплэш' : 'Splash',
+    impact: ru ? 'Разрыв' : 'Impact',
+  }[phase]
+
   return (
-    <div className="mt-5 rounded-lg border border-app-border bg-app-surface p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={fire}
-          className="cursor-pointer rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
-        >
+    <div className="mt-4 rounded-lg bg-app-surface p-3">
+      <div className="flex gap-2">
+        <button type="button" onClick={fire} className="btn btn-primary btn-lg flex-1">
           {shot
             ? ru
               ? 'Огонь ещё'
               : 'Fire again'
             : ru
-              ? 'Огонь!'
-              : 'Fire!'}
+              ? 'Огонь'
+              : 'Fire'}
+          <span className="hidden rounded bg-white/20 px-1.5 text-[12px] font-medium sm:inline">
+            F
+          </span>
         </button>
 
-        <div className="ml-auto flex gap-2">
-          {shot && (
-            <button
-              type="button"
-              onClick={() => setShot(null)}
-              className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text"
-            >
-              {ru ? 'Стоп' : 'Stop'}
-            </button>
-          )}
-
+        {shot && (
           <button
             type="button"
-            aria-pressed={sound}
-            onClick={() => setSound((value) => !value)}
-            title={ru ? 'Звуковой сигнал' : 'Sound'}
-            className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text"
+            onClick={() => setShot(null)}
+            className="btn min-h-12"
           >
-            {sound
-              ? ru
-                ? 'Звук вкл.'
-                : 'Sound on'
-              : ru
-                ? 'Звук выкл.'
-                : 'Sound off'}
+            {ru ? 'Стоп' : 'Stop'}
           </button>
-        </div>
+        )}
+
+        <button
+          type="button"
+          aria-pressed={sound}
+          onClick={() => setSound((value) => !value)}
+          title={ru ? 'Звуковой сигнал' : 'Sound'}
+          className={['btn min-h-12', sound ? '' : 'text-app-faint line-through'].join(' ')}
+        >
+          {ru ? 'Звук' : 'Sound'}
+        </button>
       </div>
 
-      <div className="mt-2" aria-live="polite">
-        {phase === 'idle' && (
-          <p className="text-xs text-app-muted">
-            {ru
-              ? `Нажмите в момент выстрела: отсчёт ${tof.toFixed(1)} с до разрыва, сигнал за ${SPLASH_WARNING_S} с.`
-              : `Press when the round is fired: ${tof.toFixed(1)} s to impact, beep ${SPLASH_WARNING_S} s before.`}
-          </p>
-        )}
-
-        {phase !== 'idle' && left !== null && (
-          <>
-            <p
-              className={[
-                'text-lg font-semibold tabular-nums',
-                phase === 'splash' || phase === 'impact'
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-app-text',
-              ].join(' ')}
-            >
-              {phase === 'impact'
-                ? ru
-                  ? 'Разрыв!'
-                  : 'Impact!'
-                : `${ru ? 'До разрыва' : 'Impact in'} ${left.toFixed(1)} ${ru ? 'с' : 's'}${
-                    phase === 'splash' ? (ru ? ' — сплэш' : ' — splash') : ''
-                  }`}
-            </p>
-
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-app-bg">
-              <div
-                className={[
-                  'h-full rounded-full',
-                  phase === 'flight' ? 'bg-emerald-500' : 'bg-red-500',
-                ].join(' ')}
-                style={{ width: `${progress * 100}%` }}
-              />
-            </div>
-          </>
-        )}
+      <div className="mt-3" aria-live="polite">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
+            {phaseLabel}
+            {phase === 'idle' &&
+              ` · ${ru ? 'сигнал за' : 'beep at'} ${SPLASH_WARNING_S} ${ru ? 'с' : 's'}`}
+          </span>
+          <span
+            className={[
+              'text-xl font-semibold tabular-nums',
+              alert ? 'text-danger' : 'text-app-text',
+            ].join(' ')}
+          >
+            {left === null
+              ? tof.toFixed(1)
+              : phase === 'impact'
+                ? '0.0'
+                : left.toFixed(1)}
+            <span className="ml-1 text-[13px] font-normal text-app-muted">
+              {ru ? 'с' : 's'}
+            </span>
+          </span>
+        </div>
+        <ProgressBar progress={progress} alert={alert} className="mt-2" />
       </div>
     </div>
   )

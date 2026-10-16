@@ -1,30 +1,419 @@
-
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Дизайн: спокойный минимализм. Чёрный фон, мягкие скруглённые
+ * контролы без рамок, список «подпись — значение», один шрифт (Inter).
+ * Синий — только для ссылок и главного действия.
+ */
 :root {
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-text: #0f172a;
-  --color-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-background: #ffffff;
+  --color-surface: #fbfcfe;
+  --color-raised: #f0f4f8;
+  --color-raised-hover: #dde7ee;
+  --color-line: #dde7ee;
+  --color-line-strong: #cdd7e1;
+  --color-text: #171a1c;
+  --color-text-2: #32383e;
+  --color-muted: #555e68;
+  --color-faint: #9fa6ad;
+  --color-accent: #0b6bcb;
+  --color-accent-solid: #0b6bcb;
+  --color-accent-strong: #185ea5;
+  --color-accent-soft: #e3effb;
+  --color-on-accent: #ffffff;
+  --color-danger: #c41c1c;
+  --color-danger-soft: #fce4e4;
+  --color-warn: #9a5b13;
+  --color-ok: #1f7a1f;
+  --color-info: #12467b;
+  --color-gun: #0b6bcb;
+  --color-target: #c41c1c;
+  color-scheme: light;
 }
 
 .dark {
-  --color-background: #020617;
-  --color-surface: #0f172a;
-  --color-text: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-border: #334155;
+  --color-background: #000000;
+  --color-surface: #0b0d0e;
+  --color-raised: #171a1c;
+  --color-raised-hover: #32383e;
+  --color-line: #171a1c;
+  --color-line-strong: #32383e;
+  --color-text: #f0f4f8;
+  --color-text-2: #cdd7e1;
+  --color-muted: #9fa6ad;
+  --color-faint: #636b74;
+  --color-accent: #4393e4;
+  --color-accent-solid: #0b6bcb;
+  --color-accent-strong: #185ea5;
+  --color-accent-soft: rgb(11 107 203 / 0.2);
+  --color-on-accent: #ffffff;
+  --color-danger: #f09898;
+  --color-danger-soft: rgb(196 28 28 / 0.22);
+  --color-warn: #f3c896;
+  --color-ok: #a1e8a1;
+  --color-info: #97c3f0;
+  --color-gun: #4393e4;
+  --color-target: #e47474;
+  color-scheme: dark;
 }
 
 @theme inline {
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Inter Variable", "Inter", ui-sans-serif, sans-serif;
+
   --color-app-bg: var(--color-background);
   --color-app-surface: var(--color-surface);
+  --color-app-raised: var(--color-raised);
+  --color-app-raised-hover: var(--color-raised-hover);
+  --color-app-border: var(--color-line);
+  --color-app-line-strong: var(--color-line-strong);
   --color-app-text: var(--color-text);
+  --color-app-text-2: var(--color-text-2);
   --color-app-muted: var(--color-muted);
-  --color-app-border: var(--color-border);
+  --color-app-faint: var(--color-faint);
+  --color-accent: var(--color-accent);
+  --color-accent-solid: var(--color-accent-solid);
+  --color-accent-strong: var(--color-accent-strong);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-on-accent: var(--color-on-accent);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-warn: var(--color-warn);
+  --color-ok: var(--color-ok);
+  --color-info: var(--color-info);
+  --color-gun: var(--color-gun);
+  --color-target: var(--color-target);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    font-feature-settings: "cv11";
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-2);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-accent-solid);
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-solid);
+    outline-offset: 2px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-faint);
+  }
+
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+@layer components {
+  /* Блок-раздел: чуть светлее фона, без рамки */
+  .panel {
+    position: relative;
+    border-radius: 12px;
+    background-color: var(--color-surface);
+  }
+
+  /* Мелкая подпись над полем или в углу */
+  .label {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    color: var(--color-muted);
+  }
+
+  /* Крупные показания (боевой экран, оверлей) */
+  .readout {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--color-text);
+  }
+
+  .mono-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Строка списка: подпись слева, значение справа */
+  .row {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .row > dt,
+  .row-label {
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  .row > dd,
+  .row-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-2);
+  }
+
+  /* ---- кнопки (мягкие, как в Joy UI) ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 6px;
+    background: var(--color-raised);
+    color: var(--color-text-2);
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--color-raised-hover);
+    color: var(--color-text);
+  }
+  .btn:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .btn-primary {
+    background: var(--color-accent-solid);
+    color: var(--color-on-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-accent-strong);
+    color: var(--color-on-accent);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-muted);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-raised);
+  }
+
+  .btn-danger {
+    color: var(--color-danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+  }
+
+  .btn-sm {
+    min-height: 1.875rem;
+    padding: 0.2rem 0.65rem;
+    font-size: 13.5px;
+  }
+
+  .btn-lg {
+    min-height: 3rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  /* ---- поля ---- */
+  .field {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background-color: var(--color-raised);
+    color: var(--color-text);
+    padding: 0.375rem 0.75rem;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+    transition:
+      background-color 120ms,
+      box-shadow 120ms;
+  }
+  .field:hover {
+    background-color: var(--color-raised-hover);
+  }
+  .field:focus {
+    background-color: var(--color-raised);
+    box-shadow: 0 0 0 2px var(--color-accent-solid);
+  }
+  .field[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  .field-lg {
+    padding: 0.55rem 0.85rem;
+    font-size: 1.125rem;
+  }
+
+  /* Значение-поле в строке списка: справа, компактное */
+  .field-inline {
+    width: 8.5rem;
+    text-align: right;
+  }
+
+  select.field {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239fa6ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5M7 9l5-5 5 5'/%3E%3C/svg%3E");
+    background-position: right 0.55rem center;
+    background-size: 1rem;
+    background-repeat: no-repeat;
+  }
+
+  /* ---- группа переключателей ---- */
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    border-radius: 6px;
+    background: var(--color-raised);
+    padding: 3px;
+  }
+  .seg > button {
+    border-radius: 4px;
+    padding: 0.2rem 0.65rem;
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition:
+      color 120ms,
+      background-color 120ms;
+  }
+  .seg > button:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+  .seg > button[aria-pressed="true"] {
+    background: var(--color-raised-hover);
+    color: var(--color-text);
+  }
+  .seg > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+
+  /* ---- метки-статусы (чипы) ---- */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    background: var(--color-raised);
+    padding: 0.1rem 0.6rem;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+  .tag-accent {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+  .tag-warn {
+    color: var(--color-warn);
+  }
+  .tag-ok {
+    color: var(--color-ok);
+  }
+  .tag-info {
+    color: var(--color-info);
+  }
+
+  .kbd {
+    display: inline-block;
+    min-width: 1.4rem;
+    border-radius: 4px;
+    background: var(--color-raised);
+    padding: 0 0.35rem;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  /* Рамка-подсказка, как «Скачайте оверлей…» */
+  .note {
+    border: 1px solid var(--color-line-strong);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    color: var(--color-text-2);
+  }
+
+  /* Раскрывающийся раздел: строка с шевроном */
+  .disclosure > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  .disclosure > summary::after {
+    content: "";
+    margin-left: auto;
+    height: 0.5rem;
+    width: 0.5rem;
+    flex-shrink: 0;
+    border-right: 2px solid var(--color-muted);
+    border-bottom: 2px solid var(--color-muted);
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 150ms;
+  }
+  .disclosure[open] > summary::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+
+  /* Полоса прогресса (таймер, отсчёт) */
+  .progress {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-raised);
+  }
+  .progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-accent-solid);
+    transition: width 100ms linear;
+  }
+  .progress[data-alert="true"] > span {
+    background: var(--color-target);
+  }
 }
 
 /* Окно-оверлей программы для ПК: прозрачный фон */
@@ -32,4 +421,13 @@ html.overlay,
 html.overlay body {
   background: transparent;
   overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
 }
