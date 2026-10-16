@@ -11,8 +11,8 @@
 import { writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 
-const BACKGROUND = [15, 23, 42] // slate-900
-const STROKE = [16, 185, 129] // emerald-500
+const BACKGROUND = [10, 10, 10] // фон тёмной темы
+const STROKE = [255, 90, 31] // акцент
 
 // Линии значка в сетке 24×24 (как в ArtilleryIcon, категория mortar)
 const SEGMENTS = [
@@ -142,12 +142,12 @@ function svg() {
   ).join('')
   const hex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="${hex(BACKGROUND)}"/><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale.toFixed(4)})" stroke="${hex(STROKE)}" stroke-width="${STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">${lines}</g></svg>\n`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="1.5" fill="${hex(BACKGROUND)}"/><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale.toFixed(4)})" stroke="${hex(STROKE)}" stroke-width="${STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">${lines}</g></svg>\n`
 }
 
 const out = new URL('../public/', import.meta.url)
-writeFileSync(new URL('icon-192.png', out), render(192, 0.62, 0.2))
-writeFileSync(new URL('icon-512.png', out), render(512, 0.62, 0.2))
+writeFileSync(new URL('icon-192.png', out), render(192, 0.62, 0.06))
+writeFileSync(new URL('icon-512.png', out), render(512, 0.62, 0.06))
 // Maskable: фон на всю площадь, значок в безопасной зоне (центр 80 %)
 writeFileSync(new URL('icon-maskable-512.png', out), render(512, 0.5, 0))
 writeFileSync(new URL('favicon.svg', out), svg())

@@ -22,6 +22,8 @@ export interface SyncApi {
   role: SyncRole
   code: string
   server: SyncServerId
+  // Позывной — подпись к своим меткам
+  callsign: string
   status: SyncStatus
   // Связь включена и брокер на связи
   active: boolean
@@ -34,6 +36,7 @@ export interface SyncApi {
   setRole: (role: SyncRole) => void
   setCode: (code: string) => void
   setServer: (server: SyncServerId) => void
+  setCallsign: (callsign: string) => void
   connect: () => void
   disconnect: () => void
   // Наводчик: текущее решение (повторы без изменений не отправляются)
@@ -51,6 +54,7 @@ export const SyncContext = createContext<SyncApi>({
   role: 'computer',
   code: '',
   server: 'hivemq',
+  callsign: '',
   status: 'off',
   active: false,
   peers: [],
@@ -59,6 +63,7 @@ export const SyncContext = createContext<SyncApi>({
   setRole: noop,
   setCode: noop,
   setServer: noop,
+  setCallsign: noop,
   connect: noop,
   disconnect: noop,
   shareSolution: noop,
@@ -87,10 +92,10 @@ export function syncStatusText(status: SyncStatus, ru: boolean): string {
 
 export function syncStatusColor(status: SyncStatus): string {
   return status === 'online'
-    ? 'bg-emerald-500'
+    ? 'bg-ok'
     : status === 'connecting'
-      ? 'bg-amber-500'
+      ? 'bg-warn'
       : status === 'off'
-        ? 'bg-app-muted'
-        : 'bg-red-500'
+        ? 'bg-app-faint'
+        : 'bg-danger'
 }

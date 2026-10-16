@@ -39,17 +39,19 @@ export function OpenOnPhone({ language }: { language: Language }) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-4">
       {image && (
-        <img
-          src={image}
-          width={144}
-          height={144}
-          alt={ru ? 'QR-код со ссылкой на приложение' : 'QR code with the app link'}
-          className="rounded-lg bg-white p-1"
-        />
+        <div className="p-2">
+          <img
+            src={image}
+            width={128}
+            height={128}
+            alt={ru ? 'QR-код со ссылкой на приложение' : 'QR code with the app link'}
+            className="block bg-white p-1"
+          />
+        </div>
       )}
 
       <div className="min-w-0 flex-1 text-sm">
-        <p className="break-all text-app-text">{url}</p>
+        <p className="text-[12.5px] break-all text-app-text">{url}</p>
         <p className="mt-2 text-xs text-app-muted">
           {isLocalOnly(window.location.hostname)
             ? ru

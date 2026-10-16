@@ -68,6 +68,19 @@ describe('loadEntries', () => {
     expect(loadEntries().map((e) => e.id)).toEqual(['a', 'b'])
   })
 
+  it('keeps the map target of entries placed on the map', () => {
+    const target = { world: 'Altis', x: 14_250, y: 16_800 }
+    stubStorage(
+      JSON.stringify([
+        { ...NEW_ENTRY, id: 'm1', target },
+        { ...NEW_ENTRY, id: 'm2', target: null },
+      ])
+    )
+    const [first, second] = loadEntries()
+    expect(first.target).toEqual(target)
+    expect(second.target).toBeNull()
+  })
+
   it('drops damaged entries and keeps the rest', () => {
     stubStorage(
       JSON.stringify([
@@ -77,6 +90,7 @@ describe('loadEntries', () => {
         { ...NEW_ENTRY, id: 'bad3', azimuthUnit: 'rad' },
         { ...NEW_ENTRY, id: 'bad4', weather: { windMode: 'storm' } },
         { ...NEW_ENTRY, id: 'bad5', mode: 'MID' },
+        { ...NEW_ENTRY, id: 'bad6', target: { world: 'Altis', x: 'far' } },
         null,
       ])
     )

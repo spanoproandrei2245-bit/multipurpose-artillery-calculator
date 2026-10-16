@@ -3,6 +3,12 @@ import type { MqttClient } from 'mqtt'
 
 import { readStored, readStoredText, writeStored } from '../lib/input'
 import {
+  applyRemoteMarker,
+  onLocalMarkerChange,
+  ownMarkers,
+  type MapMarker,
+} from '../lib/markers'
+import {
   decryptMessage,
   deriveRoom,
   encryptMessage,
@@ -53,6 +59,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [server, setServerState] = useState<SyncServerId>(
     () => invite?.server ?? readStored('syncServer', SYNC_SERVER_IDS, 'hivemq')
   )
+  const [callsign, setCallsign] = useState(() =>
+    readStoredText('syncCallsign')
+  )
   const [enabled, setEnabled] = useState(
     () => invite !== null || readStoredText('syncEnabled') === 'true'
   )
@@ -83,6 +92,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => writeStored('syncRole', role), [role])
   useEffect(() => writeStored('syncCode', code), [code])
   useEffect(() => writeStored('syncServer', server), [server])
+  useEffect(() => writeStored('syncCallsign', callsign), [callsign])
   useEffect(() => writeStored('syncEnabled', String(enabled)), [enabled])
 
   // Ссылка-приглашение отработала — убираем код из адресной строки
@@ -102,11 +112,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const connection = connectionRef.current
       if (!connection || !connection.client.connected) return false
       const packet = await encryptMessage(connection.room.key, message)
-      const channel = message.kind === 'solution' ? 'state' : 'events'
+      const channel =
+        message.kind === 'solution'
+          ? 'state'
+          : message.kind === 'marker'
+            ? `markers/${message.marker.id}`
+            : 'events'
       connection.client.publish(
         `${connection.room.topic}/${channel}`,
         packetToText(packet),
-        { qos: message.kind === 'solution' ? 1 : 0, retain }
+        { qos: channel === 'events' ? 0 : 1, retain }
       )
       return true
     },
@@ -122,6 +137,32 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (sent) setLastSharedAt(Date.now())
     },
     [clientId, publish]
+  )
+
+  const publishMarker = useCallback(
+    (marker: MapMarker) =>
+      publish({ kind: 'marker', from: clientId, sentAt: Date.now(), marker }, true),
+    [clientId, publish]
+  )
+
+  // Удаление метки — пустое сообщение в её канале стирает её на брокере
+  const clearMarker = useCallback((id: string) => {
+    const connection = connectionRef.current
+    if (!connection || !connection.client.connected) return
+    connection.client.publish(`${connection.room.topic}/markers/${id}`, '', {
+      qos: 1,
+      retain: true,
+    })
+  }, [])
+
+  // Метки, поставленные на этом устройстве, — всем в комнате
+  useEffect(
+    () =>
+      onLocalMarkerChange((change) => {
+        if (change.type === 'upsert') void publishMarker(change.marker)
+        else clearMarker(change.id)
+      }),
+    [publishMarker, clearMarker]
   )
 
   const roleRef = useRef(role)
@@ -196,10 +237,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
         client.on('connect', () => {
           setLink('online')
-          client?.subscribe([`${room.topic}/state`, `${room.topic}/events`], {
-            qos: 1,
-          })
+          client?.subscribe(
+            [
+              `${room.topic}/state`,
+              `${room.topic}/events`,
+              `${room.topic}/markers/+`,
+            ],
+            { qos: 1 }
+          )
           sendHello()
+          // Свои метки, поставленные без связи, — на брокер
+          ownMarkers().forEach((marker) => void publishMarker(marker))
           // После обрыва наводчик повторяет последнее решение
           if (roleRef.current === 'computer' && sharedRef.current) {
             void publishSolution(sharedRef.current.solution)
@@ -208,12 +256,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         client.on('reconnect', () => setLink('connecting'))
         client.on('offline', () => setLink('offline'))
         client.on('error', () => setLink('error'))
-        client.on('message', (_topic, payload) => {
+        client.on('message', (topic, payload) => {
+          const markerPrefix = `${room.topic}/markers/`
+          const markerId = topic.startsWith(markerPrefix)
+            ? topic.slice(markerPrefix.length)
+            : null
+          if (markerId !== null && payload.length === 0) {
+            applyRemoteMarker({ type: 'remove', id: markerId })
+            return
+          }
           void decryptMessage(room.key, textToPacket(payload.toString())).then(
             (message) => {
-              if (!cancelled && message && message.from !== clientId) {
-                void handle(message)
+              if (cancelled || !message) return
+              if (message.kind === 'marker') {
+                if (message.marker.id === markerId) {
+                  applyRemoteMarker({ type: 'upsert', marker: message.marker })
+                }
+                return
               }
+              if (message.from !== clientId) void handle(message)
             }
           )
         })
@@ -233,7 +294,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setPeerMap({})
       setRemote(null)
     }
-  }, [ready, code, server, clientId, sendHello, publishSolution])
+  }, [ready, code, server, clientId, sendHello, publishSolution, publishMarker])
 
   // Часы для «кто в сети»
   useEffect(() => {
@@ -272,6 +333,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     role,
     code,
     server,
+    callsign,
     status,
     active: enabled && status === 'online',
     peers,
@@ -280,6 +342,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     setRole: setRoleState,
     setCode: (value) => setCodeState(formatRoomCode(value)),
     setServer: setServerState,
+    setCallsign: (value) => setCallsign(value.slice(0, 24)),
     connect: () => setEnabled(true),
     disconnect: () => setEnabled(false),
     shareSolution,

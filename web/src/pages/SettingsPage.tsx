@@ -5,6 +5,8 @@ import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
+import { SoundSettings } from '../components/SoundSettings'
+import { SectionHeading, Switch, Toggle } from '../components/FormControls'
 
 interface SettingsPageProps {
   language: Language
@@ -19,23 +21,24 @@ interface SettingsPageProps {
   onKeepAwakeChange: (value: boolean) => void
 }
 
-const selectClass =
-  'w-full rounded-lg border border-app-border bg-app-bg px-4 py-3 text-app-text outline-none focus:border-emerald-500'
-
 function Card({
+  index,
   title,
   description,
   children,
+  className = '',
 }: {
+  index: string
   title: string
   description?: string
   children: ReactNode
+  className?: string
 }) {
   return (
-    <div className="rounded-xl border border-app-border bg-app-surface p-6">
-      <h3 className="text-lg font-semibold text-app-text">{title}</h3>
+    <div className={`panel  p-4 sm:p-5 ${className}`}>
+      <SectionHeading index={index} title={title} />
       {description && (
-        <p className="mt-1 text-sm text-app-muted">{description}</p>
+        <p className="mt-3 text-sm text-app-muted">{description}</p>
       )}
       {children}
     </div>
@@ -57,144 +60,119 @@ export function SettingsPage({
   const t = translations[language].settings
 
   return (
-    <section className="max-w-xl space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-app-text">{t.title}</h2>
-        <p className="mt-2 text-app-muted">{t.description}</p>
-      </div>
-
-      <Card title={t.preferences}>
-        <div className="mt-6">
-          <label
-            htmlFor="language"
-            className="mb-2 block text-sm font-medium text-app-muted"
-          >
-            {t.language}
-          </label>
-
-          <select
-            id="language"
-            value={language}
-            onChange={(event) =>
-              onLanguageChange(event.target.value as Language)
-            }
-            className={selectClass}
-          >
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-          </select>
-        </div>
-
-        <div className="mt-6">
-          <label
-            htmlFor="theme"
-            className="mb-2 block text-sm font-medium text-app-muted"
-          >
-            {t.theme}
-          </label>
-
-          <select
-            id="theme"
-            value={theme}
-            onChange={(event) => onThemeChange(event.target.value as Theme)}
-            className={selectClass}
-          >
-            <option value="light">{t.light}</option>
-            <option value="dark">{t.dark}</option>
-          </select>
-        </div>
-
-        <label className="mt-6 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={keepAwake}
-            disabled={!wakeLockSupported}
-            onChange={(event) => onKeepAwakeChange(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-emerald-600"
-          />
-          <span>
-            <span className="block text-sm font-medium text-app-text">
-              {t.keepAwake}
-            </span>
-            <span className="block text-xs text-app-muted">
-              {wakeLockSupported ? t.keepAwakeDescription : t.keepAwakeUnsupported}
-            </span>
-          </span>
-        </label>
-
-        <p className="mt-6 text-sm text-app-muted">{t.autoSave}</p>
-      </Card>
-
-      {isDesktop && (
-        <Card title={t.desktop} description={t.desktopDescription}>
-          <button
-            type="button"
-            onClick={() => void toggleOverlay()}
-            className="mt-4 cursor-pointer rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            {t.toggleOverlay}
-          </button>
-
-          <dl className="mt-4 space-y-2 text-sm">
-            {GLOBAL_HOTKEYS.map(({ keys, action }) => (
-              <div key={action} className="flex items-baseline gap-3">
-                <dt className="min-w-28">
-                  <kbd className="rounded border border-app-border bg-app-bg px-1.5 py-0.5 font-mono text-xs text-app-text">
-                    {keys}
-                  </kbd>
-                </dt>
-                <dd className="text-app-muted">{t.hotkeys[action]}</dd>
+    <section className="space-y-4">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <Card index="01" title={t.preferences}>
+            <div className="mt-4 flex flex-wrap gap-6">
+              <div>
+                <p className="label mb-1.5">{t.language}</p>
+                <Toggle
+                  label={t.language}
+                  value={language}
+                  onChange={onLanguageChange}
+                  options={[
+                    { value: 'ru', label: 'Русский' },
+                    { value: 'en', label: 'English' },
+                  ]}
+                />
               </div>
-            ))}
-          </dl>
 
-          <p className="mt-4 text-xs text-app-muted">{t.armaDisplayMode}</p>
-        </Card>
-      )}
+              <div>
+                <p className="label mb-1.5">{t.theme}</p>
+                <Toggle
+                  label={t.theme}
+                  value={theme}
+                  onChange={onThemeChange}
+                  options={[
+                    { value: 'dark', label: t.dark },
+                    { value: 'light', label: t.light },
+                  ]}
+                />
+              </div>
+            </div>
 
-      <Card title={t.openOnPhone} description={t.openOnPhoneDescription}>
-        <OpenOnPhone language={language} />
-      </Card>
+            <div className="mt-5">
+              <Switch
+                checked={keepAwake}
+                onChange={onKeepAwakeChange}
+                disabled={!wakeLockSupported}
+                label={t.keepAwake}
+                description={
+                  wakeLockSupported
+                    ? t.keepAwakeDescription
+                    : t.keepAwakeUnsupported
+                }
+              />
+            </div>
 
-      <Card title={t.experimental} description={t.experimentalDescription}>
-        <label className="mt-4 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={gridInput}
-            onChange={(event) => onGridInputChange(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-emerald-600"
-          />
-          <span>
-            <span className="block text-sm font-medium text-app-text">
-              {t.gridInput}
-            </span>
-            <span className="block text-xs text-app-muted">
-              {t.gridInputDescription}
-            </span>
-          </span>
-        </label>
+            <p className="label mt-5 text-app-faint">{t.autoSave}</p>
+          </Card>
 
-        <label className="mt-4 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={mapInput}
-            onChange={(event) => onMapInputChange(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-emerald-600"
-          />
-          <span>
-            <span className="block text-sm font-medium text-app-text">
-              {t.mapInput}
-            </span>
-            <span className="block text-xs text-app-muted">
-              {t.mapInputDescription}
-            </span>
-          </span>
-        </label>
-      </Card>
+          <SoundSettings language={language} />
+        </div>
 
-      <p className="text-xs text-app-muted">
-        Multipurpose Artillery Calculator v{__APP_VERSION__} · made by Heis
-      </p>
+        <div className="space-y-4">
+          {isDesktop && (
+            <Card index="03" title={t.desktop} description={t.desktopDescription}>
+              <button
+                type="button"
+                onClick={() => void toggleOverlay()}
+                className="btn btn-primary mt-4"
+              >
+                {t.toggleOverlay}
+              </button>
+
+              <dl className="mt-4 divide-y divide-app-border overflow-hidden rounded-lg text-sm">
+                {GLOBAL_HOTKEYS.map(({ keys, action }) => (
+                  <div
+                    key={action}
+                    className="flex items-baseline gap-3 bg-app-raised px-3 py-2"
+                  >
+                    <dt className="min-w-32">
+                      <kbd className="kbd">{keys}</kbd>
+                    </dt>
+                    <dd className="text-app-muted">{t.hotkeys[action]}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <p className="mt-4 rounded-md bg-app-raised px-3 py-2 text-xs text-app-muted">
+                {t.armaDisplayMode}
+              </p>
+            </Card>
+          )}
+
+          <Card
+            index="04"
+            title={t.openOnPhone}
+            description={t.openOnPhoneDescription}
+          >
+            <OpenOnPhone language={language} />
+          </Card>
+
+          <Card
+            index="05"
+            title={t.experimental}
+            description={t.experimentalDescription}
+          >
+            <div className="mt-4 space-y-4">
+              <Switch
+                checked={mapInput}
+                onChange={onMapInputChange}
+                label={t.mapInput}
+                description={t.mapInputDescription}
+              />
+              <Switch
+                checked={gridInput}
+                onChange={onGridInputChange}
+                label={t.gridInput}
+                description={t.gridInputDescription}
+              />
+            </div>
+          </Card>
+        </div>
+      </div>
     </section>
   )
 }

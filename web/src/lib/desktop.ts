@@ -21,6 +21,7 @@ export type HotkeyAction =
   | 'fire'
   | 'overlay'
   | 'input'
+  | 'screen-markers'
   | 'mode'
   | 'next-target'
   | 'previous-target'
@@ -32,6 +33,7 @@ export const GLOBAL_HOTKEYS: readonly {
   { keys: 'Ctrl + Alt + F', action: 'fire' },
   { keys: 'Ctrl + Alt + O', action: 'overlay' },
   { keys: 'Ctrl + Alt + D', action: 'input' },
+  { keys: 'Ctrl + Alt + S', action: 'screen-markers' },
   { keys: 'Ctrl + Alt + M', action: 'mode' },
   { keys: 'Ctrl + Alt + N', action: 'next-target' },
   { keys: 'Ctrl + Alt + P', action: 'previous-target' },
@@ -70,6 +72,8 @@ export interface OverlayState {
   solution: FiringSolution | null
   // Решение пришло от наводчика по связке: ввод в оверлее не нужен
   readOnly?: boolean
+  // Огонь по времени: момент выстрела, мс; null — нет
+  fireAt?: number | null
 }
 
 /** Команда из оверлея в основное окно. */

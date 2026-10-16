@@ -57,6 +57,16 @@ export interface JournalEntry {
 
   // Поле v0.10: режим таблицы; нет — HIGH
   mode?: ArtilleryMode
+
+  // Поле v0.12: точка цели на карте, если цель ставили на карте
+  target?: MapTarget | null
+}
+
+/** Цель на карте: мир (worldName) и метры от начала сетки. */
+export interface MapTarget {
+  world: string
+  x: number
+  y: number
 }
 
 export type JournalDraft = Omit<
@@ -97,6 +107,13 @@ function isWeather(value: unknown): boolean {
   )
 }
 
+function isMapTarget(value: unknown): boolean {
+  if (value === undefined || value === null) return true
+  if (typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return typeof v.world === 'string' && isNumber(v.x) && isNumber(v.y)
+}
+
 function isEntry(value: unknown): value is JournalEntry {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
@@ -123,7 +140,8 @@ function isEntry(value: unknown): value is JournalEntry {
     isOptionalNumber(v.firingAzimuth) &&
     (v.lateralCorrection === undefined || isNumber(v.lateralCorrection)) &&
     (v.mode === undefined || v.mode === 'HIGH' || v.mode === 'LOW') &&
-    isWeather(v.weather)
+    isWeather(v.weather) &&
+    isMapTarget(v.target)
   )
 }
 

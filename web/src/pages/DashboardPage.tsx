@@ -136,6 +136,11 @@ export function DashboardPage({
         gridInput={gridInput}
         mapInput={mapInput}
         activeEntry={activeEntry}
+        journalEntries={journal.entries}
+        onLoadEntry={(id) => {
+          const entry = journal.entries.find((e) => e.id === id)
+          if (entry) handleLoad(entry)
+        }}
         onSave={handleSave}
         onUpdate={handleUpdate}
       />

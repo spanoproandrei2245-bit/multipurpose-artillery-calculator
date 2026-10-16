@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { parseNumber, readStoredText, writeStored } from '../lib/input'
 import { planMrsi, type MrsiOption } from '../lib/mrsi'
-import { beep } from '../lib/sound'
+import { playSound } from '../lib/sound'
 import type { Language } from '../types/settings'
 import { NumberField } from './FormControls'
 
@@ -57,13 +57,13 @@ export function MrsiPanel({ options, showMode, language }: Props) {
           const key = `${index}:${second}`
           if (elapsed >= shot.fireAt - second && !signaled.current.has(key)) {
             signaled.current.add(key)
-            if (elapsed < shot.fireAt) beep(600, 80)
+            if (elapsed < shot.fireAt) playSound('mrsiTick')
           }
         }
         const key = `${index}:fire`
         if (elapsed >= shot.fireAt && !signaled.current.has(key)) {
           signaled.current.add(key)
-          beep(900, 300)
+          playSound('mrsiFire')
         }
       })
 
@@ -87,14 +87,16 @@ export function MrsiPanel({ options, showMode, language }: Props) {
     const at = Date.now()
     setNow(at)
     setStartedAt(at)
-    beep(440, 60)
+    playSound('fire')
   }
 
   return (
-    <details className="mt-4 rounded-lg border border-app-border bg-app-surface p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-app-text">
-        {ru ? 'Одновременный удар (MRSI)' : 'Simultaneous impact (MRSI)'}
-        <span className="ml-2 text-xs font-normal text-app-muted">
+    <details className="disclosure mt-4 rounded-lg bg-app-raised p-3">
+      <summary>
+        <span className="text-app-text">
+          {ru ? 'Одновременный удар · MRSI' : 'Simultaneous impact · MRSI'}
+        </span>
+        <span className="tag">
           {plan.length} {ru ? 'выстр.' : 'rounds'}
         </span>
       </summary>
@@ -113,7 +115,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
         onChange={setGap}
       />
 
-      <ol className="mt-3 space-y-1 text-sm">
+      <ol className="mt-3 divide-y divide-app-border overflow-hidden rounded-lg text-[12px]">
         {plan.map((shot, index) => {
           const done = elapsed !== null && elapsed >= shot.fireAt
           const next = index === nextIndex
@@ -121,9 +123,9 @@ export function MrsiPanel({ options, showMode, language }: Props) {
             <li
               key={`${shot.mode}-${shot.charge}`}
               className={[
-                'flex flex-wrap justify-between gap-2 rounded-md px-2 py-1 tabular-nums',
-                next ? 'bg-emerald-500/15 text-app-text' : '',
-                done ? 'text-app-muted line-through' : 'text-app-text',
+                'flex flex-wrap justify-between gap-2 border-l-2 px-2 py-1.5 tabular-nums',
+                next ? 'border-l-accent bg-accent-soft' : 'border-l-transparent',
+                done ? 'text-app-faint line-through' : 'text-app-text',
               ].join(' ')}
             >
               <span>
@@ -143,7 +145,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
         <button
           type="button"
           onClick={start}
-          className="cursor-pointer rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+          className="btn btn-primary"
         >
           {startedAt === null
             ? ru
@@ -157,13 +159,13 @@ export function MrsiPanel({ options, showMode, language }: Props) {
           <button
             type="button"
             onClick={() => setStartedAt(null)}
-            className="cursor-pointer rounded-lg border border-app-border bg-app-bg px-3 py-1 text-xs text-app-text"
+            className="btn"
           >
             {ru ? 'Стоп' : 'Stop'}
           </button>
         )}
 
-        <p className="text-sm tabular-nums text-app-text">
+        <p className="mono-num text-[12px] text-app-text">
           {elapsed === null
             ? `${ru ? 'Удар через' : 'Impact after'} ${impactAt.toFixed(1)} ${unitS} ${ru ? 'после первого выстрела' : 'from the first round'}`
             : nextIndex >= 0
