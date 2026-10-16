@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import exportScript from '../data/export-heightmap.sqf?raw'
-import { milToDeg } from '../lib/ballistics'
 import {
   bearing,
   heightAt,
@@ -13,7 +12,7 @@ import {
   type MapPoint,
 } from '../lib/heightmap'
 import { parseGrid } from '../lib/grid'
-import { formatSigned, readStoredText, writeStored } from '../lib/input'
+import { readStoredText, writeStored } from '../lib/input'
 import {
   addMarker,
   formatAge,
@@ -26,7 +25,7 @@ import {
   type MarkerColor,
 } from '../lib/markers'
 import { useSync } from '../lib/syncContext'
-import type { AngleUnit, MapTarget } from '../lib/journal'
+import type { MapTarget } from '../lib/journal'
 import {
   deleteHeightmap,
   listHeightmaps,
@@ -59,7 +58,6 @@ export interface JournalMapTarget {
 }
 
 interface Props {
-  azimuthUnit: AngleUnit
   language: Language
   onApply: (selection: MapSelection) => void
   // Цели журнала: показываются на карте, клик — загрузить цель
@@ -147,7 +145,6 @@ function fitView(map: Heightmap, width: number, height: number): View {
  * и цель — дистанция, азимут и высоты подставляются в калькулятор.
  */
 export function MapPicker({
-  azimuthUnit,
   language,
   onApply,
   journalTargets = [],
@@ -258,7 +255,7 @@ export function MapPicker({
             ? { x: currentTarget.x, y: currentTarget.y }
             : null
         )
-        setPlacing(readGun(world) ? 'target' : 'gun')
+        setPlacing('gun')
         setView(null)
         setAdding(false)
       })
@@ -302,7 +299,7 @@ export function MapPicker({
     setMap(parsed)
     setGun(readGun(parsed.world))
     setTarget(null)
-    setPlacing(readGun(parsed.world) ? 'target' : 'gun')
+    setPlacing('gun')
     setView(null)
     setAdding(false)
     setNotice(
@@ -360,7 +357,7 @@ export function MapPicker({
     if (!element) return
     const measure = () => {
       const width = Math.floor(element.getBoundingClientRect().width)
-      setSize({ width, height: Math.min(width, 560) })
+      setSize({ width, height: Math.min(width, 760) })
     }
     measure()
     const observer = new ResizeObserver(measure)
@@ -387,30 +384,29 @@ export function MapPicker({
     })
 
     // Цвета холста — из темы интерфейса
-    const accent = themeColor('--color-accent') || '#ff5a1f'
+    const gunColor = themeColor('--color-gun') || '#4393e4'
+    const targetColor = themeColor('--color-target') || '#e47474'
     const ink = night
       ? {
-          bg: '#0a0a0a',
-          grid: 'rgba(255,255,255,0.09)',
-          gridKm: 'rgba(255,255,255,0.22)',
-          gridText: 'rgba(255,255,255,0.5)',
-          plate: 'rgba(10,10,10,0.85)',
-          text: '#ebebeb',
-          gun: '#ebebeb',
-          outline: '#0a0a0a',
+          bg: '#000000',
+          grid: 'rgba(255,255,255,0.12)',
+          gridKm: 'rgba(255,255,255,0.32)',
+          gridText: 'rgba(255,255,255,0.55)',
+          plate: 'rgba(0,0,0,0.7)',
+          text: '#f0f4f8',
+          outline: '#000000',
         }
       : {
-          bg: '#eceae4',
-          grid: 'rgba(0,0,0,0.16)',
-          gridKm: 'rgba(0,0,0,0.38)',
-          gridText: 'rgba(0,0,0,0.65)',
-          plate: 'rgba(255,255,255,0.9)',
-          text: '#121212',
-          gun: '#121212',
-          outline: '#ffffff',
+          bg: '#0b0d0e',
+          grid: 'rgba(255,255,255,0.18)',
+          gridKm: 'rgba(255,255,255,0.45)',
+          gridText: 'rgba(255,255,255,0.8)',
+          plate: 'rgba(0,0,0,0.6)',
+          text: '#ffffff',
+          outline: '#000000',
         }
-    const mono = "'JetBrains Mono Variable', ui-monospace, monospace"
-    const sans = "'Inter Tight Variable', system-ui, sans-serif"
+    const sans = "'Inter Variable', system-ui, sans-serif"
+    const mono = sans
 
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
     ctx.fillStyle = ink.bg
@@ -495,7 +491,7 @@ export function MapPicker({
       if (saved.target.world !== map.world) continue
       const p = toScreen(saved.target)
       if (p.x < -40 || p.y < -40 || p.x > size.width + 40 || p.y > size.height + 40) continue
-      const color = saved.active ? accent : ink.text
+      const color = saved.active ? gunColor : ink.text
       ctx.strokeStyle = color
       ctx.lineWidth = 1.5
       ctx.strokeRect(p.x - 6.5, p.y - 6.5, 13, 13)
@@ -531,52 +527,39 @@ export function MapPicker({
     if (gun && target) {
       const a = toScreen(gun)
       const b = toScreen(target)
-      ctx.strokeStyle = accent
-      ctx.setLineDash([6, 4])
-      ctx.lineWidth = 1.5
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+      ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(a.x, a.y)
       ctx.lineTo(b.x, b.y)
       ctx.stroke()
-      ctx.setLineDash([])
-
-      const label = `${Math.round(bearing(gun, target).distance)} ${unitM}`
-      ctx.font = `12px ${mono}`
-      const mx = (a.x + b.x) / 2
-      const my = (a.y + b.y) / 2
-      const width = ctx.measureText(label).width
-      ctx.fillStyle = ink.plate
-      ctx.fillRect(mx - width / 2 - 5, my - 10, width + 10, 20)
-      ctx.strokeStyle = accent
-      ctx.lineWidth = 1
-      ctx.strokeRect(mx - width / 2 - 4.5, my - 9.5, width + 9, 19)
-      ctx.fillStyle = ink.text
-      ctx.fillText(label, mx - width / 2, my + 4)
     }
 
+    // Орудие — синяя точка, цель — красная со свечением
     if (gun) {
       const p = toScreen(gun)
-      // Орудие — квадрат со светлой рамкой
-      ctx.fillStyle = ink.gun
-      ctx.strokeStyle = ink.outline
-      ctx.lineWidth = 2
-      ctx.fillRect(p.x - 6, p.y - 6, 12, 12)
-      ctx.strokeRect(p.x - 6, p.y - 6, 12, 12)
-      ctx.fillStyle = accent
-      ctx.fillRect(p.x - 2, p.y - 2, 4, 4)
+      ctx.fillStyle = gunColor
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
     }
 
     if (target) {
       const p = toScreen(target)
-      ctx.strokeStyle = accent
-      ctx.lineWidth = 2
+      const glow = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 16)
+      glow.addColorStop(0, targetColor)
+      glow.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = glow
       ctx.beginPath()
-      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2)
-      ctx.moveTo(p.x - 13, p.y)
-      ctx.lineTo(p.x + 13, p.y)
-      ctx.moveTo(p.x, p.y - 13)
-      ctx.lineTo(p.x, p.y + 13)
-      ctx.stroke()
+      ctx.arc(p.x, p.y, 16, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = targetColor
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
+      ctx.fill()
     }
   }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets])
 
@@ -617,6 +600,8 @@ export function MapPicker({
   }, [canvas])
 
   // ---- перетаскивание и клики ----
+  // Мышь: ЛКМ — орудие (или метка), ПКМ — цель, перетаскивание — сдвиг.
+  // Касание: что ставить, выбирает переключатель под картой.
   function onPointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     if (!activeView) return
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -642,10 +627,40 @@ export function MapPicker({
     })
   }
 
+  /** Подставить орудие и цель в расчёт — сразу, без кнопки. */
+  function applyPoints(gunPoint: MapPoint | null, targetPoint: MapPoint | null) {
+    if (!map || !gunPoint || !targetPoint) return
+    const ownHeight = heightAt(map, gunPoint)
+    const targetHeight = heightAt(map, targetPoint)
+    if (ownHeight === null || targetHeight === null) return
+    const line = bearing(gunPoint, targetPoint)
+    onApply({
+      distance: line.distance,
+      azimuthMil: line.azimuthMil,
+      ownHeight,
+      targetHeight,
+      target: { world: map.world, x: targetPoint.x, y: targetPoint.y },
+    })
+  }
+
+  function placeGun(point: MapPoint) {
+    if (!map) return
+    setGun(point)
+    writeStored(`mapGun:${map.world}`, JSON.stringify(point))
+    applyPoints(point, target)
+  }
+
+  function placeTarget(point: MapPoint) {
+    setTarget(point)
+    applyPoints(gun, point)
+  }
+
   function onPointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
     const drag = dragRef.current
     dragRef.current = null
     if (!drag || drag.moved || !map) return
+    // Средняя кнопка — только сдвиг
+    if (event.button === 1) return
 
     const rect = event.currentTarget.getBoundingClientRect()
     const point = {
@@ -654,7 +669,15 @@ export function MapPicker({
     }
     if (!isInside(map, point)) return
 
-    if (placing === 'marker') {
+    const mouse = event.pointerType === 'mouse'
+    const action: Placing =
+      mouse && event.button === 2
+        ? 'target'
+        : mouse && placing === 'target'
+          ? 'gun'
+          : placing
+
+    if (action === 'marker') {
       setDraft({ point, label: '', color: markerColor })
       return
     }
@@ -667,105 +690,42 @@ export function MapPicker({
           drag.view.scale <=
           MARKER_HIT_PX
     )
-    if (journalHit && placing !== 'gun' && onPickJournalTarget) {
+    if (journalHit && action === 'target' && onPickJournalTarget) {
       onPickJournalTarget(journalHit.id)
       return
     }
 
-    // Клик по метке — цель ставится точно в неё
+    if (action === 'gun') {
+      placeGun(point)
+      // На телефоне следующим касанием — цель
+      if (!mouse) setPlacing('target')
+      return
+    }
+
+    // Клик рядом с меткой — цель ставится точно в неё
     const hit = markers.find(
       (m) =>
         Math.hypot(m.x - point.x, m.y - point.y) * drag.view.scale <=
         MARKER_HIT_PX
     )
-    if (hit && placing === 'target') {
-      setTarget({ x: hit.x, y: hit.y })
-      return
-    }
-
-    if (placing === 'gun') {
-      setGun(point)
-      writeStored(`mapGun:${map.world}`, JSON.stringify(point))
-      setPlacing('target')
-    } else {
-      setTarget(point)
-    }
+    placeTarget(hit ? { x: hit.x, y: hit.y } : point)
   }
 
-  // ---- результат ----
   const gunHeight = map && gun ? heightAt(map, gun) : null
   const targetHeight = map && target ? heightAt(map, target) : null
-  const line = gun && target ? bearing(gun, target) : null
-
-  function formatAzimuth(mil: number) {
-    return azimuthUnit === 'mil'
-      ? `${Math.round(mil)} ${ru ? 'мил' : 'mil'}`
-      : `${milToDeg(mil).toFixed(1)}°`
-  }
-
-  function apply() {
-    if (!line || gunHeight === null || targetHeight === null) return
-    if (!map || !target) return
-    onApply({
-      distance: line.distance,
-      azimuthMil: line.azimuthMil,
-      ownHeight: gunHeight,
-      targetHeight,
-      target: { world: map.world, x: target.x, y: target.y },
-    })
-    setNotice(ru ? 'Подставлено в калькулятор.' : 'Applied to the calculator.')
-  }
 
   const buttonClass = 'btn btn-sm'
 
   const showLoader = adding || !map
 
   return (
-    <div className="mt-5 border border-app-border bg-app-bg p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="label flex items-center gap-2 text-app-text">
-          {ru ? 'Карта и метки' : 'Map and markers'}
-          <span className="tag tag-warn">
-            {ru ? 'эксперимент' : 'experimental'}
-          </span>
-        </p>
-
-        {maps.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label={ru ? 'Карта' : 'Map'}
-              value={map?.world ?? ''}
-              onChange={(event) => openMap(event.target.value)}
-              className="field w-auto py-1 font-mono text-[11px]"
-            >
-              {!map && <option value="">—</option>}
-              {maps.map((m) => (
-                <option key={m.world} value={m.world}>
-                  {m.world} · {m.step} {unitM}
-                </option>
-              ))}
-            </select>
-            <button type="button" className={buttonClass} onClick={() => setAdding((v) => !v)}>
-              {ru ? 'Добавить карту' : 'Add map'}
-            </button>
-            {map && (
-              <button type="button" className={buttonClass} onClick={() => void removeMap()}>
-                {ru ? 'Удалить' : 'Delete'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {notice && (
-        <p className="mt-2 border-l-2 border-accent pl-2 text-xs text-app-text" role="status">
-          {notice}
-        </p>
-      )}
-
+    <div>
       {showLoader && (
-        <div className="mt-3 space-y-3 text-sm text-app-muted">
-          <ol className="list-decimal space-y-1 pl-5">
+        <div className="flex aspect-square flex-col justify-center gap-4 rounded-lg bg-app-surface p-6 text-[15px] text-app-text-2 sm:p-10">
+          <p className="text-lg font-semibold text-app-text">
+            {ru ? 'Добавьте карту' : 'Add a map'}
+          </p>
+          <ol className="list-decimal space-y-3 pl-5">
             <li>
               <button type="button" className={buttonClass} onClick={() => void copyScript()}>
                 {ru ? 'Скопировать скрипт для игры' : 'Copy the game script'}
@@ -776,11 +736,11 @@ export function MapPicker({
                 ? 'В Arma 3: редактор Eden на нужной карте → Play → Esc → Debug Console → вставить скрипт → LOCAL EXEC. Высоты скопируются в буфер обмена.'
                 : 'In Arma 3: Eden editor on the map → Play → Esc → Debug Console → paste the script → LOCAL EXEC. The heights are copied to the clipboard.'}
             </li>
-            <li>
+            <li className="space-x-2">
               <button type="button" className={buttonClass} onClick={() => void pasteFromClipboard()}>
-                {ru ? 'Вставить высоты из буфера' : 'Paste heights from clipboard'}
+                {ru ? 'Вставить высоты' : 'Paste heights'}
               </button>
-              <span className="mx-2">{ru ? 'или' : 'or'}</span>
+              <span className="text-app-muted">{ru ? 'или' : 'or'}</span>
               <button type="button" className={buttonClass} onClick={() => fileRef.current?.click()}>
                 {ru ? 'Загрузить файл' : 'Load a file'}
               </button>
@@ -805,21 +765,70 @@ export function MapPicker({
               event.preventDefault()
               void importText(event.clipboardData.getData('text'))
             }}
-            className="field text-xs"
+            className="field text-sm"
           />
-          <p className="text-xs">
+          <p className="text-[13px] text-app-muted">
             {ru
-              ? 'Карта рисуется из высот: чужие изображения карт не нужны. Высоты хранятся только в этом браузере.'
-              : 'The map is drawn from the heights, no map images needed. Heights are stored only in this browser.'}
+              ? 'Карта рисуется из высот: чужие изображения карт не нужны. Высоты хранятся только на этом устройстве.'
+              : 'The map is drawn from the heights, no map images needed. Heights stay on this device.'}
           </p>
+          {map && (
+            <button type="button" className="btn self-start" onClick={() => setAdding(false)}>
+              {ru ? 'Назад к карте' : 'Back to the map'}
+            </button>
+          )}
         </div>
       )}
 
       {map && !adding && (
-        <>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div ref={containerRef} className="w-full">
+          <canvas
+            ref={setCanvas}
+            width={Math.round(size.width * ratio)}
+            height={Math.round(size.height * ratio)}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => (dragRef.current = null)}
+            onContextMenu={(event) => event.preventDefault()}
+            style={{ width: size.width, height: size.height }}
+            className="block cursor-crosshair touch-none rounded-lg"
+          />
+        </div>
+      )}
+
+      {notice && (
+        <p className="mt-3 rounded-md bg-app-raised px-3 py-2 text-[13.5px] text-app-text-2" role="status">
+          {notice}
+        </p>
+      )}
+
+      {/* ---- Панель под картой ---- */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {maps.length > 0 && (
+          <select
+            aria-label={ru ? 'Карта' : 'Map'}
+            value={map?.world ?? ''}
+            onChange={(event) => openMap(event.target.value)}
+            className="field w-auto"
+          >
+            {!map && <option value="">—</option>}
+            {maps.map((m) => (
+              <option key={m.world} value={m.world}>
+                {m.world}
+              </option>
+            ))}
+          </select>
+        )}
+        {maps.length > 0 && !adding && (
+          <button type="button" className="btn" onClick={() => setAdding(true)}>
+            {ru ? '+ Карта' : '+ Map'}
+          </button>
+        )}
+        {map && !adding && (
+          <>
             <Toggle
-              label={ru ? 'Что ставить кликом' : 'Click places'}
+              label={ru ? 'Что ставит касание' : 'Tap places'}
               value={placing}
               onChange={setPlacing}
               options={[
@@ -828,47 +837,38 @@ export function MapPicker({
                 { value: 'marker', label: ru ? 'метка' : 'marker' },
               ]}
             />
-            <div className="flex gap-1">
-              <button type="button" className={buttonClass} aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}>+</button>
-              <button type="button" className={buttonClass} aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}>−</button>
-              <button type="button" className={buttonClass} onClick={() => setView(null)}>
-                {ru ? 'Вся карта' : 'Fit'}
+            <div className="ml-auto flex gap-1">
+              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}>−</button>
+              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}>+</button>
+              <button type="button" className="btn" onClick={() => setView(null)}>
+                {ru ? 'Вся' : 'Fit'}
               </button>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
-          <div ref={containerRef} className="mt-2 w-full">
-            <canvas
-              ref={setCanvas}
-              width={Math.round(size.width * ratio)}
-              height={Math.round(size.height * ratio)}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={() => (dragRef.current = null)}
-              style={{ width: size.width, height: size.height }}
-              className="block cursor-crosshair touch-none border border-app-border"
-            />
-          </div>
-
-          <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="label inline">{ru ? 'Орудие' : 'Gun'} </dt>
-              <dd className="inline font-mono text-app-text">
-                {gun ? `${toGridReference(gun)} · ${Math.round(gunHeight ?? 0)} ${unitM}` : '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="label inline">{ru ? 'Цель' : 'Target'} </dt>
-              <dd className="inline font-mono text-app-text">
-                {target ? `${toGridReference(target)} · ${Math.round(targetHeight ?? 0)} ${unitM}` : '—'}
-              </dd>
-            </div>
-          </dl>
+      {map && !adding && (
+        <>
+          <p className="mt-2 text-[13px] text-app-muted tabular-nums">
+            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-gun" />
+            {gun
+              ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
+              : ru
+                ? 'орудие не задано'
+                : 'no gun'}
+            <span className="mx-3 text-app-faint">|</span>
+            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-target" />
+            {target
+              ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
+              : ru
+                ? 'цель не задана'
+                : 'no target'}
+          </p>
 
           {draft && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border border-accent bg-app-surface p-2">
-              <span className="font-mono text-xs text-app-muted">
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-app-surface p-2">
+              <span className="text-[13px] text-app-muted tabular-nums">
                 {toGridReference(draft.point, 8)}
               </span>
               <input
@@ -883,87 +883,72 @@ export function MapPicker({
                   if (event.key === 'Enter') saveDraft()
                   if (event.key === 'Escape') setDraft(null)
                 }}
-                className="field min-w-0 flex-1 py-1 text-sm"
+                className="field min-w-0 flex-1"
               />
               <ColorPicker
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
                 language={language}
               />
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="btn btn-primary btn-sm"
-              >
+              <button type="button" onClick={saveDraft} className="btn btn-primary">
                 {ru ? 'Поставить' : 'Place'}
               </button>
-              <button
-                type="button"
-                onClick={() => setDraft(null)}
-                className={buttonClass}
-              >
+              <button type="button" onClick={() => setDraft(null)} className="btn">
                 {ru ? 'Отмена' : 'Cancel'}
               </button>
             </div>
           )}
 
-          {line && gunHeight !== null && targetHeight !== null && (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <p className="mono-num text-sm text-app-text">
-                {Math.round(line.distance)} {unitM} · {formatAzimuth(line.azimuthMil)} · ΔH{' '}
-                {formatSigned(targetHeight - gunHeight, 0)} {unitM}
-              </p>
+          <details className="disclosure panel mt-3 p-4">
+            <summary>
+              {ru ? 'Метки' : 'Markers'}
+              <span className="tag">{markers.length}</span>
+            </summary>
+
+            <MarkerList
+              markers={markers}
+              now={now}
+              language={language}
+              onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
+            />
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="label">
+                {ru ? 'Метка по координате' : 'Marker by grid'}
+              </span>
+              <input
+                value={gridDraft}
+                onChange={(event) => setGridDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') addByGrid()
+                }}
+                placeholder="045 078"
+                inputMode="numeric"
+                className="field w-32"
+              />
               <button
                 type="button"
-                onClick={apply}
-                className="btn btn-primary"
+                onClick={addByGrid}
+                disabled={!parseGrid(gridDraft)}
+                className={buttonClass}
               >
-                {ru ? 'Подставить в калькулятор' : 'Apply to calculator'}
+                {ru ? 'Добавить' : 'Add'}
               </button>
             </div>
-          )}
-
-          <MarkerList
-            markers={markers}
-            now={now}
-            language={language}
-            onTarget={(marker) => {
-              setTarget({ x: marker.x, y: marker.y })
-              setPlacing('target')
-            }}
-          />
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="label">
-              {ru ? 'Метка по координате' : 'Marker by grid'}
-            </span>
-            <input
-              value={gridDraft}
-              onChange={(event) => setGridDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') addByGrid()
-              }}
-              placeholder="045 078"
-              inputMode="numeric"
-              className="field w-32 py-1 font-mono text-xs"
-            />
-            <button
-              type="button"
-              onClick={addByGrid}
-              disabled={!parseGrid(gridDraft)}
-              className={buttonClass}
-            >
-              {ru ? 'Добавить' : 'Add'}
-            </button>
-          </div>
+          </details>
 
           <ScreenMarkers world={map.world} author={author} language={language} />
 
-          <p className="mt-2 text-xs text-app-muted">
-            {ru
-              ? `Колёсико — масштаб, перетаскивание — сдвиг. Высоты по сетке с шагом ${map.step} м: на крутых склонах ошибка до нескольких метров. Подписи сетки — сотни метров, как в 6-значной координате.`
-              : `Wheel zooms, drag pans. Heights come from a ${map.step} m grid: on steep slopes the error can reach a few metres. Grid labels are hundreds of metres, as in a 6-digit grid.`}
-          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[13px] text-app-muted">
+              {ru
+                ? `Высоты по сетке с шагом ${map.step} м: на крутых склонах ошибка до нескольких метров.`
+                : `Heights come from a ${map.step} m grid: on steep slopes the error can reach a few metres.`}
+            </p>
+            <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
+              {ru ? 'Удалить карту' : 'Delete map'}
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -996,8 +981,8 @@ function ColorPicker({
           onClick={() => onChange(color)}
           style={{ backgroundColor: MARKER_RGB[color] }}
           className={[
-            'h-6 w-6 cursor-pointer border-2',
-            value === color ? 'border-accent' : 'border-app-line-strong',
+            'h-6 w-6 cursor-pointer rounded-full ring-offset-2 ring-offset-app-surface',
+            value === color ? 'ring-2 ring-accent' : '',
           ].join(' ')}
         />
       ))}
@@ -1027,7 +1012,7 @@ function MarkerList({
     )
   }
   return (
-    <ul className="mt-3 divide-y divide-app-border border border-app-border bg-app-raised text-sm">
+    <ul className="mt-3 divide-y divide-app-border overflow-hidden rounded-lg bg-app-raised text-sm">
       {markers.map((marker) => (
         <li
           key={marker.id}
@@ -1040,15 +1025,15 @@ function MarkerList({
           />
           <span className="min-w-0 flex-1 truncate text-app-text">
             {markerTitle(marker, ru)}
-            <span className="label ml-2 text-[9.5px]">
+            <span className="label ml-2 text-[12.5px]">
               {marker.author}
               {marker.source === 'screen' && (ru ? ' · с экрана' : ' · from screen')}
             </span>
           </span>
-          <span className="font-mono text-xs text-app-muted">
+          <span className="text-xs text-app-muted">
             {toGridReference(marker, 8)}
           </span>
-          <span className="mono-num w-24 text-right text-[11px] text-app-muted">
+          <span className="mono-num w-24 text-right text-[12.5px] text-app-muted">
             {formatAge(now - marker.createdAt, ru)}
           </span>
           <button

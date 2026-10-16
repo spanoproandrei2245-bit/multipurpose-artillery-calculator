@@ -51,9 +51,9 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
   }
 
   return (
-    <div className="mt-5 border border-dashed border-app-line-strong bg-app-bg p-4">
+    <div className="mt-5 rounded-lg bg-app-surface p-4">
       <p className="flex flex-wrap items-center gap-2">
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'По координатам сетки' : 'From grid coordinates'}
         </span>
         <span className="tag tag-warn">

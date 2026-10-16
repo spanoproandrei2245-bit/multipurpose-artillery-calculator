@@ -7,7 +7,6 @@ import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
 import { SectionHeading, Switch, Toggle } from '../components/FormControls'
-import { PageIntro } from '../components/PageIntro'
 
 interface SettingsPageProps {
   language: Language
@@ -36,7 +35,7 @@ function Card({
   className?: string
 }) {
   return (
-    <div className={`panel ticks p-4 sm:p-5 ${className}`}>
+    <div className={`panel  p-4 sm:p-5 ${className}`}>
       <SectionHeading index={index} title={title} />
       {description && (
         <p className="mt-3 text-sm text-app-muted">{description}</p>
@@ -62,8 +61,6 @@ export function SettingsPage({
 
   return (
     <section className="space-y-4">
-      <PageIntro index="04" eyebrow={t.title} title={t.description} />
-
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <Card index="01" title={t.preferences}>
@@ -126,7 +123,7 @@ export function SettingsPage({
                 {t.toggleOverlay}
               </button>
 
-              <dl className="mt-4 divide-y divide-app-border border border-app-border text-sm">
+              <dl className="mt-4 divide-y divide-app-border overflow-hidden rounded-lg text-sm">
                 {GLOBAL_HOTKEYS.map(({ keys, action }) => (
                   <div
                     key={action}
@@ -140,7 +137,7 @@ export function SettingsPage({
                 ))}
               </dl>
 
-              <p className="mt-4 border-l-2 border-warn pl-2 text-xs text-app-muted">
+              <p className="mt-4 rounded-md bg-app-raised px-3 py-2 text-xs text-app-muted">
                 {t.armaDisplayMode}
               </p>
             </Card>

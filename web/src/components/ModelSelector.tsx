@@ -100,14 +100,6 @@ export function ModelSelector({
 
   return (
     <div ref={rootRef} className="relative">
-      <label
-        id={`${id}-label`}
-        htmlFor={`${id}-button`}
-        className="label mb-1.5 block"
-      >
-        {t.label}
-      </label>
-
       <button
         ref={buttonRef}
         id={`${id}-button`}
@@ -115,6 +107,7 @@ export function ModelSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
+        aria-label={t.label}
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -122,28 +115,22 @@ export function ModelSelector({
             openList()
           }
         }}
-        className="field flex min-h-14 cursor-pointer items-center gap-3 text-left"
+        className="field flex w-auto max-w-[15rem] cursor-pointer items-center gap-2 pr-2 text-left"
       >
-        <ArtilleryIcon category={current.category} language={language} />
-
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[17px] font-medium">
-            {current.name}
-          </span>
-          <span className="label block truncate text-[9.5px]">
-            {current.mod}
-          </span>
-        </span>
-
+        <span className="min-w-0 truncate">{current.name}</span>
         <svg
-          viewBox="0 0 20 20"
+          viewBox="0 0 24 24"
           aria-hidden="true"
-          className={[
-            'h-5 w-5 shrink-0 fill-current text-app-muted transition-transform',
-            open ? 'rotate-180' : '',
-          ].join(' ')}
+          className="h-4 w-4 shrink-0 text-app-muted"
         >
-          <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z" />
+          <path
+            d="m7 15 5 5 5-5M7 9l5-5 5 5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
@@ -153,10 +140,10 @@ export function ModelSelector({
           id={listId}
           role="listbox"
           tabIndex={-1}
-          aria-labelledby={`${id}-label`}
+          aria-label={t.label}
           aria-activedescendant={`${id}-opt-${active}`}
           onKeyDown={handleListKey}
-          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto border border-app-line-strong bg-app-raised p-1 shadow-2xl shadow-black/40 outline-none"
+          className="absolute right-0 z-30 mt-1 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none"
         >
           {modelIds.map((modelId, index) => {
             const model = models[modelId]
@@ -171,24 +158,37 @@ export function ModelSelector({
                 onPointerEnter={() => setActive(index)}
                 onClick={() => choose(index)}
                 className={[
-                  'flex cursor-pointer items-center gap-3 border-l-2 px-2 py-2 text-app-text',
-                  index === active ? 'bg-app-surface' : '',
-                  selected ? 'border-accent' : 'border-transparent',
+                  'flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-left',
+                  index === active ? 'bg-app-raised-hover' : '',
                 ].join(' ')}
               >
                 <ArtilleryIcon category={model.category} language={language} />
 
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">{model.name}</span>
-                  <span className="label block truncate text-[9.5px]">
+                  <span
+                    className={[
+                      'block truncate',
+                      selected ? 'font-semibold text-app-text' : 'text-app-text-2',
+                    ].join(' ')}
+                  >
+                    {model.name}
+                  </span>
+                  <span className="block truncate text-[12.5px] text-app-muted">
                     {model.mod}
                   </span>
                 </span>
 
                 {selected && (
-                  <span aria-hidden="true" className="index">
-                    ●
-                  </span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-accent">
+                    <path
+                      d="m5 12 5 5L20 7"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 )}
               </li>
             )

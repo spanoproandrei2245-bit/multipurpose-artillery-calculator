@@ -312,12 +312,12 @@ export function ScreenMarkers({ world, author, language }: Props) {
 
   return (
     <details
-      className="disclosure mt-4 border border-app-border bg-app-surface p-3"
+      className="disclosure panel mt-3 p-4"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Метки с экрана игры' : 'Markers from the game screen'}
         </span>
         <span className="tag tag-warn">
@@ -417,7 +417,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
           </div>
 
           {calibrating && (
-            <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
+            <p className="mt-2 rounded-md bg-app-raised px-3 py-2 text-xs text-warn">
               {ru
                 ? `Точка ${points.length + 1} из 2: кликните пересечение линий сетки и введите его координату (например 045 078). Точки — подальше друг от друга.`
                 : `Point ${points.length + 1} of 2: click a grid line intersection and enter its grid (e.g. 045 078). Keep the points far apart.`}
@@ -445,7 +445,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
                 }}
                 placeholder="045 078"
                 inputMode="numeric"
-                className="field w-32 py-1 font-mono text-xs"
+                className="field w-32 py-1 text-xs"
               />
               <button
                 type="button"

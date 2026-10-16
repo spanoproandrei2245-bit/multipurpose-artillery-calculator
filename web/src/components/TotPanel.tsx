@@ -9,7 +9,7 @@ import {
   suggestImpactTime,
 } from '../lib/tot'
 import type { Language } from '../types/settings'
-import { SegmentBar } from './FormControls'
+import { ProgressBar } from './FormControls'
 
 // Отсчёт со звуком за столько секунд до выстрела
 const COUNTDOWN_S = 5
@@ -25,6 +25,8 @@ interface Props {
   // Момент выстрела настал: запустить таймер полёта
   onFireMoment: () => void
   language: Language
+  // Оформление блока: по умолчанию — самостоятельная панель
+  className?: string
 }
 
 /**
@@ -37,6 +39,7 @@ export function TotPanel({
   onImpactChange,
   onFireMoment,
   language,
+  className = 'panel p-4 sm:p-5',
 }: Props) {
   const ru = language === 'ru'
   const editable = onImpactChange !== undefined
@@ -98,11 +101,11 @@ export function TotPanel({
 
   return (
     <details
-      className="disclosure mt-4 border border-app-border bg-app-raised p-3"
+      className={`disclosure ${className}`}
       open={impactAt !== null || undefined}
     >
       <summary>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Огонь по времени · TOT' : 'Time on target · TOT'}
         </span>
         {impactAt !== null && (
@@ -137,7 +140,7 @@ export function TotPanel({
               placeholder="18:30:00"
               inputMode="numeric"
               aria-invalid={draft !== '' && draftAt === null}
-              className="field w-32 py-1.5 font-mono text-sm"
+              className="field w-32 py-1.5 text-sm"
             />
           </label>
           <button
@@ -209,7 +212,7 @@ export function TotPanel({
             </span>
           </div>
           {/* Последняя минута до выстрела — шкалой */}
-          <SegmentBar
+          <ProgressBar
             progress={1 - Math.min(60, Math.max(0, left)) / 60}
             alert={phase === 'count' || phase === 'fire'}
             className="mt-2"

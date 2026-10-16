@@ -53,10 +53,10 @@ export function CombatScreen({
     }
   }, [])
 
-  const cell = 'bg-app-bg p-4 sm:p-6'
+  const cell = 'rounded-xl bg-app-surface p-5 sm:p-7'
+  const caption = 'text-[15px] font-medium text-app-muted'
 
-  // Портал в <body>: экран не зависит от контекста наложения родителя
-  // (липкая панель результата иначе прячет его под шапкой).
+  // Портал в <body>: экран не зависит от контекста наложения родителя.
   return createPortal(
     <div
       role="dialog"
@@ -64,23 +64,14 @@ export function CombatScreen({
       aria-label={ru ? 'Боевой экран' : 'Combat screen'}
       className="fixed inset-0 z-50 flex flex-col overflow-auto bg-app-bg p-3 sm:p-6"
     >
-      {/* Угловые скобки прицела */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-3 sm:inset-5">
-        <span className="absolute top-0 left-0 h-6 w-6 border-t border-l border-accent" />
-        <span className="absolute top-0 right-0 h-6 w-6 border-t border-r border-accent" />
-        <span className="absolute bottom-0 left-0 h-6 w-6 border-b border-l border-accent" />
-        <span className="absolute right-0 bottom-0 h-6 w-6 border-r border-b border-accent" />
-      </div>
-
-      <div className="flex items-start justify-between gap-4 px-2 pt-2 sm:px-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="label text-accent">
-            {ru ? 'Боевой экран' : 'Combat screen'}
-          </p>
-          <p className="mt-1 truncate text-xl font-light text-app-text sm:text-2xl">
+          <p className="truncate text-xl font-semibold text-app-text sm:text-2xl">
             {targetName ?? title}
           </p>
-          {targetName && <p className="label mt-1 truncate">{title}</p>}
+          {targetName && (
+            <p className="mt-0.5 truncate text-[15px] text-app-muted">{title}</p>
+          )}
         </div>
 
         <button type="button" onClick={onClose} className="btn shrink-0">
@@ -89,44 +80,44 @@ export function CombatScreen({
         </button>
       </div>
 
-      <div className="mt-4 grid flex-1 gap-px border border-app-border bg-app-border sm:mx-3 sm:grid-cols-2">
+      <div className="mt-4 grid flex-1 gap-3 sm:grid-cols-2">
         <div className={cell}>
-          <p className="label">
-            {ru ? 'Возвышение' : 'Elevation'} · {ru ? 'мил' : 'mil'}
+          <p className={caption}>
+            {ru ? 'Возвышение' : 'Elevation'}, {ru ? 'мил' : 'mil'}
           </p>
-          <p className="readout mt-3 text-[clamp(5rem,24vw,12rem)]">
+          <p className="readout mt-3 text-[clamp(5rem,24vw,12rem)] font-semibold">
             {Math.round(elevation)}
           </p>
         </div>
 
         <div className={cell}>
-          <p className="label">
+          <p className={caption}>
             {ru ? 'Азимут' : 'Azimuth'}
-            {azimuth !== null && ` · ${azimuthUnit}`}
+            {azimuth !== null && `, ${azimuthUnit}`}
           </p>
           <p
             className={[
-              'readout mt-3 text-[clamp(5rem,24vw,12rem)]',
+              'readout mt-3 text-[clamp(5rem,24vw,12rem)] font-semibold',
               azimuth === null ? 'text-app-faint' : '',
             ].join(' ')}
           >
-            {azimuth ?? '——'}
+            {azimuth ?? '—'}
           </p>
         </div>
 
-        <div className={`${cell} flex items-end gap-10`}>
+        <div className={`${cell} flex items-end gap-12`}>
           <div>
-            <p className="label">{ru ? 'Заряд' : 'Charge'}</p>
-            <p className="readout mt-3 flex items-baseline gap-3 text-7xl">
-              {String(charge).padStart(2, '0')}
+            <p className={caption}>{ru ? 'Заряд' : 'Charge'}</p>
+            <p className="readout mt-3 flex items-baseline gap-3 text-7xl font-semibold">
+              {charge}
               {mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
             </p>
           </div>
           <div>
-            <p className="label">
-              {ru ? 'Полёт' : 'Flight'} · {ru ? 'с' : 's'}
+            <p className={caption}>
+              {ru ? 'Полёт' : 'Flight'}, {ru ? 'с' : 's'}
             </p>
-            <p className="readout mt-3 text-7xl">{tof.toFixed(1)}</p>
+            <p className="readout mt-3 text-7xl font-semibold">{tof.toFixed(1)}</p>
           </div>
         </div>
 

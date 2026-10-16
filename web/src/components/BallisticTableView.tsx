@@ -114,10 +114,9 @@ export function BallisticTableView({
     shown === activeCharge ? bracket(rows, highlightRange) : new Set()
 
   return (
-    <details className="disclosure panel ticks mt-4 p-4 sm:p-5">
+    <details className="disclosure panel p-4 sm:p-5">
       <summary>
-        <span className="index">[06]</span>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Таблица стрельбы из игры' : 'In-game range table'}
         </span>
       </summary>
@@ -170,8 +169,8 @@ export function BallisticTableView({
       </div>
       </div>
 
-      <div className="mt-3 max-h-96 overflow-auto border border-app-border">
-        <table className="w-full border-collapse text-right font-mono text-[11.5px] tabular-nums">
+      <div className="mt-3 max-h-96 overflow-auto rounded-lg">
+        <table className="w-full border-collapse text-right text-[12.5px] tabular-nums">
           <thead className="sticky top-0 bg-app-raised">
             <tr>
               {COLUMNS.slice(0, width).map((column, index) => (
@@ -180,7 +179,7 @@ export function BallisticTableView({
                   scope="col"
                   className="border-b border-app-line-strong px-2 py-2 align-bottom font-medium text-app-muted"
                 >
-                  <span className="block whitespace-nowrap text-[10px] tracking-[0.08em] uppercase">
+                  <span className="block whitespace-nowrap text-[12.5px]">
                     {ru ? column.ru : column.en}
                   </span>
                   <span className="block font-normal text-app-faint">

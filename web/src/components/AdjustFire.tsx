@@ -172,11 +172,10 @@ export function AdjustFire({
     <details
       id="adjust-fire"
       open={hasTotal}
-      className="disclosure panel ticks p-4 sm:p-5"
+      className="disclosure panel p-4 sm:p-5"
     >
       <summary>
-        <span className="index">[04]</span>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Корректировка огня' : 'Adjust fire'}
         </span>
         {hasTotal && (
@@ -295,7 +294,7 @@ export function AdjustFire({
             <span className="mono-num ml-1 text-accent">{describe(total)}</span>
           </p>
 
-          <ol className="mt-2 space-y-1 font-mono text-[11px] text-app-muted">
+          <ol className="mt-2 space-y-1 text-[12.5px] text-app-muted">
             {history.map((entry, index) => (
               <li key={index} className="flex flex-wrap justify-between gap-2">
                 <span>

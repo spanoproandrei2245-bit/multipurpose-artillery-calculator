@@ -152,11 +152,10 @@ export function ShotJournal({
   const buttonClass = 'btn btn-sm'
 
   return (
-    <section className="panel ticks mt-4 p-4 sm:p-5">
+    <section className="panel mt-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-3">
-          <span className="index">[07]</span>
-          <span className="label text-app-text">
+          <span className="text-app-text">
             {ru ? 'Журнал целей' : 'Target journal'}
           </span>
           <span className="tag">{entries.length}</span>
@@ -193,7 +192,7 @@ export function ShotJournal({
       </div>
 
       {notice && (
-        <p className="mt-3 border-l-2 border-accent pl-2 text-sm text-app-text" role="status">
+        <p className="mt-3 rounded-md bg-app-raised px-3 py-2 text-sm text-app-text" role="status">
           {notice}
         </p>
       )}
@@ -222,8 +221,8 @@ export function ShotJournal({
       {entries.length === 0 && (
         <p className="mt-3 text-sm text-app-muted">
           {ru
-            ? 'Пока пусто. Рассчитайте установки и нажмите «Новая цель» — или импортируйте журнал из файла.'
-            : 'Empty for now. Calculate a solution and press "New target" — or import a journal file.'}
+            ? 'Пока пусто. Рассчитайте установки и нажмите «Сохранить» — или импортируйте журнал из файла.'
+            : 'Empty for now. Calculate a solution and press "Save" — or import a journal file.'}
         </p>
       )}
 
@@ -249,7 +248,7 @@ export function ShotJournal({
               </button>
             </div>
 
-            <ul className="mt-2 divide-y divide-app-border border border-app-border">
+            <ul className="mt-2 divide-y divide-app-border overflow-hidden rounded-lg">
               {day.entries.map((entry) => (
                 <li
                   key={entry.id}
@@ -278,12 +277,12 @@ export function ShotJournal({
                         className="field min-w-0 flex-1 py-1 text-base"
                       />
                     ) : (
-                      <p className="min-w-0 break-words text-lg font-light text-app-text">
+                      <p className="min-w-0 break-words text-lg font-medium text-app-text">
                         {entry.name}
                       </p>
                     )}
 
-                    <span className="mono-num text-[11px] text-app-muted">
+                    <span className="mono-num text-[12.5px] text-app-muted">
                       {formatTime(entry.createdAt)}
                     </span>
                   </div>

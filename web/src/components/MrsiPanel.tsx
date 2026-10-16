@@ -91,9 +91,9 @@ export function MrsiPanel({ options, showMode, language }: Props) {
   }
 
   return (
-    <details className="disclosure mt-4 border border-app-border bg-app-raised p-3">
+    <details className="disclosure mt-4 rounded-lg bg-app-raised p-3">
       <summary>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Одновременный удар · MRSI' : 'Simultaneous impact · MRSI'}
         </span>
         <span className="tag">
@@ -115,7 +115,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
         onChange={setGap}
       />
 
-      <ol className="mt-3 divide-y divide-app-border border border-app-border font-mono text-[12px]">
+      <ol className="mt-3 divide-y divide-app-border overflow-hidden rounded-lg text-[12px]">
         {plan.map((shot, index) => {
           const done = elapsed !== null && elapsed >= shot.fireAt
           const next = index === nextIndex

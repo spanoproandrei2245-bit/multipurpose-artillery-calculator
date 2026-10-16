@@ -72,7 +72,7 @@ export function SoundSettings({ language }: { language: Language }) {
   const button = 'btn btn-sm'
 
   return (
-    <div className="panel ticks p-4 sm:p-5">
+    <div className="panel p-4 sm:p-5">
       <SectionHeading index="02" title={ru ? 'Звуки' : 'Sounds'} />
       <p className="mt-3 text-sm text-app-muted">
         {ru
@@ -97,7 +97,7 @@ export function SoundSettings({ language }: { language: Language }) {
         </span>
       </label>
 
-      <ul className="mt-4 divide-y divide-app-border border border-app-border">
+      <ul className="mt-4 divide-y divide-app-border overflow-hidden rounded-lg">
         {SOUND_EVENTS.map((event) => (
           <li
             key={event}
@@ -109,7 +109,7 @@ export function SoundSettings({ language }: { language: Language }) {
               </p>
               <p
                 className={[
-                  'truncate font-mono text-[11px]',
+                  'truncate  text-[12.5px]',
                   names[event] ? 'text-accent' : 'text-app-faint',
                 ].join(' ')}
               >
@@ -156,7 +156,7 @@ export function SoundSettings({ language }: { language: Language }) {
       </ul>
 
       {error && (
-        <p className="mt-2 border-l-2 border-danger pl-2 text-sm text-danger">
+        <p className="mt-2 rounded-md bg-app-raised px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}

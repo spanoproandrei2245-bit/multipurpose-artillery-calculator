@@ -57,11 +57,10 @@ export function WeatherSection({
   return (
     <details
       open={defaultOpen}
-      className="disclosure panel ticks p-4 sm:p-5"
+      className="disclosure panel p-4 sm:p-5"
     >
       <summary>
-        <span className="index">[05]</span>
-        <span className="label text-app-text">
+        <span className="text-app-text">
           {ru ? 'Погодные поправки' : 'Weather corrections'}
         </span>
         {w.entered && (
@@ -178,9 +177,9 @@ export function WeatherSection({
         />
       </div>
 
-      <div className="mt-3 space-y-1 font-mono text-[11px] text-app-muted">
+      <div className="mt-3 space-y-1 text-[12.5px] text-app-muted">
         {w.windMode === 'vector' && w.windIncomplete && (
-          <p className="border-l-2 border-warn pl-2 font-sans text-xs text-warn">
+          <p className="rounded-md bg-app-raised px-3 py-2 font-sans text-xs text-warn">
             {ru
               ? 'Для ветра укажите направление и азимут на цель — пока ветер не учитывается.'
               : 'Enter the wind direction and the azimuth to target — wind is not applied yet.'}

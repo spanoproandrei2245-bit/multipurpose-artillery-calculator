@@ -26,10 +26,11 @@ export function TargetBar({ entries, activeId, onLoad, language }: Props) {
   const recent = recentEntries(entries)
 
   return (
-    <div className="mt-5">
-      <p className="label mb-1.5">
+    <div className="mt-4">
+      <p className="label mb-2 flex items-center gap-2">
         {ru ? 'Сохранённые цели' : 'Saved targets'}
-        <span className="ml-2 text-app-faint">N / P</span>
+        <span className="kbd">N</span>
+        <span className="kbd">P</span>
       </p>
 
       <div
@@ -48,16 +49,16 @@ export function TargetBar({ entries, activeId, onLoad, language }: Props) {
               disabled={!isModelId(entry.modelId)}
               onClick={() => onLoad(entry)}
               className={[
-                'shrink-0 cursor-pointer border border-l-2 bg-app-raised px-3 py-2 text-left transition-colors',
+                'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 text-left transition-colors',
                 active
-                  ? 'border-app-line-strong border-l-accent'
-                  : 'border-app-border hover:border-app-line-strong',
+                  ? 'bg-accent-soft ring-1 ring-accent'
+                  : 'bg-app-raised hover:bg-app-raised-hover',
               ].join(' ')}
             >
               <span className="block max-w-40 truncate text-sm font-medium text-app-text">
                 {entry.name}
               </span>
-              <span className="mono-num block text-[11px] text-app-muted">
+              <span className="block text-[12.5px] text-app-muted tabular-nums">
                 {shortModel(entry.modelId)}
                 {entry.mode === 'LOW' && ' LOW'} · {entry.distance}{' '}
                 {ru ? 'м' : 'm'} · {Math.round(entry.elevation)}{' '}

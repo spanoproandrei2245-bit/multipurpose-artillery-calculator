@@ -40,6 +40,7 @@ import type {
   MapTarget,
 } from '../lib/journal'
 import {
+  isDesktop,
   notifyOverlayShot,
   onHotkey,
   onOverlayCommand,
@@ -60,7 +61,7 @@ import { AmmunitionSelector } from './AmmunitionSelector'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
-import { NumberField, SectionHeading, Toggle } from './FormControls'
+import { InlineNumber, Row, SectionHeading, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
@@ -69,6 +70,10 @@ import { fireMoment } from '../lib/tot'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
+
+// Релизы с установщиком программы для ПК
+const RELEASES_URL =
+  'https://github.com/spanoproandrei2245-bit/multipurpose-artillery-calculator/releases'
 
 // Карта с рельефом и распознаванием экрана — отдельным чанком:
 // расчёт открывается раньше, карта догружается следом.
@@ -653,203 +658,230 @@ export function ArtilleryCalculator({
     if (sync.active) sendShot()
   }
 
+  const chargeValue =
+    chosenCharge !== null && applicable.some((r) => r.charge === chosenCharge)
+      ? String(chosenCharge)
+      : 'auto'
+
+  const alertClass = 'rounded-md bg-app-raised px-3 py-2 text-[13.5px]'
+
   return (
     <section>
-      {/* ---- Орудие и боеприпас ---- */}
-      <div className="panel ticks p-4 sm:p-5">
-        <SectionHeading index="01" title={ru ? 'Орудие' : 'Weapon'} />
-        <div className="mt-3 grid items-end gap-4 sm:grid-cols-2">
-          {modelSelector}
-          <AmmunitionSelector
-            ammunition={ammunition}
-            selectedId={ammoId}
-            onSelect={handleAmmoChange}
-            language={language}
-          />
-        </div>
-
-        {targetBar}
-      </div>
-
-      {/* Мобильный порядок: цель → результат → корректировка → погода.
-          На широком экране результат справа и не уезжает при прокрутке. */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
-        {/* ---- Цель ---- */}
-        <div className="panel ticks p-4 sm:p-5 lg:col-start-1 lg:row-start-1">
-          <SectionHeading index="02" title={ru ? 'Цель' : 'Target'} />
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <NumberField
-              id="calc-distance"
-              label={ru ? 'Дистанция (м)' : 'Distance (m)'}
-              value={distance}
-              onChange={edited((value) => {
-                setDistance(value)
-                setMapTarget(null)
-              })}
-            />
-
-            <NumberField
-              id="calc-azimuth"
-              label={ru ? 'Азимут на цель' : 'Azimuth to target'}
-              value={azimuth}
-              onChange={edited((value) => {
-                setAzimuth(value)
-                setMapTarget(null)
-              })}
-              placeholder={ru ? 'необязательно' : 'optional'}
-              aside={
-                <Toggle
-                  label={ru ? 'Единицы азимута' : 'Azimuth units'}
-                  value={azimuthUnit}
-                  onChange={changeAzimuthUnit}
-                  options={[
-                    { value: 'mil', label: ru ? 'милы' : 'mils' },
-                    { value: 'deg', label: ru ? 'градусы' : 'degrees' },
-                  ]}
+      <div
+        className={[
+          'grid items-start gap-8 lg:gap-10',
+          mapInput ? 'lg:grid-cols-2' : 'mx-auto max-w-xl',
+        ].join(' ')}
+      >
+        {/* ---- Карта ---- */}
+        {(mapInput || gridInput) && (
+          <div className="min-w-0">
+            {mapInput && (
+              <Suspense
+                fallback={
+                  <div className="flex aspect-square items-center justify-center rounded-lg bg-app-surface">
+                    <p className="label">
+                      {ru ? 'Загрузка карты…' : 'Loading the map…'}
+                    </p>
+                  </div>
+                }
+              >
+                <MapPicker
+                  language={language}
+                  currentTarget={mapTarget}
+                  journalTargets={journalTargets}
+                  onPickJournalTarget={onLoadEntry}
+                  onApply={(selection) => {
+                    setDistance(String(Math.round(selection.distance)))
+                    setAzimuth(
+                      azimuthUnit === 'mil'
+                        ? String(Math.round(selection.azimuthMil))
+                        : String(
+                            Math.round(milToDeg(selection.azimuthMil) * 10) / 10
+                          )
+                    )
+                    setOwnHeight(String(Math.round(selection.ownHeight)))
+                    setTargetHeight(String(Math.round(selection.targetHeight)))
+                    setMapTarget(selection.target)
+                    markEdited()
+                  }}
                 />
-              }
-            />
-
-            <NumberField
-              id="calc-own-height"
-              label={ru ? 'Своя высота (м)' : 'Own height (m)'}
-              value={ownHeight}
-              onChange={edited(setOwnHeight)}
-            />
-
-            <NumberField
-              id="calc-target-height"
-              label={ru ? 'Высота цели (м)' : 'Target height (m)'}
-              value={targetHeight}
-              onChange={edited(setTargetHeight)}
-            />
-          </div>
-
-          <p className="mt-3 text-sm text-app-muted">
-            <span className="label">
-              {ru ? 'Разница высот' : 'Height difference'}
-            </span>{' '}
-            <span className="mono-num ml-1 text-app-text">
-              {formatSigned(heightDifference, 0)} {unitM}
-            </span>
-            {heightIncomplete && (
-              <span className="ml-2 text-xs">
-                {ru
-                  ? '— введите обе высоты (поправка пока не применяется)'
-                  : '— enter both heights (no correction applied yet)'}
-              </span>
+              </Suspense>
             )}
-          </p>
 
-          {invalidInputs && (
-            <p className="mt-2 border-l-2 border-danger pl-2 text-xs text-danger">
-              {ru
-                ? 'Некоторые значения не распознаны (подсвечены) и не применяются.'
-                : 'Some values were not recognised (highlighted) and are not applied.'}
-            </p>
-          )}
-
-          {gridInput && (
-            <GridInput
-              azimuthUnit={azimuthUnit}
-              language={language}
-              onApply={(gridDistance, gridAzimuth) => {
-                setDistance(String(gridDistance))
-                setAzimuth(String(gridAzimuth))
-                setMapTarget(null)
-                markEdited()
-              }}
-            />
-          )}
-
-          {mapInput && (
-            <Suspense
-              fallback={
-                <p className="label mt-5 border border-app-border p-4">
-                  {ru ? 'Загрузка карты…' : 'Loading the map…'}
-                </p>
-              }
-            >
-              <MapPicker
+            {gridInput && (
+              <GridInput
                 azimuthUnit={azimuthUnit}
                 language={language}
-                currentTarget={mapTarget}
-                journalTargets={journalTargets}
-                onPickJournalTarget={onLoadEntry}
-                onApply={(selection) => {
-                  setDistance(String(Math.round(selection.distance)))
-                  setAzimuth(
-                    azimuthUnit === 'mil'
-                      ? String(Math.round(selection.azimuthMil))
-                      : String(Math.round(milToDeg(selection.azimuthMil) * 10) / 10)
-                  )
-                  setOwnHeight(String(Math.round(selection.ownHeight)))
-                  setTargetHeight(String(Math.round(selection.targetHeight)))
-                  setMapTarget(selection.target)
+                onApply={(gridDistance, gridAzimuth) => {
+                  setDistance(String(gridDistance))
+                  setAzimuth(String(gridAzimuth))
+                  setMapTarget(null)
                   markEdited()
                 }}
               />
-            </Suspense>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
-        {/* ---- Результат ---- */}
-        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="panel ticks ticks-accent p-4 sm:p-5 lg:sticky lg:top-28">
-            <SectionHeading
-              index="03"
-              title={ru ? 'Установки наведения' : 'Firing solution'}
-              aside={
-                profileModes.length > 1 && (
-                  <Toggle
-                    label={ru ? 'Режим траектории' : 'Trajectory mode'}
-                    value={mode}
-                    onChange={changeMode}
-                    options={profileModes.map((item) => ({
-                      value: item,
-                      label:
-                        item === 'HIGH'
-                          ? ru
-                            ? 'HIGH · навес'
-                            : 'HIGH'
-                          : ru
-                            ? 'LOW · настил'
-                            : 'LOW',
-                    }))}
-                  />
-                )
-              }
-            />
+        {/* ---- Решение и вводные: «подпись — значение» ---- */}
+        <div className="min-w-0">
+          <dl>
+            <Row label={ru ? 'Возвышение' : 'Elevation'}>
+              <span
+                className={[
+                  'text-2xl font-semibold tabular-nums',
+                  solution ? 'text-app-text' : 'text-app-faint',
+                ].join(' ')}
+              >
+                {solution ? Math.round(solution.elevation) : '—'}
+              </span>
+              <span className="w-7 text-left text-app-muted">{unitMil}</span>
+            </Row>
+            <Row label={ru ? 'Азимут' : 'Azimuth'}>
+              <span
+                className={[
+                  'text-2xl font-semibold tabular-nums',
+                  firingAzimuth === null ? 'text-app-faint' : 'text-app-text',
+                ].join(' ')}
+              >
+                {firingAzimuth === null ? '—' : formatAzimuth(firingAzimuth)}
+              </span>
+              <span className="w-7 text-left text-app-muted">
+                {unitAzimuth}
+              </span>
+            </Row>
+            <Row label={ru ? 'Время полёта' : 'Time of flight'}>
+              {solution ? solution.tof.toFixed(1) : '—'}
+              <span className="w-7 text-left text-app-muted">{unitS}</span>
+            </Row>
+            <Row label={ru ? 'Заряд' : 'Charge'} htmlFor="calc-charge">
+              <select
+                id="calc-charge"
+                value={chargeValue}
+                disabled={applicable.length === 0}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setChosenCharge(value === 'auto' ? null : Number(value))
+                  markEdited()
+                }}
+                className="field w-auto"
+              >
+                <option value="auto">
+                  {ru ? 'Авто' : 'Auto'}
+                  {activeResult && chargeValue === 'auto'
+                    ? ` · ${activeResult.charge}`
+                    : ''}
+                </option>
+                {applicable.map((result) => (
+                  <option key={result.charge} value={result.charge}>
+                    {ru ? 'Заряд' : 'Charge'} {result.charge}
+                  </option>
+                ))}
+              </select>
+            </Row>
+            {profileModes.length > 1 && (
+              <Row label={ru ? 'Траектория' : 'Trajectory'}>
+                <Toggle
+                  label={ru ? 'Режим траектории' : 'Trajectory mode'}
+                  value={mode}
+                  onChange={changeMode}
+                  options={profileModes.map((item) => ({
+                    value: item,
+                    label:
+                      item === 'HIGH'
+                        ? ru
+                          ? 'Навесная'
+                          : 'High'
+                        : ru
+                          ? 'Настильная'
+                          : 'Low',
+                  }))}
+                />
+              </Row>
+            )}
+          </dl>
 
+          <div className="my-3 h-px bg-app-border" />
+
+          <dl>
+            <Row label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
+              <InlineNumber
+                id="calc-distance"
+                value={distance}
+                onChange={edited((value) => {
+                  setDistance(value)
+                  setMapTarget(null)
+                })}
+                unit={unitM}
+              />
+            </Row>
+            <Row label={ru ? 'Азимут на цель' : 'Target bearing'} htmlFor="calc-azimuth">
+              <Toggle
+                label={ru ? 'Единицы азимута' : 'Azimuth units'}
+                value={azimuthUnit}
+                onChange={changeAzimuthUnit}
+                options={[
+                  { value: 'mil', label: unitMil },
+                  { value: 'deg', label: '°' },
+                ]}
+              />
+              <InlineNumber
+                id="calc-azimuth"
+                value={azimuth}
+                onChange={edited((value) => {
+                  setAzimuth(value)
+                  setMapTarget(null)
+                })}
+                placeholder={ru ? 'не задан' : 'not set'}
+              />
+            </Row>
+            <Row label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
+              <InlineNumber
+                id="calc-own-height"
+                value={ownHeight}
+                onChange={edited(setOwnHeight)}
+                unit={unitM}
+              />
+            </Row>
+            <Row label={ru ? 'Высота цели' : 'Target height'} htmlFor="calc-target-height">
+              <InlineNumber
+                id="calc-target-height"
+                value={targetHeight}
+                onChange={edited(setTargetHeight)}
+                unit={unitM}
+              />
+            </Row>
+          </dl>
+
+          <div className="my-3 h-px bg-app-border" />
+
+          <dl>
+            <Row label={ru ? 'Орудие' : 'Weapon'}>{modelSelector}</Row>
+            <Row label={ru ? 'Снаряд' : 'Shell'}>
+              <AmmunitionSelector
+                ammunition={ammunition}
+                selectedId={ammoId}
+                onSelect={handleAmmoChange}
+                language={language}
+              />
+            </Row>
+          </dl>
+
+          {targetBar}
+
+          {/* ---- Состояние расчёта и предупреждения ---- */}
+          <div className="mt-4 space-y-2">
             {!profile && (
-              <p className="mt-4 text-sm text-app-muted">
+              <p className={`${alertClass} text-app-muted`}>
                 {ru
                   ? 'Для этого боеприпаса нет таблиц.'
                   : 'No tables for this ammunition.'}
               </p>
             )}
 
-            {profile && !validDistance && (
-              <div className="mt-4 grid grid-cols-2 gap-px border border-app-border bg-app-border">
-                {[
-                  ru ? 'Возвышение' : 'Elevation',
-                  ru ? 'Азимут' : 'Azimuth',
-                ].map((title) => (
-                  <div key={title} className="bg-app-surface p-3">
-                    <p className="label">{title}</p>
-                    <p className="readout mt-2 text-5xl text-app-faint">——</p>
-                  </div>
-                ))}
-                <p className="col-span-2 bg-app-surface px-3 py-2 text-sm text-app-muted">
-                  {ru
-                    ? 'Введите дистанцию до цели.'
-                    : 'Enter the distance to the target.'}
-                </p>
-              </div>
-            )}
-
             {profile && validDistance && applicable.length === 0 && range && (
-              <p className="mt-4 border-l-2 border-warn pl-3 text-sm text-app-text">
+              <p className={`${alertClass} text-warn`}>
                 {rangeAdjust !== 0
                   ? ru
                     ? `Дальность ${baseRange} м (дистанция ${distanceValue} м, корректировка ${formatSigned(rangeAdjust, 0)} м) вне таблиц. Доступно: ${range.min}–${range.max} м.`
@@ -864,344 +896,219 @@ export function ArtilleryCalculator({
               </p>
             )}
 
+            {heightIncomplete && (
+              <p className={`${alertClass} text-app-muted`}>
+                {ru
+                  ? 'Введите обе высоты — пока поправка на высоту не применяется.'
+                  : 'Enter both heights — no height correction is applied yet.'}
+              </p>
+            )}
+
+            {invalidInputs && (
+              <p className={`${alertClass} text-danger`}>
+                {ru
+                  ? 'Некоторые значения не распознаны (подсвечены) и не применяются.'
+                  : 'Some values were not recognised (highlighted) and are not applied.'}
+              </p>
+            )}
+
             {solution && activeResult && w && (
               <>
-                {/* Показания прибора: ячейки через волосяные линии */}
-                <div className="mt-4 grid grid-cols-2 gap-px border border-app-border bg-app-border">
-                  <div className="bg-app-surface p-3">
-                    <p className="label">
-                      {ru ? 'Возвышение' : 'Elevation'} · {unitMil}
-                    </p>
-                    <p className="readout mt-2 text-[clamp(2.75rem,9vw,3.75rem)]">
-                      {Math.round(solution.elevation)}
-                    </p>
-                  </div>
-
-                  <div className="bg-app-surface p-3">
-                    <p className="label">
-                      {ru ? 'Азимут' : 'Azimuth'}
-                      {firingAzimuth !== null && ` · ${unitAzimuth}`}
-                    </p>
-                    <p
-                      className={[
-                        'readout mt-2 text-[clamp(2.75rem,9vw,3.75rem)]',
-                        firingAzimuth === null ? 'text-app-faint' : '',
-                      ].join(' ')}
-                    >
-                      {firingAzimuth === null
-                        ? '——'
-                        : formatAzimuth(firingAzimuth)}
-                    </p>
-                  </div>
-
-                  <div className="bg-app-surface p-3">
-                    <p className="label">{ru ? 'Заряд' : 'Charge'}</p>
-                    <p className="readout mt-2 flex items-baseline gap-2 text-4xl">
-                      {String(activeResult.charge).padStart(2, '0')}
-                      {mode === 'LOW' && (
-                        <span className="tag tag-warn">LOW</span>
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="bg-app-surface p-3">
-                    <p className="label">
-                      {ru ? 'Полёт' : 'Flight'} · {unitS}
-                    </p>
-                    <p className="readout mt-2 text-4xl">
-                      {solution.tof.toFixed(1)}
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="mt-3 space-y-1 font-mono text-[11px] leading-relaxed text-app-muted">
-                  <li>
-                    {ru ? 'По таблице' : 'Table value'}:{' '}
-                    {solution.baseElevation.toFixed(1)} {unitMil}
-                    {' · '}
-                    {ru ? 'высота' : 'height'}{' '}
-                    {formatSigned(solution.elevationCorrection)} {unitMil},{' '}
-                    {formatSigned(solution.tofCorrection)} {unitS}
-                  </li>
-
-                  {totalRangeCorrection !== 0 && (
-                    <li>
-                      {ru ? 'Дальность по таблице' : 'Table range'}:{' '}
-                      {solution.lookupRange.toFixed(0)} {unitM}
-                      {rangeAdjust !== 0 &&
-                        ` · ${ru ? 'корректировка' : 'adjust'} ${formatSigned(rangeAdjust, 0)} ${unitM}`}
-                      {w.wind !== 0 &&
-                        ` · ${ru ? 'ветер' : 'wind'} ${formatSigned(w.wind)} ${unitM}`}
-                      {w.temperature !== 0 &&
-                        ` · ${ru ? 'температура' : 'temperature'} ${formatSigned(w.temperature)} ${unitM}`}
-                      {w.density !== 0 &&
-                        ` · ${ru ? 'плотность' : 'density'} ${formatSigned(w.density)} ${unitM}`}
-                    </li>
-                  )}
-
-                  {azimuthCorrectionMil !== 0 && (
-                    <li>
-                      {ru ? 'Доворот' : 'Turn'}:{' '}
-                      {describeTurn(azimuthCorrectionMil)}
-                      {w.azimuth !== 0 &&
-                        lateralMil !== 0 &&
-                        ` (${ru ? 'ветер' : 'wind'} ${formatSigned(w.azimuth)}, ${ru ? 'корректировка' : 'adjust'} ${formatSigned(lateralMil)})`}
-                      {azimuthValue === null &&
-                        (ru
-                          ? ' — введите азимут, чтобы получить готовое значение'
-                          : ' — enter the azimuth to get the final value')}
-                    </li>
-                  )}
-                </ul>
-
                 {w.missing && (
-                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
+                  <p className={`${alertClass} text-app-muted`}>
                     {ru
                       ? 'На этой дальности в таблице нет части погодных поправок (прочерк «-»). Они не применены.'
                       : 'The table lacks some weather corrections at this range ("-"). They are not applied.'}
                   </p>
                 )}
-
                 {solution.heightCorrectionMissing && (
-                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
+                  <p className={`${alertClass} text-app-muted`}>
                     {ru
                       ? 'На этой дальности в таблице игры нет поправки на высоту (прочерк «-»). Результат дан без неё.'
                       : 'The game table has no height correction at this range ("-"). The result is shown without it.'}
                   </p>
                 )}
-
                 {activeResult.nearEdge && (
-                  <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
+                  <p className={`${alertClass} text-warn`}>
                     {ru
                       ? `Заряд ${activeResult.charge} у края своей таблицы: поправки на погоду и высоту здесь менее надёжны. Если есть заряд выше — лучше взять его.`
                       : `Charge ${activeResult.charge} is at the edge of its table: weather and height corrections are less reliable here. Prefer a higher charge if available.`}
                   </p>
                 )}
-
                 {activeResult.wideGap && (
-                  <p className="mt-2 border-l-2 border-warn pl-2 text-xs text-warn">
+                  <p className={`${alertClass} text-warn`}>
                     {ru
                       ? 'В таблице игры здесь пропущены строки: значение интерполировано по далёким соседям, точность ниже. Сверьте с таблицей ниже.'
                       : 'The game table skips rows here: the value is interpolated between distant rows, accuracy is lower. Check the table below.'}
                   </p>
                 )}
-
                 {isLargeCorrection(solution) && (
-                  <p className="mt-2 border-l-2 border-app-line-strong pl-2 text-xs text-app-text">
+                  <p className={`${alertClass} text-app-muted`}>
                     {ru
                       ? 'Большая разница высот: поправка линейная, точность снижена.'
                       : 'Large height difference: the correction is linear, accuracy is reduced.'}
                   </p>
                 )}
+              </>
+            )}
+          </div>
 
-                {!combatOpen && (
-                  <FireTimer
-                    ref={timerRef}
-                    tof={solution.tof}
-                    language={language}
-                    onFire={handleFire}
-                  />
+          {solution && activeResult && w && (
+            <>
+              <ul className="mt-3 space-y-0.5 text-[13px] text-app-muted">
+                <li>
+                  {ru ? 'По таблице' : 'Table value'}:{' '}
+                  {solution.baseElevation.toFixed(1)} {unitMil}
+                  {' · '}
+                  {ru ? 'высота' : 'height'}{' '}
+                  {formatSigned(solution.elevationCorrection)} {unitMil},{' '}
+                  {formatSigned(solution.tofCorrection)} {unitS}
+                </li>
+
+                {totalRangeCorrection !== 0 && (
+                  <li>
+                    {ru ? 'Дальность по таблице' : 'Table range'}:{' '}
+                    {solution.lookupRange.toFixed(0)} {unitM}
+                    {rangeAdjust !== 0 &&
+                      ` · ${ru ? 'корректировка' : 'adjust'} ${formatSigned(rangeAdjust, 0)} ${unitM}`}
+                    {w.wind !== 0 &&
+                      ` · ${ru ? 'ветер' : 'wind'} ${formatSigned(w.wind)} ${unitM}`}
+                    {w.temperature !== 0 &&
+                      ` · ${ru ? 'температура' : 'temperature'} ${formatSigned(w.temperature)} ${unitM}`}
+                    {w.density !== 0 &&
+                      ` · ${ru ? 'плотность' : 'density'} ${formatSigned(w.density)} ${unitM}`}
+                  </li>
                 )}
 
-                <SyncStatusLine language={language} />
+                {azimuthCorrectionMil !== 0 && (
+                  <li>
+                    {ru ? 'Доворот' : 'Turn'}: {describeTurn(azimuthCorrectionMil)}
+                    {w.azimuth !== 0 &&
+                      lateralMil !== 0 &&
+                      ` (${ru ? 'ветер' : 'wind'} ${formatSigned(w.azimuth)}, ${ru ? 'корректировка' : 'adjust'} ${formatSigned(lateralMil)})`}
+                    {azimuthValue === null &&
+                      (ru
+                        ? ' — введите азимут, чтобы получить готовое значение'
+                        : ' — enter the azimuth to get the final value')}
+                  </li>
+                )}
+              </ul>
 
+              {!combatOpen && (
+                <FireTimer
+                  ref={timerRef}
+                  tof={solution.tof}
+                  language={language}
+                  onFire={handleFire}
+                />
+              )}
+
+              <SyncStatusLine language={language} />
+
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setCombatOpen(true)}
-                  className="btn mt-2 w-full"
+                  className="btn flex-1"
                 >
                   {ru ? 'Боевой экран' : 'Combat screen'}
                   <span className="kbd hidden sm:inline-block">B</span>
                 </button>
-
-                <TotPanel
-                  tof={solution.tof}
-                  impactAt={totAt}
-                  onImpactChange={setTotAt}
-                  onFireMoment={() => {
-                    // Только у себя: стрелки по связке ведут свой отсчёт
-                    timerRef.current?.remoteFire()
-                    notifyOverlayShot()
-                  }}
-                  language={language}
-                />
-
-                {combatOpen && (
-                  <CombatScreen
-                    title={`${reference.name} · ${selectedAmmo ? `${selectedAmmo.designation} [${selectedAmmo.type}]` : ''}`}
-                    targetName={activeEntry?.name ?? null}
-                    charge={activeResult.charge}
-                    mode={mode}
-                    elevation={solution.elevation}
-                    azimuth={
-                      firingAzimuth === null
-                        ? null
-                        : formatAzimuth(firingAzimuth)
-                    }
-                    azimuthUnit={unitAzimuth}
-                    tof={solution.tof}
-                    timerRef={timerRef}
-                    onFire={handleFire}
-                    onClose={() => setCombatOpen(false)}
-                    language={language}
-                  />
-                )}
-
-                {/* ---- Сохранение в журнал ---- */}
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={saveName}
-                    onChange={(event) => setSaveName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') handleSave()
-                    }}
-                    maxLength={60}
-                    aria-label={ru ? 'Название метки' : 'Mark name'}
-                    placeholder={
-                      ru ? 'Название метки' : 'Mark name'
-                    }
-                    className="field min-w-0 flex-1 text-sm"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    className="btn btn-primary"
-                  >
-                    {justSaved === 'saved'
-                      ? ru
-                        ? 'Сохранено ✓'
-                        : 'Saved ✓'
-                      : ru
-                        ? 'Новая цель'
-                        : 'New target'}
-                  </button>
-                </div>
-
                 {activeEntry && onUpdate && (
                   <button
                     type="button"
                     onClick={handleUpdate}
-                    className="btn mt-2 w-full truncate border-accent text-accent"
+                    className="btn flex-1 truncate"
                   >
                     {justSaved === 'updated'
                       ? ru
-                        ? `«${activeEntry.name}» обновлена ✓`
-                        : `"${activeEntry.name}" updated ✓`
+                        ? 'Обновлено ✓'
+                        : 'Updated ✓'
                       : ru
                         ? `Обновить «${activeEntry.name}»`
                         : `Update "${activeEntry.name}"`}
                   </button>
                 )}
-              </>
-            )}
+              </div>
 
-            {/* ---- Выбор заряда ---- */}
-            {results.length > 0 && (
-              <div className="mt-5 border-t border-app-border pt-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="label text-app-text">
-                    {ru ? 'Заряды' : 'Charges'}
-                  </h4>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={saveName}
+                  onChange={(event) => setSaveName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') handleSave()
+                  }}
+                  maxLength={60}
+                  aria-label={ru ? 'Название цели' : 'Target name'}
+                  placeholder={ru ? 'Название цели' : 'Target name'}
+                  className="field min-w-0 flex-1"
+                />
+                <button type="button" onClick={handleSave} className="btn btn-primary">
+                  {justSaved === 'saved'
+                    ? ru
+                      ? 'Сохранено ✓'
+                      : 'Saved ✓'
+                    : ru
+                      ? 'Сохранить'
+                      : 'Save'}
+                </button>
+              </div>
 
-                  <Toggle
-                    label={ru ? 'Заряд по умолчанию' : 'Default charge'}
-                    value={chargePreference}
-                    onChange={(value) => {
-                      setChargePreference(value)
-                      setChosenCharge(null)
-                      markEdited()
-                    }}
-                    options={[
-                      { value: 'lowest', label: ru ? 'меньший' : 'lowest' },
-                      { value: 'fastest', label: ru ? 'быстрее' : 'fastest' },
-                      { value: 'precise', label: ru ? 'точнее' : 'precise' },
-                    ]}
-                  />
-                </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {results.map((result) => {
-                    const usable = result.solution !== null
-                    const active =
-                      usable && result.charge === activeResult?.charge
-
-                    return (
-                      <button
-                        key={result.charge}
-                        type="button"
-                        disabled={!usable}
-                        aria-pressed={active}
-                        onClick={() => {
-                          setChosenCharge(result.charge)
-                          markEdited()
-                        }}
-                        className={[
-                          'border px-3 py-2 text-left text-sm transition-colors',
-                          active
-                            ? 'border-accent bg-accent-soft text-app-text'
-                            : 'border-app-border bg-app-raised text-app-text',
-                          usable
-                            ? 'cursor-pointer hover:border-app-line-strong'
-                            : 'cursor-not-allowed opacity-40',
-                        ].join(' ')}
-                      >
-                        <span className="flex items-baseline justify-between gap-2">
-                          <span className="label text-app-text">
-                            {ru ? 'Заряд' : 'Charge'}
-                          </span>
-                          <span
-                            className={[
-                              'readout text-2xl',
-                              active ? 'text-accent' : '',
-                            ].join(' ')}
-                          >
-                            {String(result.charge).padStart(2, '0')}
-                          </span>
-                        </span>
-
-                        <span className="mono-num mt-1 block text-[11px] text-app-muted">
-                          {result.solution
-                            ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
-                            : `${result.minRange}–${result.maxRange} ${unitM}`}
-                        </span>
-
-                        {result.solution && result.metersPerMil !== null && (
-                          <span
-                            className={[
-                              'mono-num block text-[11px]',
-                              result.nearEdge ? 'text-warn' : 'text-app-muted',
-                            ].join(' ')}
-                          >
-                            1 {unitMil} ≈ {result.metersPerMil.toFixed(1)}{' '}
-                            {unitM}
-                            {result.nearEdge && (ru ? ' · край' : ' · edge')}
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <p className="mt-2 text-xs text-app-muted">
-                  {ru
-                    ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
-                    : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
-                </p>
-
-                <MrsiPanel
-                  options={mrsiOptions}
-                  showMode={profileModes.length > 1}
+              {combatOpen && (
+                <CombatScreen
+                  title={`${reference.name} · ${selectedAmmo ? `${selectedAmmo.designation} [${selectedAmmo.type}]` : ''}`}
+                  targetName={activeEntry?.name ?? null}
+                  charge={activeResult.charge}
+                  mode={mode}
+                  elevation={solution.elevation}
+                  azimuth={
+                    firingAzimuth === null ? null : formatAzimuth(firingAzimuth)
+                  }
+                  azimuthUnit={unitAzimuth}
+                  tof={solution.tof}
+                  timerRef={timerRef}
+                  onFire={handleFire}
+                  onClose={() => setCombatOpen(false)}
                   language={language}
                 />
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </>
+          )}
 
-        {/* ---- Корректировка и погода ---- */}
-        <div className="space-y-4 lg:col-start-1 lg:row-start-2">
+          <p className="mt-6 text-[15px] leading-relaxed text-app-text-2">
+            {mapInput
+              ? ru
+                ? 'Нажмите ЛКМ на карте, чтобы задать положение орудия, ПКМ — положение цели. Перетаскивайте карту мышью, колесо — масштаб. Или введите дистанцию и азимут вручную.'
+                : 'Left-click the map to place the gun, right-click to place the target. Drag to pan, scroll to zoom. Or type the distance and bearing in by hand.'
+              : ru
+                ? 'Введите дистанцию до цели и азимут — установки посчитаются сразу.'
+                : 'Enter the distance and bearing to the target — the solution updates instantly.'}
+          </p>
+
+          <p className="note mt-3 text-[15px]">
+            {isDesktop
+              ? ru
+                ? 'Оверлей поверх игры — Ctrl+Alt+O, ввод в нём — Ctrl+Alt+D.'
+                : 'Overlay on top of the game — Ctrl+Alt+O, type in it — Ctrl+Alt+D.'
+              : (
+                <>
+                  {ru
+                    ? 'Скачайте программу с оверлеем поверх игры с '
+                    : 'Get the desktop app with an in-game overlay from '}
+                  <a href={RELEASES_URL} target="_blank" rel="noreferrer">
+                    github.com
+                  </a>
+                  .
+                </>
+              )}
+          </p>
+        </div>
+      </div>
+
+      {/* ---- Дополнительно: раскрывающиеся разделы ---- */}
+      <div className="mt-12 grid items-start gap-3 lg:grid-cols-2">
+        <div className="min-w-0 space-y-3">
           <AdjustFire
             history={adjustHistory}
             onAdd={(entry) => {
@@ -1230,30 +1137,140 @@ export function ArtilleryCalculator({
             />
           ) : (
             profile && (
-              <p className="panel px-4 py-3 text-xs text-app-muted">
+              <p className="panel px-4 py-3 text-[13.5px] text-app-muted">
                 {ru
                   ? 'Погодные поправки недоступны: в таблицах этой модели погодные столбцы пустые («-»).'
                   : 'Weather corrections are unavailable: the weather columns of this model’s tables are empty ("-").'}
               </p>
             )
           )}
+
+          {solution && (
+            <TotPanel
+              tof={solution.tof}
+              impactAt={totAt}
+              onImpactChange={setTotAt}
+              onFireMoment={() => {
+                // Только у себя: стрелки по связке ведут свой отсчёт
+                timerRef.current?.remoteFire()
+                notifyOverlayShot()
+              }}
+              language={language}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0 space-y-3">
+          {results.length > 0 && (
+            <details className="disclosure panel p-4 sm:p-5">
+              <summary>
+                {ru ? 'Заряды' : 'Charges'}
+                {activeResult && (
+                  <span className="tag">
+                    {ru ? 'выбран' : 'selected'} {activeResult.charge}
+                  </span>
+                )}
+              </summary>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <span className="label">
+                  {ru ? 'Заряд по умолчанию' : 'Default charge'}
+                </span>
+                <Toggle
+                  label={ru ? 'Заряд по умолчанию' : 'Default charge'}
+                  value={chargePreference}
+                  onChange={(value) => {
+                    setChargePreference(value)
+                    setChosenCharge(null)
+                    markEdited()
+                  }}
+                  options={[
+                    { value: 'lowest', label: ru ? 'меньший' : 'lowest' },
+                    { value: 'fastest', label: ru ? 'быстрее' : 'fastest' },
+                    { value: 'precise', label: ru ? 'точнее' : 'precise' },
+                  ]}
+                />
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {results.map((result) => {
+                  const usable = result.solution !== null
+                  const active = usable && result.charge === activeResult?.charge
+
+                  return (
+                    <button
+                      key={result.charge}
+                      type="button"
+                      disabled={!usable}
+                      aria-pressed={active}
+                      onClick={() => {
+                        setChosenCharge(result.charge)
+                        markEdited()
+                      }}
+                      className={[
+                        'rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                        active
+                          ? 'bg-accent-soft ring-1 ring-accent'
+                          : 'bg-app-raised',
+                        usable
+                          ? 'cursor-pointer hover:bg-app-raised-hover'
+                          : 'cursor-not-allowed opacity-40',
+                      ].join(' ')}
+                    >
+                      <span className="block font-medium text-app-text">
+                        {ru ? 'Заряд' : 'Charge'} {result.charge}
+                      </span>
+                      <span className="block text-[12.5px] text-app-muted tabular-nums">
+                        {result.solution
+                          ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
+                          : `${result.minRange}–${result.maxRange} ${unitM}`}
+                      </span>
+                      {result.solution && result.metersPerMil !== null && (
+                        <span
+                          className={[
+                            'block text-[12.5px] tabular-nums',
+                            result.nearEdge ? 'text-warn' : 'text-app-muted',
+                          ].join(' ')}
+                        >
+                          1 {unitMil} ≈ {result.metersPerMil.toFixed(1)} {unitM}
+                          {result.nearEdge && (ru ? ' · край' : ' · edge')}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <p className="mt-3 text-[13px] text-app-muted">
+                {ru
+                  ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
+                  : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
+              </p>
+
+              <MrsiPanel
+                options={mrsiOptions}
+                showMode={profileModes.length > 1}
+                language={language}
+              />
+            </details>
+          )}
+
+          {profile && (
+            <BallisticTableView
+              profile={profile}
+              mode={mode}
+              onModeChange={changeMode}
+              charges={selectedAmmo?.charges}
+              activeCharge={activeResult?.charge ?? null}
+              highlightRange={solution?.lookupRange ?? null}
+              language={language}
+            />
+          )}
         </div>
       </div>
 
-      {profile && (
-        <BallisticTableView
-          profile={profile}
-          mode={mode}
-          onModeChange={changeMode}
-          charges={selectedAmmo?.charges}
-          activeCharge={activeResult?.charge ?? null}
-          highlightRange={solution?.lookupRange ?? null}
-          language={language}
-        />
-      )}
-
       {showKeys && (
-        <div className="panel ticks mt-4 p-4 sm:p-5">
+        <div className="panel mt-3 p-4 sm:p-5">
           <SectionHeading title={ru ? 'Горячие клавиши' : 'Keyboard shortcuts'} />
           <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             {[
@@ -1277,7 +1294,7 @@ export function ArtilleryCalculator({
               </div>
             ))}
           </dl>
-          <p className="mt-3 text-xs text-app-muted">
+          <p className="mt-3 text-[13px] text-app-muted">
             {ru
               ? 'Клавиши работают в любой раскладке, когда курсор не в поле ввода.'
               : 'Shortcuts work in any keyboard layout when no input field is focused.'}
@@ -1285,7 +1302,7 @@ export function ArtilleryCalculator({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-2">
+      <div className="mt-3 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setShowKeys((value) => !value)}
@@ -1296,11 +1313,7 @@ export function ArtilleryCalculator({
           <span className="kbd">?</span>
         </button>
 
-        <button
-          type="button"
-          onClick={resetForm}
-          className="btn btn-danger ml-auto"
-        >
+        <button type="button" onClick={resetForm} className="btn btn-ghost btn-danger ml-auto">
           {ru ? 'Очистить поля' : 'Clear inputs'}
         </button>
       </div>

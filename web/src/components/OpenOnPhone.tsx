@@ -39,7 +39,7 @@ export function OpenOnPhone({ language }: { language: Language }) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-4">
       {image && (
-        <div className="ticks ticks-accent p-2">
+        <div className="p-2">
           <img
             src={image}
             width={128}
@@ -51,7 +51,7 @@ export function OpenOnPhone({ language }: { language: Language }) {
       )}
 
       <div className="min-w-0 flex-1 text-sm">
-        <p className="font-mono text-[11px] break-all text-app-text">{url}</p>
+        <p className="text-[12.5px] break-all text-app-text">{url}</p>
         <p className="mt-2 text-xs text-app-muted">
           {isLocalOnly(window.location.hostname)
             ? ru

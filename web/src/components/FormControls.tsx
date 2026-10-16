@@ -101,53 +101,40 @@ export function Toggle<T extends string>({
   )
 }
 
-/** Заголовок раздела: [02] ЦЕЛЬ ─────── (справа — необязательный элемент). */
+/** Заголовок раздела (справа — необязательный элемент). */
 export function SectionHeading({
-  index,
   title,
   aside,
   as: Tag = 'h3',
 }: {
+  // Старый номер раздела больше не показывается
   index?: string
   title: string
   aside?: ReactNode
   as?: 'h2' | 'h3' | 'h4'
 }) {
   return (
-    <div className="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-2">
-      {index && <span className="index">[{index}]</span>}
-      <Tag className="label text-app-text">{title}</Tag>
-      <span className="hidden h-px min-w-6 flex-1 bg-app-border sm:block" />
+    <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <Tag className="font-semibold text-app-text">{title}</Tag>
       {aside}
     </div>
   )
 }
 
-/**
- * Сегментная шкала: progress 0…1 зажигает сегменты слева направо.
- * alert — красные сегменты (сплэш, разрыв).
- */
-export function SegmentBar({
+/** Полоса прогресса 0…1; alert — красная (сплэш, разрыв). */
+export function ProgressBar({
   progress,
-  count = 40,
   alert = false,
   className = '',
 }: {
   progress: number
-  count?: number
   alert?: boolean
   className?: string
 }) {
-  const lit = Math.round(Math.min(1, Math.max(0, progress)) * count)
+  const percent = Math.min(1, Math.max(0, progress)) * 100
   return (
-    <div
-      className={`segments ${className}`}
-      data-alert={alert}
-      role="presentation"
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <span key={i} data-on={i < lit} />
-      ))}
+    <div className={`progress ${className}`} data-alert={alert} role="presentation">
+      <span style={{ width: `${percent}%` }} />
     </div>
   )
 }
@@ -184,14 +171,14 @@ export function Switch({
       <span
         aria-hidden="true"
         className={[
-          'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center border transition-colors peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
-          checked ? 'border-accent bg-accent-soft' : 'border-app-line-strong',
+          'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-solid',
+          checked ? 'bg-accent-solid' : 'bg-app-raised-hover',
         ].join(' ')}
       >
         <span
           className={[
-            'absolute h-3 w-3 transition-all',
-            checked ? 'left-[19px] bg-accent' : 'left-[3px] bg-app-muted',
+            'absolute h-4 w-4 rounded-full bg-white shadow transition-all',
+            checked ? 'left-[18px]' : 'left-[2px]',
           ].join(' ')}
         />
       </span>
@@ -204,5 +191,61 @@ export function Switch({
         )}
       </span>
     </label>
+  )
+}
+
+/** Строка списка «подпись — значение» (внутри <dl>). */
+export function Row({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: ReactNode
+  htmlFor?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="row">
+      <dt className="min-w-0">
+        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+      </dt>
+      <dd className="flex min-w-0 items-center justify-end gap-2">{children}</dd>
+    </div>
+  )
+}
+
+/** Числовое поле прямо в строке списка, с единицами справа. */
+export function InlineNumber({
+  id,
+  value,
+  onChange,
+  unit,
+  placeholder = '0',
+  label,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  unit?: string
+  placeholder?: string
+  // Подпись для экранного диктора, если строка без <label>
+  label?: string
+}) {
+  return (
+    <>
+      <input
+        id={id}
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        aria-invalid={isInvalid(value)}
+        className="field field-inline"
+      />
+      {unit && <span className="w-7 text-left text-app-muted">{unit}</span>}
+    </>
   )
 }

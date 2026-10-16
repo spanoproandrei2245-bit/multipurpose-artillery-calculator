@@ -2,23 +2,6 @@
 import type { Language } from '../types/settings'
 
 type Translation = {
-  header: {
-    title: string
-    subtitle: string
-    status: string
-  }
-  navigation: {
-    dashboard: string
-    sync: string
-    models: string
-    settings: string
-  }
-  modelsPage: {
-    title: string
-    description: string
-    modes: string
-    openDashboard: string
-  }
   modelSelector: {
     label: string
   }
@@ -61,23 +44,6 @@ type Translation = {
 
 export const translations: Record<Language, Translation> = {
   en: {
-    header: {
-      title: 'Multipurpose Artillery Calculator',
-      subtitle: 'made by Heis',
-      status: 'Alpha',
-    },
-    navigation: {
-      dashboard: 'Solution',
-      sync: 'Link',
-      models: 'Weapons',
-      settings: 'Settings',
-    },
-    modelsPage: {
-      title: 'Weapons',
-      description: 'Pick a weapon — the solution opens on its own range tables.',
-      modes: 'Modes',
-      openDashboard: 'Open',
-    },
     modelSelector: {
       label: 'Game Model',
     },
@@ -124,23 +90,6 @@ export const translations: Record<Language, Translation> = {
   },
 
   ru: {
-    header: {
-      title: 'Multipurpose Artillery Calculator',
-      subtitle: 'made by Heis',
-      status: 'Альфа',
-    },
-    navigation: {
-      dashboard: 'Расчёт',
-      sync: 'Связка',
-      models: 'Орудия',
-      settings: 'Настройки',
-    },
-    modelsPage: {
-      title: 'Орудия',
-      description: 'Выберите орудие — расчёт откроется по его таблицам.',
-      modes: 'Режимы',
-      openDashboard: 'Открыть',
-    },
     modelSelector: {
       label: 'Игровая модель',
     },

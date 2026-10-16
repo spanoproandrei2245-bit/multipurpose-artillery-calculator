@@ -8,7 +8,7 @@ import {
 
 import { readStored, writeStored } from '../lib/input'
 import { playSound } from '../lib/sound'
-import { SegmentBar } from './FormControls'
+import { ProgressBar } from './FormControls'
 import type { Language } from '../types/settings'
 
 /** Управление таймером снаружи (горячие клавиши). */
@@ -132,13 +132,9 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
   }[phase]
 
   return (
-    <div className="mt-4 border border-app-border bg-app-raised">
-      <div className="flex items-stretch">
-        <button
-          type="button"
-          onClick={fire}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-3 bg-accent px-4 py-3 font-mono text-[13px] font-semibold uppercase tracking-[0.22em] text-on-accent transition-colors hover:bg-accent-strong"
-        >
+    <div className="mt-4 rounded-lg bg-app-surface p-3">
+      <div className="flex gap-2">
+        <button type="button" onClick={fire} className="btn btn-primary btn-lg flex-1">
           {shot
             ? ru
               ? 'Огонь ещё'
@@ -146,7 +142,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
             : ru
               ? 'Огонь'
               : 'Fire'}
-          <span className="hidden border border-current px-1 text-[10px] tracking-normal opacity-70 sm:inline">
+          <span className="hidden rounded bg-white/20 px-1.5 text-[12px] font-medium sm:inline">
             F
           </span>
         </button>
@@ -155,7 +151,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           <button
             type="button"
             onClick={() => setShot(null)}
-            className="btn btn-ghost border-l border-app-border"
+            className="btn min-h-12"
           >
             {ru ? 'Стоп' : 'Stop'}
           </button>
@@ -166,16 +162,13 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           aria-pressed={sound}
           onClick={() => setSound((value) => !value)}
           title={ru ? 'Звуковой сигнал' : 'Sound'}
-          className={[
-            'btn btn-ghost border-l border-app-border',
-            sound ? 'text-app-text' : 'text-app-faint line-through',
-          ].join(' ')}
+          className={['btn min-h-12', sound ? '' : 'text-app-faint line-through'].join(' ')}
         >
           {ru ? 'Звук' : 'Sound'}
         </button>
       </div>
 
-      <div className="border-t border-app-border px-3 py-2.5" aria-live="polite">
+      <div className="mt-3" aria-live="polite">
         <div className="flex items-baseline justify-between gap-3">
           <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
             {phaseLabel}
@@ -184,21 +177,21 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           </span>
           <span
             className={[
-              'mono-num text-xl',
+              'text-xl font-semibold tabular-nums',
               alert ? 'text-danger' : 'text-app-text',
             ].join(' ')}
           >
             {left === null
-              ? `T ${tof.toFixed(1)}`
+              ? tof.toFixed(1)
               : phase === 'impact'
-                ? 'T 0.0'
-                : `T−${left.toFixed(1)}`}
-            <span className="ml-1 text-[11px] text-app-muted">
+                ? '0.0'
+                : left.toFixed(1)}
+            <span className="ml-1 text-[13px] font-normal text-app-muted">
               {ru ? 'с' : 's'}
             </span>
           </span>
         </div>
-        <SegmentBar progress={progress} alert={alert} className="mt-2" />
+        <ProgressBar progress={progress} alert={alert} className="mt-2" />
       </div>
     </div>
   )

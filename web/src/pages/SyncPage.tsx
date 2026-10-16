@@ -5,7 +5,7 @@ import { CombatScreen } from '../components/CombatScreen'
 import { FireTimer, type FireTimerHandle } from '../components/FireTimer'
 import { TotPanel } from '../components/TotPanel'
 import { fireMoment } from '../lib/tot'
-import { SectionHeading, Toggle } from '../components/FormControls'
+import { Row, SectionHeading, Toggle } from '../components/FormControls'
 import { PageIntro } from '../components/PageIntro'
 import {
   isDesktop,
@@ -63,20 +63,10 @@ export function SyncPage({ language }: Props) {
   return (
     <div className="space-y-4">
       <PageIntro
-        index="02"
-        eyebrow={ru ? 'Связка' : 'Link'}
         title={
-          ru ? (
-            <>
-              Наводчик считает —<br />
-              стрелок видит сразу
-            </>
-          ) : (
-            <>
-              The FDC computes —<br />
-              gunners see it live
-            </>
-          )
+          ru
+            ? 'Наводчик считает — стрелок видит сразу.'
+            : 'The FDC computes — gunners see it live.'
         }
       >
         {ru
@@ -145,7 +135,7 @@ function RoomCard({ language }: Props) {
   ]
 
   return (
-    <section className="panel ticks p-4 sm:p-5">
+    <section className="panel p-4 sm:p-5">
       <SectionHeading
         index="01"
         title={ru ? 'Комната' : 'Room'}
@@ -186,7 +176,7 @@ function RoomCard({ language }: Props) {
             spellCheck={false}
             maxLength={12}
             aria-invalid={sync.code !== '' && !validCode}
-            className="field w-44 font-mono text-lg tracking-[0.18em] uppercase"
+            className="field w-44 text-lg"
           />
         </label>
 
@@ -272,7 +262,7 @@ function RoomCard({ language }: Props) {
       {link && sync.role === 'computer' && (
         <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-app-border pt-5">
           {qr?.link === link && (
-            <div className="ticks ticks-accent p-2">
+            <div className="p-2">
               <img
                 src={qr.image}
                 width={128}
@@ -283,10 +273,10 @@ function RoomCard({ language }: Props) {
             </div>
           )}
           <div className="min-w-0 flex-1 text-sm">
-            <p className="label text-app-text">
+            <p className="text-app-text">
               {ru ? 'Приглашение для стрелка' : 'Invite for a gunner'}
             </p>
-            <p className="mt-2 font-mono text-[11px] break-all text-app-muted">
+            <p className="mt-2 text-[12.5px] break-all text-app-muted">
               {link}
             </p>
             <button
@@ -321,7 +311,7 @@ function RoomCard({ language }: Props) {
             onChange={(event) =>
               sync.setServer(event.target.value as SyncServerId)
             }
-            className="field w-auto py-1.5 font-mono text-xs"
+            className="field w-auto py-1.5 text-xs"
           >
             {SYNC_SERVERS.map((server) => (
               <option key={server.id} value={server.id}>
@@ -347,24 +337,20 @@ function ComputerView({ language }: Props) {
   const gunners = sync.peers.filter((peer) => peer.role === 'gunner').length
 
   return (
-    <section className="panel ticks p-4 sm:p-5">
+    <section className="panel p-4 sm:p-5">
       <SectionHeading index="02" title={ru ? 'Наводчик' : 'Fire direction'} />
-      <div className="mt-4 grid grid-cols-2 gap-px border border-app-border bg-app-border">
-        <div className="bg-app-surface p-3">
-          <p className="label">{ru ? 'Стрелков на связи' : 'Gunners online'}</p>
-          <p className="readout mt-2 text-5xl">{String(gunners).padStart(2, '0')}</p>
-        </div>
-        <div className="bg-app-surface p-3">
-          <p className="label">{ru ? 'Последняя отправка' : 'Last sent'}</p>
-          <p className="mono-num mt-3 text-lg text-app-text">
-            {sync.lastSharedAt
-              ? ago(now - sync.lastSharedAt, ru)
-              : ru
-                ? 'ещё нет'
-                : 'not yet'}
-          </p>
-        </div>
-      </div>
+      <dl className="mt-2">
+        <Row label={ru ? 'Стрелков на связи' : 'Gunners online'}>
+          <span className="text-xl font-semibold text-app-text">{gunners}</span>
+        </Row>
+        <Row label={ru ? 'Последняя отправка' : 'Last sent'}>
+          {sync.lastSharedAt
+            ? ago(now - sync.lastSharedAt, ru)
+            : ru
+              ? 'ещё нет'
+              : 'not yet'}
+        </Row>
+      </dl>
       <p className="mt-3 text-xs text-app-muted">
         {ru
           ? 'Работайте на вкладке «Расчёт»: каждое изменение возвышения, азимута или заряда сразу уходит стрелкам. Когда стрелок жмёт «Огонь», у вас запускается отсчёт до разрыва.'
@@ -469,7 +455,7 @@ function GunnerView({ language }: Props) {
 
   if (!sync.active || !solution) {
     return (
-      <section className="panel ticks p-10 text-center">
+      <section className="panel p-10 text-center">
         <p className="label">
           {!sync.active
             ? ru
@@ -486,8 +472,8 @@ function GunnerView({ language }: Props) {
   return (
     <section
       className={[
-        'panel ticks p-4 transition-colors sm:p-5',
-        fresh ? 'ticks-accent border-accent' : '',
+        'panel p-4 transition-shadow sm:p-5',
+        fresh ? 'ring-2 ring-accent-solid' : '',
       ].join(' ')}
     >
       <SectionHeading
@@ -499,54 +485,47 @@ function GunnerView({ language }: Props) {
           </span>
         }
       />
-      <p className="mt-3 text-xl font-light text-app-text">
+      <p className="mt-1 text-[15px] text-app-muted">
         {solution.targetName ?? solution.title}
-        {solution.targetName && (
-          <span className="label ml-3">{solution.title}</span>
-        )}
+        {solution.targetName && ` · ${solution.title}`}
       </p>
 
-      <div className="mt-4 grid gap-px border border-app-border bg-app-border sm:grid-cols-2">
-        <div className="bg-app-surface p-4">
-          <p className="label">
-            {ru ? 'Возвышение' : 'Elevation'} · {ru ? 'мил' : 'mil'}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-app-raised p-4">
+          <p className="text-[15px] font-medium text-app-muted">
+            {ru ? 'Возвышение' : 'Elevation'}, {ru ? 'мил' : 'mil'}
           </p>
-          <p className="readout mt-3 text-[clamp(4rem,18vw,7.5rem)]">
+          <p className="readout mt-2 text-[clamp(4rem,18vw,7rem)] font-semibold">
             {Math.round(solution.elevation)}
           </p>
         </div>
-        <div className="bg-app-surface p-4">
-          <p className="label">
+        <div className="rounded-xl bg-app-raised p-4">
+          <p className="text-[15px] font-medium text-app-muted">
             {ru ? 'Азимут' : 'Azimuth'}
-            {solution.azimuth !== null && ` · ${solution.azimuthUnit}`}
+            {solution.azimuth !== null && `, ${solution.azimuthUnit}`}
           </p>
           <p
             className={[
-              'readout mt-3 text-[clamp(4rem,18vw,7.5rem)]',
+              'readout mt-2 text-[clamp(4rem,18vw,7rem)] font-semibold',
               solution.azimuth === null ? 'text-app-faint' : '',
             ].join(' ')}
           >
-            {solution.azimuth ?? '——'}
+            {solution.azimuth ?? '—'}
           </p>
         </div>
-        <div className="flex gap-10 bg-app-surface p-4 sm:col-span-2">
-          <div>
-            <p className="label">{ru ? 'Заряд' : 'Charge'}</p>
-            <p className="readout mt-2 flex items-baseline gap-3 text-5xl">
-              {String(solution.charge).padStart(2, '0')}
-              {solution.mode === 'LOW' && (
-                <span className="tag tag-warn">LOW</span>
-              )}
-            </p>
-          </div>
-          <div>
-            <p className="label">
-              {ru ? 'Полёт' : 'Flight'} · {ru ? 'с' : 's'}
-            </p>
-            <p className="readout mt-2 text-5xl">{solution.tof.toFixed(1)}</p>
-          </div>
-        </div>
       </div>
+
+      <dl className="mt-2">
+        <Row label={ru ? 'Заряд' : 'Charge'}>
+          <span className="text-xl font-semibold text-app-text">
+            {solution.charge}
+          </span>
+          {solution.mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
+        </Row>
+        <Row label={ru ? 'Время полёта' : 'Time of flight'}>
+          {solution.tof.toFixed(1)} {ru ? 'с' : 's'}
+        </Row>
+      </dl>
 
       {!combatOpen && (
         <FireTimer
@@ -558,6 +537,7 @@ function GunnerView({ language }: Props) {
       )}
 
       <TotPanel
+        className="mt-3 rounded-lg bg-app-raised p-3"
         tof={solution.tof}
         impactAt={solution.tot ?? null}
         onFireMoment={() => {
