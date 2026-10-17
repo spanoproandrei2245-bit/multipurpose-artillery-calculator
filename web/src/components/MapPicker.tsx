@@ -34,6 +34,14 @@ import {
   type StoredMapInfo,
 } from '../lib/mapStore'
 import { renderRelief, type ReliefPalette } from '../lib/relief'
+import {
+  listBuiltinMaps,
+  loadBuiltinMap,
+  tileLevel,
+  visibleTiles,
+  type BuiltinMapEntry,
+  type MapTiles,
+} from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
 import { Toggle } from './FormControls'
@@ -155,6 +163,11 @@ export function MapPicker({
   const unitM = ru ? 'м' : 'm'
 
   const [maps, setMaps] = useState<StoredMapInfo[]>([])
+  // Встроенные карты (спутник + высоты) и тайлы открытой карты
+  const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
+  const [tiles, setTiles] = useState<MapTiles | null>(null)
+  // Какой пункт списка открыт: «builtin:stratis» или «local:altis»
+  const [mapKey, setMapKey] = useState('')
   const [map, setMap] = useState<Heightmap | null>(null)
   const [adding, setAdding] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -243,12 +256,23 @@ export function MapPicker({
   }
 
   // ---- загрузка списка и последней карты ----
-  function openMap(world: string) {
-    loadHeightmap(world)
+  function openMap(key: string) {
+    const [source, world] = key.includes(':') ? key.split(':', 2) : ['local', key]
+    const load =
+      source === 'builtin'
+        ? loadBuiltinMap(world).then((result) =>
+            result ? { heightmap: result.heightmap, tiles: result.tiles } : null
+          )
+        : loadHeightmap(world).then((heightmap) =>
+            heightmap ? { heightmap, tiles: null } : null
+          )
+    load
       .then((loaded) => {
         if (!loaded) return
-        writeStored('mapWorld', world)
-        setMap(loaded)
+        writeStored('mapWorld', key)
+        setMapKey(key)
+        setMap(loaded.heightmap)
+        setTiles(loaded.tiles)
         setGun(readGun(world))
         setTarget(
           currentTarget?.world === world
@@ -265,16 +289,25 @@ export function MapPicker({
   }
 
   useEffect(() => {
-    listHeightmaps()
-      .then((list) => {
-        setMaps(list)
-        const last = readStoredText('mapWorld')
-        const world = list.find((m) => m.world === last)?.world ?? list[0]?.world
-        if (world) openMap(world)
-      })
-      .catch(() => {
-        // IndexedDB недоступна — карта не сохранится, но загрузить можно
-      })
+    void Promise.all([
+      // IndexedDB недоступна — свои карты не сохраняются, встроенные есть
+      listHeightmaps().catch(() => [] as StoredMapInfo[]),
+      listBuiltinMaps(),
+    ]).then(([local, embedded]) => {
+      setMaps(local)
+      setBuiltin(embedded)
+      const keys = [
+        ...embedded.map((m) => `builtin:${m.world}`),
+        ...local.map((m) => `local:${m.world}`),
+      ]
+      const last = readStoredText('mapWorld')
+      // Старые версии хранили просто имя мира
+      const key =
+        keys.find((k) => k === last) ??
+        keys.find((k) => k === `local:${last}`) ??
+        keys[0]
+      if (key) openMap(key)
+    })
     // Только при первом показе
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -295,8 +328,10 @@ export function MapPicker({
     } catch {
       // Сохранить не удалось — карта работает до перезагрузки
     }
-    writeStored('mapWorld', parsed.world)
+    writeStored('mapWorld', `local:${parsed.world}`)
+    setMapKey(`local:${parsed.world}`)
     setMap(parsed)
+    setTiles(null)
     setGun(readGun(parsed.world))
     setTarget(null)
     setPlacing('gun')
@@ -335,7 +370,7 @@ export function MapPicker({
   }
 
   async function removeMap() {
-    if (!map) return
+    if (!map || !mapKey.startsWith('local:')) return
     const message = ru
       ? `Удалить высоты карты ${map.world}?`
       : `Delete the heights of ${map.world}?`
@@ -347,6 +382,8 @@ export function MapPicker({
       // Не удалось удалить — список не меняется
     }
     setMap(null)
+    setMapKey('')
+    setTiles(null)
     setGun(null)
     setTarget(null)
   }
@@ -367,6 +404,22 @@ export function MapPicker({
 
   // Чёткость на экранах с масштабированием
   const ratio = window.devicePixelRatio || 1
+
+  // Загруженные тайлы спутника; готовый тайл — повод перерисовать
+  const tileCache = useRef(new Map<string, HTMLImageElement>())
+  const [tileTick, setTileTick] = useState(0)
+  function tileImage(url: string): HTMLImageElement {
+    let image = tileCache.current.get(url)
+    if (!image) {
+      image = new Image()
+      image.crossOrigin = 'anonymous'
+      image.decoding = 'async'
+      image.onload = () => setTileTick((value) => value + 1)
+      image.src = url
+      tileCache.current.set(url, image)
+    }
+    return image
+  }
 
   const activeView =
     view ?? (map && size.width > 0 ? fitView(map, size.width, size.height) : null)
@@ -424,6 +477,25 @@ export function MapPicker({
       (extent + map.step) * scale,
       (extent + map.step) * scale
     )
+
+    // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
+    if (tiles) {
+      const z = tileLevel(tiles, scale * ratio)
+      const visible = visibleTiles(tiles, z, {
+        minX: x0,
+        maxX: x0 + size.width / scale,
+        minY: y0 - size.height / scale,
+        maxY: y0,
+      })
+      for (const tile of visible) {
+        const image = tileImage(tile.url)
+        if (!image.complete || image.naturalWidth === 0) continue
+        const p = toScreen({ x: tile.x, y: tile.y })
+        // +0.5 px — без щелей между тайлами при дробном масштабе
+        const side = tile.meters * scale + 0.5
+        ctx.drawImage(image, p.x, p.y, side, side)
+      }
+    }
 
     // Сетка: 100 м / 1 км / 10 км — по масштабу
     const spacing =
@@ -561,7 +633,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -805,22 +877,27 @@ export function MapPicker({
 
       {/* ---- Панель под картой ---- */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {maps.length > 0 && (
+        {(maps.length > 0 || builtin.length > 0) && (
           <select
             aria-label={ru ? 'Карта' : 'Map'}
-            value={map?.world ?? ''}
+            value={mapKey}
             onChange={(event) => openMap(event.target.value)}
             className="field w-auto"
           >
             {!map && <option value="">—</option>}
+            {builtin.map((m) => (
+              <option key={`builtin:${m.world}`} value={`builtin:${m.world}`}>
+                {m.displayName}
+              </option>
+            ))}
             {maps.map((m) => (
-              <option key={m.world} value={m.world}>
-                {m.world}
+              <option key={`local:${m.world}`} value={`local:${m.world}`}>
+                {m.world} · {ru ? 'свои высоты' : 'own heights'}
               </option>
             ))}
           </select>
         )}
-        {maps.length > 0 && !adding && (
+        {(maps.length > 0 || builtin.length > 0) && !adding && (
           <button type="button" className="btn" onClick={() => setAdding(true)}>
             {ru ? '+ Карта' : '+ Map'}
           </button>
@@ -941,13 +1018,19 @@ export function MapPicker({
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[13px] text-app-muted">
+              {mapKey.startsWith('builtin:') && (() => {
+                const entry = builtin.find((m) => `builtin:${m.world}` === mapKey)
+                return entry ? `${entry.displayName}${entry.author ? ` · © ${entry.author}` : ''} · ` : ''
+              })()}
               {ru
-                ? `Высоты по сетке с шагом ${map.step} м: на крутых склонах ошибка до нескольких метров.`
-                : `Heights come from a ${map.step} m grid: on steep slopes the error can reach a few metres.`}
+                ? `Высоты по сетке с шагом ${Math.round(map.step * 10) / 10} м.`
+                : `Heights on a ${Math.round(map.step * 10) / 10} m grid.`}
             </p>
-            <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
-              {ru ? 'Удалить карту' : 'Delete map'}
-            </button>
+            {mapKey.startsWith('local:') && (
+              <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
+                {ru ? 'Удалить карту' : 'Delete map'}
+              </button>
+            )}
           </div>
         </>
       )}

@@ -1,0 +1,22 @@
+{
+  "maps": [
+    {
+      "world": "altis",
+      "displayName": "Алтис",
+      "author": "Bohemia Interactive",
+      "worldSize": 30720
+    },
+    {
+      "world": "stratis",
+      "displayName": "Стратис",
+      "author": "Bohemia Interactive",
+      "worldSize": 8192
+    },
+    {
+      "world": "tanoa",
+      "displayName": "Таноа",
+      "author": "Bohemia Interactive",
+      "worldSize": 15360
+    }
+  ]
+}
