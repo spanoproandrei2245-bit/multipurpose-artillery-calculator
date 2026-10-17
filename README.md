@@ -38,6 +38,10 @@ npm run dev
 
 Range tables are copied by hand from screenshots of the ACE tables in game into `web/data-sources/<weapon>/`, then `npm run tables:import` turns them into JSON. The file format is in [web/data-sources/README.md](web/data-sources/README.md).
 
+## Adding a map
+
+Export the terrain with the [grad_meh](https://github.com/gruppe-adler/grad_meh) mod, then run `npm run maps:import "<Arma 3>/grad_meh/<map>"` in `web/`. It writes satellite tiles and heights to `web/public/maps/<map>/`. Map imagery © its authors, used with permission.
+
 ## License
 
 [MIT](LICENSE) · made by Heis
