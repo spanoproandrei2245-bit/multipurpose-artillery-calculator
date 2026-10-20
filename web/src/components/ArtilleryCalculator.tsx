@@ -37,6 +37,7 @@ import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
 import { recentEntries } from '../lib/journal'
 import { useFeature } from '../lib/features'
+import { togglePanel } from '../lib/uiPanels'
 import type {
   AngleUnit,
   JournalDraft,
@@ -44,7 +45,6 @@ import type {
   MapTarget,
 } from '../lib/journal'
 import {
-  isDesktop,
   notifyOverlayShot,
   onHotkey,
   onOverlayCommand,
@@ -68,7 +68,7 @@ import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import type { FlightShot } from './FlightCanvas'
-import { InlineNumber, Row, SectionHeading, Toggle } from './FormControls'
+import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
@@ -77,10 +77,6 @@ import { fireMoment } from '../lib/tot'
 import { WeatherSection } from './WeatherSection'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
-
-// Релизы с установщиком программы для ПК
-const RELEASES_URL =
-  'https://github.com/spanoproandrei2245-bit/multipurpose-artillery-calculator/releases'
 
 // Карта с рельефом и распознаванием экрана — отдельным чанком:
 // расчёт открывается раньше, карта догружается следом.
@@ -134,6 +130,7 @@ export function ArtilleryCalculator({
   const showWeather = useFeature('weather')
   const showTot = useFeature('tot')
   const showJournal = useFeature('journal')
+  const showTable = useFeature('table')
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
@@ -329,7 +326,6 @@ export function ArtilleryCalculator({
   const timerRef = useRef<FireTimerHandle>(null)
   // Снаряд в полёте — для анимации на карте
   const [flight, setFlight] = useState<FlightShot | null>(null)
-  const [showKeys, setShowKeys] = useState(false)
   const [combatOpen, setCombatOpen] = useState(false)
 
   function focusField(id: string) {
@@ -353,7 +349,6 @@ export function ArtilleryCalculator({
       // Сначала закрывается боевой экран, затем останавливается таймер
       if (combatOpen) setCombatOpen(false)
       else timerRef.current?.stop()
-      setShowKeys(false)
     },
     KeyB: () => {
       if (solution) setCombatOpen((value) => !value)
@@ -370,7 +365,7 @@ export function ArtilleryCalculator({
       if (details instanceof HTMLDetailsElement) details.open = true
       focusField('adjust-range')
     },
-    Question: () => setShowKeys((value) => !value),
+    Question: () => togglePanel('hotkeys'),
   }
   for (let charge = 0; charge <= 9; charge += 1) {
     hotkeys[`Digit${charge}`] = () => selectCharge(charge)
@@ -396,7 +391,16 @@ export function ArtilleryCalculator({
     }
   }
 
+  // «Очистить поля» срабатывает со второго нажатия, чтобы не стереть случайно
+  const [confirmClear, setConfirmClear] = useState(false)
+  useEffect(() => {
+    if (!confirmClear) return
+    const timer = window.setTimeout(() => setConfirmClear(false), 3000)
+    return () => window.clearTimeout(timer)
+  }, [confirmClear])
+
   function resetForm() {
+    setConfirmClear(false)
     setMapTarget(null)
     setDistance('')
     setOwnHeight('')
@@ -905,7 +909,22 @@ export function ArtilleryCalculator({
             )}
           </dl>
 
-          <div className="my-3 h-px bg-app-border" />
+          <div className="my-3 flex items-center gap-3">
+            <div className="h-px flex-1 bg-app-border" />
+            <button
+              type="button"
+              onClick={() => (confirmClear ? resetForm() : setConfirmClear(true))}
+              className={[
+                'btn btn-sm',
+                confirmClear ? 'btn-danger' : 'btn-ghost text-app-muted',
+              ].join(' ')}
+            >
+              <FieldIcon name="trash" className="h-4 w-4" />
+              {confirmClear
+                ? ru ? 'Нажмите ещё раз — очистить' : 'Tap again to clear'
+                : ru ? 'Очистить поля' : 'Clear inputs'}
+            </button>
+          </div>
 
           <dl>
             <Row icon="distance" label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
@@ -1211,33 +1230,7 @@ export function ArtilleryCalculator({
             </>
           )}
 
-          <p className="mt-6 text-[15px] leading-relaxed text-app-text-2">
-            {mapInput
-              ? ru
-                ? 'Нажмите ЛКМ на карте, чтобы задать положение орудия, ПКМ — положение цели. Перетаскивайте карту мышью, колесо — масштаб. Или введите дистанцию и азимут вручную.'
-                : 'Left-click the map to place the gun, right-click to place the target. Drag to pan, scroll to zoom. Or type the distance and bearing in by hand.'
-              : ru
-                ? 'Введите дистанцию до цели и азимут — установки посчитаются сразу.'
-                : 'Enter the distance and bearing to the target — the solution updates instantly.'}
-          </p>
 
-          <p className="note mt-3 text-[15px]">
-            {isDesktop
-              ? ru
-                ? 'Оверлей поверх игры — Ctrl+Alt+O, ввод в нём — Ctrl+Alt+D.'
-                : 'Overlay on top of the game — Ctrl+Alt+O, type in it — Ctrl+Alt+D.'
-              : (
-                <>
-                  {ru
-                    ? 'Скачайте программу с оверлеем поверх игры с '
-                    : 'Get the desktop app with an in-game overlay from '}
-                  <a href={RELEASES_URL} target="_blank" rel="noreferrer">
-                    github.com
-                  </a>
-                  .
-                </>
-              )}
-          </p>
         </div>
       </div>
 
@@ -1395,7 +1388,7 @@ export function ArtilleryCalculator({
             </details>
           )}
 
-          {profile && (
+          {profile && showTable && (
             <BallisticTableView
               profile={profile}
               mode={mode}
@@ -1409,56 +1402,6 @@ export function ArtilleryCalculator({
         </div>
       </div>
 
-      {showKeys && (
-        <div className="panel mt-3 p-4 sm:p-5">
-          <SectionHeading title={ru ? 'Горячие клавиши' : 'Keyboard shortcuts'} />
-          <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            {[
-              ['F', ru ? 'Огонь — запустить таймер' : 'Fire — start the timer'],
-              ['B', ru ? 'Боевой экран' : 'Combat screen'],
-              ['M', ru ? 'Режим HIGH / LOW' : 'HIGH / LOW mode'],
-              ['N / P', ru ? 'Следующая / предыдущая цель' : 'Next / previous target'],
-              ['Esc', ru ? 'Остановить таймер, выйти из поля' : 'Stop the timer, leave a field'],
-              ['0 – 9', ru ? 'Выбрать заряд' : 'Select a charge'],
-              ['D', ru ? 'К полю дистанции' : 'Go to distance'],
-              ['A', ru ? 'К полю азимута' : 'Go to azimuth'],
-              ['C', ru ? 'К корректировке огня' : 'Go to fire adjustment'],
-              ['Enter', ru ? 'В поле доклада — учесть разрыв' : 'In a report field — apply'],
-              ['?', ru ? 'Показать / скрыть эту справку' : 'Show / hide this help'],
-            ].map(([key, text]) => (
-              <div key={key} className="flex items-baseline gap-3">
-                <dt className="min-w-12">
-                  <kbd className="kbd">{key}</kbd>
-                </dt>
-                <dd className="text-app-muted">{text}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-3 text-[13px] text-app-muted">
-            {ru
-              ? 'Клавиши работают в любой раскладке, когда курсор не в поле ввода.'
-              : 'Shortcuts work in any keyboard layout when no input field is focused.'}
-          </p>
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setShowKeys((value) => !value)}
-          aria-expanded={showKeys}
-          className="btn btn-ghost hidden sm:inline-flex"
-        >
-          <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
-          {ru ? 'Горячие клавиши' : 'Shortcuts'}
-          <span className="kbd">?</span>
-        </button>
-
-        <button type="button" onClick={resetForm} className="btn btn-ghost btn-danger ml-auto">
-          <FieldIcon name="trash" className="h-[18px] w-[18px]" />
-          {ru ? 'Очистить поля' : 'Clear inputs'}
-        </button>
-      </div>
     </section>
   )
 }

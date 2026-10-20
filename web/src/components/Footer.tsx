@@ -1,11 +1,16 @@
 import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
+import { isDesktop } from '../lib/desktop'
 import { syncStatusColor, useSync } from '../lib/syncContext'
+import { setPanel, togglePanel } from '../lib/uiPanels'
 import type { Language } from '../types/settings'
 
 const REPO_URL =
   'https://github.com/spanoproandrei2245-bit/multipurpose-artillery-calculator'
+
+// Релизы с установщиком программы для ПК
+const RELEASES_URL = `${REPO_URL}/releases`
 
 export type View = 'dashboard' | 'sync' | 'settings'
 
@@ -149,6 +154,45 @@ export function Footer({ view, onViewChange, language, onLanguageChange }: Props
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <button
           type="button"
+          onClick={() => {
+            onViewChange('dashboard')
+            setPanel('tour', true)
+          }}
+          className="btn btn-ghost"
+        >
+          <FieldIcon name="help" className="h-[18px] w-[18px]" />
+          {ru ? 'Обучение' : 'Tutorial'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => togglePanel('hotkeys')}
+          className="btn btn-ghost hidden sm:inline-flex"
+        >
+          <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
+          {ru ? 'Горячие клавиши' : 'Shortcuts'}
+          <span className="kbd">?</span>
+        </button>
+
+        {!isDesktop && (
+          <a
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noreferrer"
+            title={
+              ru
+                ? 'Программа для ПК с оверлеем поверх игры'
+                : 'Desktop app with an in-game overlay'
+            }
+            className="btn btn-ghost"
+          >
+            <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
+            {ru ? 'Программа для ПК' : 'Desktop app'}
+          </a>
+        )}
+
+        <button
+          type="button"
           onClick={() => onViewChange(view === 'sync' ? 'dashboard' : 'sync')}
           aria-pressed={view === 'sync'}
           className={['btn', view === 'sync' ? 'bg-app-raised-hover text-app-text' : ''].join(' ')}
@@ -169,6 +213,7 @@ export function Footer({ view, onViewChange, language, onLanguageChange }: Props
             onViewChange(view === 'settings' ? 'dashboard' : 'settings')
           }
           aria-pressed={view === 'settings'}
+          data-tour="settings"
           aria-label={ru ? 'Настройки' : 'Settings'}
           title={ru ? 'Настройки' : 'Settings'}
           className={[

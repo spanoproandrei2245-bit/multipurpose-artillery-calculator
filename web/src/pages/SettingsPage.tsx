@@ -6,6 +6,7 @@ import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
+import { FeaturePreview } from '../components/FeaturePreview'
 import { SectionHeading, Switch, Toggle } from '../components/FormControls'
 import { setFeature, useFeature } from '../lib/features'
 
@@ -72,6 +73,7 @@ export function SettingsPage({
   const weather = useFeature('weather')
   const tot = useFeature('tot')
   const journal = useFeature('journal')
+  const table = useFeature('table')
 
   return (
     <section className="space-y-4">
@@ -107,6 +109,7 @@ export function SettingsPage({
             </div>
 
             <div className="mt-5">
+              <FeaturePreview id="keepAwake" language={language}>
               <Switch
                 checked={keepAwake}
                 onChange={onKeepAwakeChange}
@@ -118,6 +121,7 @@ export function SettingsPage({
                     : t.keepAwakeUnsupported
                 }
               />
+              </FeaturePreview>
             </div>
 
             <p className="label mt-5 text-app-faint">{t.autoSave}</p>
@@ -175,6 +179,7 @@ export function SettingsPage({
             }
           >
             <div className="mt-4 space-y-4">
+              <FeaturePreview id="adjust" language={language}>
               <Switch
                 checked={adjust}
                 onChange={(v) => setFeature('adjust', v)}
@@ -185,6 +190,8 @@ export function SettingsPage({
                     : 'Short / over, left / right reports. Over the link a gunner gets the corrected settings anyway — no need to enable it there.'
                 }
               />
+              </FeaturePreview>
+              <FeaturePreview id="weather" language={language}>
               <Switch
                 checked={weather}
                 onChange={(v) => setFeature('weather', v)}
@@ -195,6 +202,8 @@ export function SettingsPage({
                     : 'Wind, temperature, pressure. Only for servers with advanced ballistics.'
                 }
               />
+              </FeaturePreview>
+              <FeaturePreview id="tot" language={language}>
               <Switch
                 checked={tot}
                 onChange={(v) => setFeature('tot', v)}
@@ -205,6 +214,20 @@ export function SettingsPage({
                     : 'Set the impact time and fire on the countdown. A time from the FDC reaches a gunner even without this.'
                 }
               />
+              </FeaturePreview>
+              <FeaturePreview id="table" language={language}>
+              <Switch
+                checked={table}
+                onChange={(v) => setFeature('table', v)}
+                label={ru ? 'Таблица стрельбы из игры' : 'In-game range table'}
+                description={
+                  ru
+                    ? 'Таблица возвышений по дальностям, как в игре: для сверки с расчётом.'
+                    : 'The elevation-by-range table as in the game, to cross-check the calculation.'
+                }
+              />
+              </FeaturePreview>
+              <FeaturePreview id="journal" language={language}>
               <Switch
                 checked={journal}
                 onChange={(v) => setFeature('journal', v)}
@@ -215,6 +238,7 @@ export function SettingsPage({
                     : 'Saving targets, the quick list on the map and the journal below.'
                 }
               />
+              </FeaturePreview>
             </div>
           </Card>
 
@@ -224,12 +248,15 @@ export function SettingsPage({
             description={t.experimentalDescription}
           >
             <div className="mt-4 space-y-4">
+              <FeaturePreview id="map" language={language}>
               <Switch
                 checked={mapInput}
                 onChange={onMapInputChange}
                 label={t.mapInput}
                 description={t.mapInputDescription}
               />
+              </FeaturePreview>
+              <FeaturePreview id="markers" language={language}>
               <Switch
                 checked={showMarkers}
                 onChange={onShowMarkersChange}
@@ -240,6 +267,8 @@ export function SettingsPage({
                     : 'The markers panel, the marker tool and markers from gunners over the link.'
                 }
               />
+              </FeaturePreview>
+              <FeaturePreview id="screenMarkers" language={language}>
               <Switch
                 checked={showScreenMarkers}
                 onChange={onShowScreenMarkersChange}
@@ -251,12 +280,15 @@ export function SettingsPage({
                 }
                 disabled={!showMarkers}
               />
+              </FeaturePreview>
+              <FeaturePreview id="grid" language={language}>
               <Switch
                 checked={gridInput}
                 onChange={onGridInputChange}
                 label={t.gridInput}
                 description={t.gridInputDescription}
               />
+              </FeaturePreview>
             </div>
           </Card>
         </div>

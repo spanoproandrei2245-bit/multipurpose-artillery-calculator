@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
  * Необязательные разделы калькулятора: включаются в настройках.
  * По умолчанию выключены, чтобы главный экран не был перегружен.
  */
-export type FeatureId = 'adjust' | 'weather' | 'tot' | 'journal'
+export type FeatureId = 'adjust' | 'weather' | 'tot' | 'journal' | 'table'
 
 const KEY_PREFIX = 'feature:'
 const listeners = new Set<() => void>()

@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 
 import { Footer, type View } from './components/Footer'
+import { HotkeysDialog } from './components/HotkeysDialog'
+import { Tour } from './components/Tour'
 import { DashboardPage } from './pages/DashboardPage'
 
 import { isModelId, type ModelId } from './data/models'
@@ -180,6 +182,9 @@ function App() {
           )}
         </Suspense>
       </main>
+
+      <HotkeysDialog language={language} />
+      {view === 'dashboard' && <Tour language={language} />}
 
       <Footer
         view={view}

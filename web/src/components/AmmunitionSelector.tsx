@@ -38,14 +38,6 @@ export function AmmunitionSelector({
     )
   }
 
-  if (ammunition.length === 1) {
-    return (
-      <span className="flex h-9 items-center gap-2 pr-[1.375rem] pl-1.5">
-        <ShellIcon category={category} type={ammunition[0].type} language={language} />
-        {formatLabel(ammunition[0])}
-      </span>
-    )
-  }
 
   const selected =
     ammunition.find((item) => item.id === selectedId) ?? ammunition[0]

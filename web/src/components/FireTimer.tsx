@@ -159,7 +159,7 @@ export function FireTimer({
   return (
     <div className="mt-4 rounded-lg bg-app-surface p-3">
       <div className="flex gap-2">
-        <button type="button" onClick={fire} className="btn btn-primary btn-lg flex-1">
+        <button type="button" data-tour="fire" onClick={fire} className="btn btn-primary btn-lg flex-1">
           <FieldIcon name="fire" className="h-5 w-5" />
           {shot
             ? ru

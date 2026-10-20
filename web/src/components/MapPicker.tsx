@@ -1190,7 +1190,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
       )}
 
       {map && !adding && (
-        <div ref={containerRef} className="relative w-full">
+        <div ref={containerRef} data-tour="map" className="relative w-full">
           <canvas
             ref={setCanvas}
             width={Math.round(size.width * ratio)}
@@ -1219,6 +1219,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
           {/* Справа: что ставит касание */}
           <div
             role="toolbar"
+            data-tour="tools"
             aria-label={ru ? 'Что ставит касание' : 'Tap places'}
             aria-orientation="vertical"
             className="absolute top-2 right-2 flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
