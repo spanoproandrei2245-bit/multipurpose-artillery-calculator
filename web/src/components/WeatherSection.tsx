@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { STANDARD_TEMPERATURE } from '../lib/ballistics'
 import { formatSigned } from '../lib/input'
 import type { WeatherInputs } from '../lib/useWeatherInputs'
@@ -60,7 +61,8 @@ export function WeatherSection({
       className="disclosure panel p-4 sm:p-5"
     >
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="weather" className="h-5 w-5 text-app-muted" />
           {ru ? 'Погодные поправки' : 'Weather corrections'}
         </span>
         {w.entered && (

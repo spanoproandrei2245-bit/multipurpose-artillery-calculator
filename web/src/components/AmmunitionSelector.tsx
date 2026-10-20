@@ -2,6 +2,9 @@ import type { Ammunition } from '../types/artillery'
 import { Dropdown } from './Dropdown'
 import type { Language } from '../types/settings'
 
+import type { ArtilleryCategory } from '../types/gameModel'
+import { ShellIcon } from './ShellIcon'
+
 type AmmunitionOption = Pick<Ammunition, 'id' | 'designation' | 'type'>
 
 interface AmmunitionSelectorProps {
@@ -9,6 +12,8 @@ interface AmmunitionSelectorProps {
   selectedId: string
   onSelect: (id: string) => void
   language: Language
+  // Класс орудия — форма значка снаряда
+  category: ArtilleryCategory
 }
 
 function formatLabel(item: AmmunitionOption): string {
@@ -21,6 +26,7 @@ export function AmmunitionSelector({
   selectedId,
   onSelect,
   language,
+  category,
 }: AmmunitionSelectorProps) {
   const ru = language === 'ru'
 
@@ -33,7 +39,12 @@ export function AmmunitionSelector({
   }
 
   if (ammunition.length === 1) {
-    return <span>{formatLabel(ammunition[0])}</span>
+    return (
+      <span className="flex items-center gap-2">
+        <ShellIcon category={category} type={ammunition[0].type} language={language} />
+        {formatLabel(ammunition[0])}
+      </span>
+    )
   }
 
   const selected =
@@ -47,7 +58,14 @@ export function AmmunitionSelector({
       options={ammunition.map((item) => ({
         value: item.id,
         label: formatLabel(item),
+        icon: <ShellIcon category={category} type={item.type} language={language} />,
       }))}
+      buttonLabel={
+        <span className="flex items-center gap-2">
+          <ShellIcon category={category} type={selected.type} language={language} />
+          {formatLabel(selected)}
+        </span>
+      }
     />
   )
 }

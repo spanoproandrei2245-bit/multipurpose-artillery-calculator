@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useRef, useState } from 'react'
 
 import { artilleryRegistry } from '../data/artillery/registry'
@@ -155,7 +156,8 @@ export function ShotJournal({
     <section className="panel mt-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-3">
-          <span className="text-app-text">
+          <span className="inline-flex items-center gap-2 text-app-text">
+            <FieldIcon name="journal" className="h-5 w-5 text-app-muted" />
             {ru ? 'Журнал целей' : 'Target journal'}
           </span>
           <span className="tag">{entries.length}</span>
@@ -168,6 +170,7 @@ export function ShotJournal({
             disabled={entries.length === 0}
             onClick={handleExport}
           >
+            <FieldIcon name="export" />
             {ru ? 'Экспорт' : 'Export'}
           </button>
           <button
@@ -175,6 +178,7 @@ export function ShotJournal({
             className={buttonClass}
             onClick={() => fileRef.current?.click()}
           >
+            <FieldIcon name="import" />
             {ru ? 'Импорт' : 'Import'}
           </button>
           <input

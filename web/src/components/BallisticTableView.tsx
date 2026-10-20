@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useState } from 'react'
 
 import type {
@@ -116,7 +117,8 @@ export function BallisticTableView({
   return (
     <details className="disclosure panel p-4 sm:p-5">
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="table" className="h-5 w-5 text-app-muted" />
           {ru ? 'Таблица стрельбы из игры' : 'In-game range table'}
         </span>
       </summary>

@@ -87,6 +87,16 @@ function App() {
   // Карта с метками и высотами
   const [mapInput, setMapInput] = usePersistentState('showMap', parseFlag(true))
 
+  // Метки на карте и метки с экрана игры — по желанию, в настройках
+  const [showMarkers, setShowMarkers] = usePersistentState(
+    'showMarkers',
+    parseFlag(false)
+  )
+  const [showScreenMarkers, setShowScreenMarkers] = usePersistentState(
+    'showScreenMarkers',
+    parseFlag(false)
+  )
+
   useWakeLock(keepAwake)
 
   // Программа для ПК: Ctrl+Alt+O показывает и скрывает оверлей
@@ -122,6 +132,8 @@ function App() {
             language={language}
             gridInput={gridInput}
             mapInput={mapInput}
+            showMarkers={showMarkers}
+            showScreenMarkers={showScreenMarkers}
           />
         )}
 
@@ -157,6 +169,10 @@ function App() {
                 onGridInputChange={setGridInput}
                 mapInput={mapInput}
                 onMapInputChange={setMapInput}
+                showMarkers={showMarkers}
+                onShowMarkersChange={setShowMarkers}
+                showScreenMarkers={showScreenMarkers}
+                onShowScreenMarkersChange={setShowScreenMarkers}
                 keepAwake={keepAwake}
                 onKeepAwakeChange={setKeepAwake}
               />

@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useState } from 'react'
 
 import {
@@ -175,7 +176,8 @@ export function AdjustFire({
       className="disclosure panel p-4 sm:p-5"
     >
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="correction" className="h-5 w-5 text-app-muted" />
           {ru ? 'Корректировка огня' : 'Adjust fire'}
         </span>
         {hasTotal && (
@@ -184,7 +186,8 @@ export function AdjustFire({
       </summary>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span className="label">
+        <span className="label flex items-center gap-1.5">
+          <FieldIcon name="line" />
           {ru ? 'Доклад по линии' : 'Report along'}
         </span>
         <Toggle
@@ -192,16 +195,17 @@ export function AdjustFire({
           value={frame}
           onChange={setFrame}
           options={[
-            { value: 'gun', label: ru ? 'орудие — цель' : 'gun–target' },
+            { value: 'gun', label: ru ? 'орудие — цель' : 'gun–target', icon: 'gun' },
             {
               value: 'observer',
               label: ru ? 'наблюдатель — цель' : 'observer–target',
+              icon: 'observer',
             },
           ]}
         />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4">
         {frame === 'observer' && (
           <NumberField
             id="adjust-observer"
@@ -239,8 +243,8 @@ export function AdjustFire({
               value={rangeSide}
               onChange={setRangeSide}
               options={[
-                { value: 'short', label: ru ? 'недолёт' : 'short' },
-                { value: 'over', label: ru ? 'перелёт' : 'over' },
+                { value: 'short', label: ru ? 'недолёт' : 'short', icon: 'arrowDown' },
+                { value: 'over', label: ru ? 'перелёт' : 'over', icon: 'arrowUp' },
               ]}
             />
           }
@@ -258,8 +262,8 @@ export function AdjustFire({
               value={lateralSide}
               onChange={setLateralSide}
               options={[
-                { value: 'left', label: ru ? 'левее' : 'left' },
-                { value: 'right', label: ru ? 'правее' : 'right' },
+                { value: 'left', label: ru ? 'левее' : 'left', icon: 'arrowLeft' },
+                { value: 'right', label: ru ? 'правее' : 'right', icon: 'arrowRight' },
               ]}
             />
           }
@@ -270,9 +274,11 @@ export function AdjustFire({
         {hasTotal && (
           <>
             <button type="button" onClick={onUndo} className="btn">
+              <FieldIcon name="undo" />
               {ru ? 'Отменить последний' : 'Undo last'}
             </button>
             <button type="button" onClick={onReset} className="btn btn-danger">
+              <FieldIcon name="trash" />
               {ru ? 'Сбросить' : 'Reset'}
             </button>
           </>
@@ -283,6 +289,7 @@ export function AdjustFire({
           onClick={add}
           className="btn btn-primary"
         >
+          <FieldIcon name="correction" />
           {ru ? 'Учесть разрыв' : 'Apply'}
           <span className="hidden opacity-70 sm:inline">↵</span>
         </button>

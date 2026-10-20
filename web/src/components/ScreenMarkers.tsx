@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
 import { onHotkey } from '../lib/desktop'
@@ -317,7 +318,8 @@ export function ScreenMarkers({ world, author, language }: Props) {
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="marker" className="h-5 w-5 text-app-muted" />
           {ru ? 'Метки с экрана игры' : 'Markers from the game screen'}
         </span>
         <span className="tag tag-warn">

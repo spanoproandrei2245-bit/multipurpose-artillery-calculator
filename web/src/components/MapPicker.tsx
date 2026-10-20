@@ -53,7 +53,7 @@ import {
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
 import { Dropdown } from './Dropdown'
-import { Toggle } from './FormControls'
+import { FieldIcon, type FieldIconName } from './FieldIcon'
 import { ScreenMarkers } from './ScreenMarkers'
 
 export interface MapSelection {
@@ -74,6 +74,14 @@ export interface JournalMapTarget {
   active: boolean
 }
 
+/** Сохранённая цель в быстром списке на карте. */
+export interface QuickTarget {
+  id: string
+  name: string
+  detail: string
+  active: boolean
+}
+
 interface Props {
   language: Language
   onApply: (selection: MapSelection) => void
@@ -82,6 +90,14 @@ interface Props {
   onPickJournalTarget?: (id: string) => void
   // Точка текущей цели (например, загруженной из журнала)
   currentTarget?: MapTarget | null
+  // Быстрый выбор сохранённых целей: список слева на карте
+  quickTargets?: readonly QuickTarget[]
+  // Орудие закреплено на карте (true) или освобождено (false); высота —
+  // высота орудия в точке, м, если известна
+  onGunLockChange?: (locked: boolean, height: number | null) => void
+  // Метки на карте и распознавание меток с экрана игры — из настроек
+  showMarkers?: boolean
+  showScreenMarkers?: boolean
 }
 
 interface View {
@@ -187,6 +203,10 @@ export function MapPicker({
   journalTargets = [],
   onPickJournalTarget,
   currentTarget = null,
+  showMarkers = false,
+  showScreenMarkers = false,
+  quickTargets = [],
+  onGunLockChange,
 }: Props) {
   const ru = language === 'ru'
   const unitM = ru ? 'м' : 'm'
@@ -204,6 +224,13 @@ export function MapPicker({
   const [gun, setGun] = useState<MapPoint | null>(null)
   const [target, setTarget] = useState<MapPoint | null>(null)
   const [placing, setPlacing] = useState<Placing>('gun')
+
+  // Орудие закреплено на карте: касания его не двигают
+  const [gunLocked, setGunLocked] = useState(false)
+  // Список целей слева: на узком экране свёрнут
+  const [targetsOpen, setTargetsOpen] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 768
+  )
 
   // Линия огня: ломаная из точек, оружие (радиус поражения) и номер
   // точки прицеливания, по которой стреляют сейчас
@@ -254,12 +281,12 @@ export function MapPicker({
   const allMarkers = useMarkers()
   const markers = useMemo(
     () =>
-      map
+      map && showMarkers
         ? allMarkers
             .filter((m) => m.world === map.world || m.world === '')
             .sort((a, b) => b.createdAt - a.createdAt)
         : [],
-    [allMarkers, map]
+    [allMarkers, map, showMarkers]
   )
   // Новая метка: где поставлена и что вписать
   const [draft, setDraft] = useState<{
@@ -318,6 +345,7 @@ export function MapPicker({
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
         setGun(readGun(world))
+        setGunLocked(readStoredText(`mapGunLocked:${world}`) === 'on')
         setLinePoints(readLine(world))
         setLineIndex(null)
         setTarget(
@@ -825,8 +853,17 @@ export function MapPicker({
     placeTarget(point)
   }
 
+  function toggleGunLock() {
+    if (!map || !gun) return
+    const locked = !gunLocked
+    setGunLocked(locked)
+    writeStored(`mapGunLocked:${map.world}`, locked ? 'on' : 'off')
+    if (locked) setPlacing('target')
+    onGunLockChange?.(locked, heightAt(map, gun))
+  }
+
   function placeGun(point: MapPoint) {
-    if (!map) return
+    if (!map || gunLocked) return
     setGun(point)
     writeStored(`mapGun:${map.world}`, JSON.stringify(point))
     applyPoints(point, target)
@@ -852,12 +889,15 @@ export function MapPicker({
     if (!isInside(map, point)) return
 
     const mouse = event.pointerType === 'mouse'
-    const action: Placing =
+    let action: Placing =
       mouse && event.button === 2
         ? 'target'
         : mouse && placing === 'target'
           ? 'gun'
           : placing
+
+    // Орудие закреплено — касание ставит цель
+    if (gunLocked && action === 'gun') action = 'target'
 
     if (action === 'marker') {
       setDraft({ point, label: '', color: markerColor })
@@ -968,7 +1008,7 @@ export function MapPicker({
       )}
 
       {map && !adding && (
-        <div ref={containerRef} className="w-full">
+        <div ref={containerRef} className="relative w-full">
           <canvas
             ref={setCanvas}
             width={Math.round(size.width * ratio)}
@@ -981,6 +1021,108 @@ export function MapPicker({
             style={{ width: size.width, height: size.height }}
             className="block cursor-crosshair touch-none rounded-lg"
           />
+
+          {/* Справа: что ставит касание */}
+          <div
+            role="toolbar"
+            aria-label={ru ? 'Что ставит касание' : 'Tap places'}
+            aria-orientation="vertical"
+            className="absolute top-2 right-2 flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
+          >
+            {(
+              [
+                { id: 'gun', icon: 'gun', ru: 'Орудие', en: 'Gun' },
+                { id: 'target', icon: 'target', ru: 'Цель', en: 'Target' },
+                ...(showMarkers
+                  ? [{ id: 'marker', icon: 'marker', ru: 'Метка', en: 'Marker' }]
+                  : []),
+                { id: 'line', icon: 'line', ru: 'Огневая линия', en: 'Fire line' },
+              ] as { id: Placing; icon: FieldIconName; ru: string; en: string }[]
+            ).map((tool) => {
+              const active = placing === tool.id
+              const disabled = tool.id === 'gun' && gunLocked
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={disabled}
+                  title={ru ? tool.ru : tool.en}
+                  aria-label={ru ? tool.ru : tool.en}
+                  onClick={() => setPlacing(tool.id)}
+                  className={[
+                    'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                    active
+                      ? 'bg-accent-solid text-white'
+                      : 'text-white/80 hover:bg-white/15',
+                  ].join(' ')}
+                >
+                  <FieldIcon name={tool.icon} className="h-5 w-5" />
+                </button>
+              )
+            })}
+            <div className="mx-1 h-px bg-white/20" />
+            <button
+              type="button"
+              aria-pressed={gunLocked}
+              disabled={!gun}
+              title={
+                gunLocked
+                  ? ru ? 'Орудие закреплено — нажмите, чтобы освободить' : 'Gun locked — tap to unlock'
+                  : ru ? 'Закрепить орудие (и его высоту)' : 'Lock the gun (and its height)'
+              }
+              aria-label={ru ? 'Закрепить орудие' : 'Lock the gun'}
+              onClick={toggleGunLock}
+              className={[
+                'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                gunLocked ? 'bg-warn/90 text-black' : 'text-white/80 hover:bg-white/15',
+              ].join(' ')}
+            >
+              <FieldIcon name={gunLocked ? 'lock' : 'unlock'} className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Слева: быстрый выбор сохранённых целей */}
+          {quickTargets.length > 0 && (
+            <div className="absolute top-2 left-2 flex max-w-[55%] flex-col items-start gap-1">
+              <button
+                type="button"
+                aria-expanded={targetsOpen}
+                onClick={() => setTargetsOpen((v) => !v)}
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+              >
+                <FieldIcon name="list" className="h-5 w-5" />
+                {ru ? 'Цели' : 'Targets'}
+                <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
+                  {quickTargets.length}
+                </span>
+              </button>
+              {targetsOpen && (
+                <ul className="max-h-[min(22rem,60%)] w-48 max-w-full overflow-y-auto rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm">
+                  {quickTargets.map((t) => (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        aria-current={t.active ? 'true' : undefined}
+                        onClick={() => onPickJournalTarget?.(t.id)}
+                        className={[
+                          'flex w-full cursor-pointer flex-col rounded-md px-2 py-1 text-left transition-colors',
+                          t.active
+                            ? 'bg-accent-solid text-white'
+                            : 'text-white/90 hover:bg-white/15',
+                        ].join(' ')}
+                      >
+                        <span className="truncate text-[13px] font-medium">{t.name}</span>
+                        <span className="truncate text-[11.5px] tabular-nums opacity-70">
+                          {t.detail}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1027,26 +1169,17 @@ export function MapPicker({
         )}
         {(maps.length > 0 || builtin.length > 0) && !adding && (
           <button type="button" className="btn" onClick={() => setAdding(true)}>
-            {ru ? '+ Карта' : '+ Map'}
+            <FieldIcon name="plus" />
+            {ru ? 'Карта' : 'Map'}
           </button>
         )}
         {map && !adding && (
           <>
-            <Toggle
-              label={ru ? 'Что ставит касание' : 'Tap places'}
-              value={placing}
-              onChange={setPlacing}
-              options={[
-                { value: 'gun', label: ru ? 'орудие' : 'gun' },
-                { value: 'target', label: ru ? 'цель' : 'target' },
-                { value: 'marker', label: ru ? 'метка' : 'marker' },
-                { value: 'line', label: ru ? 'линия' : 'line' },
-              ]}
-            />
             <div className="ml-auto flex gap-1">
-              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}>−</button>
-              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}>+</button>
+              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}><FieldIcon name="minus" /></button>
+              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}><FieldIcon name="plus" /></button>
               <button type="button" className="btn" onClick={() => setView(null)}>
+                <FieldIcon name="fit" />
                 {ru ? 'Вся' : 'Fit'}
               </button>
             </div>
@@ -1224,9 +1357,13 @@ export function MapPicker({
             </div>
           )}
 
+          {showMarkers && (
           <details className="disclosure panel mt-3 p-4">
             <summary>
-              {ru ? 'Метки' : 'Markers'}
+              <span className="inline-flex items-center gap-2">
+                <FieldIcon name="marker" className="h-5 w-5 text-app-muted" />
+                {ru ? 'Метки' : 'Markers'}
+              </span>
               <span className="tag">{markers.length}</span>
             </summary>
 
@@ -1261,8 +1398,11 @@ export function MapPicker({
               </button>
             </div>
           </details>
+          )}
 
-          <ScreenMarkers world={map.world} author={author} language={language} />
+          {showMarkers && showScreenMarkers && (
+            <ScreenMarkers world={map.world} author={author} language={language} />
+          )}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[13px] text-app-muted">

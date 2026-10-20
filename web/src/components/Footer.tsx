@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
 import { syncStatusColor, useSync } from '../lib/syncContext'
@@ -155,6 +156,7 @@ export function Footer({ view, onViewChange, language, onLanguageChange }: Props
           <span
             className={`h-2 w-2 rounded-full ${syncStatusColor(sync.enabled ? sync.status : 'off')}`}
           />
+          <FieldIcon name="link" className="h-[18px] w-[18px]" />
           {ru ? 'Связка' : 'Link'}
           {sync.enabled && sync.code && (
             <span className="text-app-muted">{sync.code}</span>

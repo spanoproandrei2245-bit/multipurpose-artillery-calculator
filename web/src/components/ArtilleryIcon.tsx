@@ -1,15 +1,7 @@
 import type { ArtilleryCategory } from '../types/gameModel'
 import type { Language } from '../types/settings'
-import { categoryLabels } from '../data/categories'
+import { categoryLabels, categoryMarks } from '../data/categories'
 
-// Класс орудия — цветная точка в углу значка:
-// миномёт — зелёная, буксируемое — жёлтая, САУ — красная, РСЗО — синяя.
-const categoryMarks: Record<ArtilleryCategory, string> = {
-  mortar: 'bg-ok',
-  towed: 'bg-warn',
-  spg: 'bg-danger',
-  mlrs: 'bg-info',
-}
 
 // Линейные значки в сетке 24×24: контур 1.5, скруглённые стыки.
 function Glyph({ category }: { category: ArtilleryCategory }) {
@@ -59,8 +51,8 @@ function Glyph({ category }: { category: ArtilleryCategory }) {
 
 interface Props {
   category: ArtilleryCategory
-  // sm — в списке, md — в карточках
-  size?: 'sm' | 'md'
+  // xs — на кнопке выбора, sm — в списке, md — в карточках
+  size?: 'xs' | 'sm' | 'md'
   language: Language
 }
 
@@ -70,12 +62,12 @@ export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
       title={categoryLabels[category][language]}
       className={[
         'relative inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
-        size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',
+        size === 'xs' ? 'h-7 w-7' : size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',
       ].join(' ')}
     >
       <span
         aria-hidden="true"
-        className={`absolute top-1 right-1 h-1.5 w-1.5 rounded-full ${categoryMarks[category]}`}
+        className={`absolute top-0.5 left-0.5 h-1.5 w-1.5 rounded-full ${categoryMarks[category]}`}
       />
       <svg
         viewBox="0 0 24 24"
@@ -85,7 +77,7 @@ export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        className={size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'}
+        className={size === 'xs' ? 'h-[18px] w-[18px]' : size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'}
       >
         <Glyph category={category} />
       </svg>

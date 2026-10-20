@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState } from 'react'
 
 import { playSound } from '../lib/sound'
@@ -105,7 +106,8 @@ export function TotPanel({
       open={impactAt !== null || undefined}
     >
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="clock" className="h-5 w-5 text-app-muted" />
           {ru ? 'Огонь по времени · TOT' : 'Time on target · TOT'}
         </span>
         {impactAt !== null && (

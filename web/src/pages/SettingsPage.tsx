@@ -17,6 +17,10 @@ interface SettingsPageProps {
   onGridInputChange: (value: boolean) => void
   mapInput: boolean
   onMapInputChange: (value: boolean) => void
+  showMarkers: boolean
+  onShowMarkersChange: (value: boolean) => void
+  showScreenMarkers: boolean
+  onShowScreenMarkersChange: (value: boolean) => void
   keepAwake: boolean
   onKeepAwakeChange: (value: boolean) => void
 }
@@ -54,6 +58,10 @@ export function SettingsPage({
   onGridInputChange,
   mapInput,
   onMapInputChange,
+  showMarkers,
+  onShowMarkersChange,
+  showScreenMarkers,
+  onShowScreenMarkersChange,
   keepAwake,
   onKeepAwakeChange,
 }: SettingsPageProps) {
@@ -162,6 +170,27 @@ export function SettingsPage({
                 onChange={onMapInputChange}
                 label={t.mapInput}
                 description={t.mapInputDescription}
+              />
+              <Switch
+                checked={showMarkers}
+                onChange={onShowMarkersChange}
+                label={language === 'ru' ? 'Метки на карте' : 'Map markers'}
+                description={
+                  language === 'ru'
+                    ? 'Панель меток, инструмент «метка» и метки от стрелков по связке.'
+                    : 'The markers panel, the marker tool and markers from gunners over the link.'
+                }
+              />
+              <Switch
+                checked={showScreenMarkers}
+                onChange={onShowScreenMarkersChange}
+                label={language === 'ru' ? 'Метки с экрана игры' : 'Markers from the game screen'}
+                description={
+                  language === 'ru'
+                    ? 'Распознавание меток со скриншота карты игры. Работает только вместе с метками на карте.'
+                    : 'Recognise markers on a game map screenshot. Needs the map markers above.'
+                }
+                disabled={!showMarkers}
               />
               <Switch
                 checked={gridInput}

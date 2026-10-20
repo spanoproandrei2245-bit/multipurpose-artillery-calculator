@@ -22,6 +22,8 @@ interface DashboardPageProps {
   language: Language
   gridInput: boolean
   mapInput: boolean
+  showMarkers: boolean
+  showScreenMarkers: boolean
 }
 
 interface LoadRequest {
@@ -35,6 +37,8 @@ export function DashboardPage({
   language,
   gridInput,
   mapInput,
+  showMarkers,
+  showScreenMarkers,
 }: DashboardPageProps) {
   const journal = useJournal()
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
@@ -135,6 +139,8 @@ export function DashboardPage({
         initial={initial}
         gridInput={gridInput}
         mapInput={mapInput}
+        showMarkers={showMarkers}
+        showScreenMarkers={showScreenMarkers}
         activeEntry={activeEntry}
         journalEntries={journal.entries}
         onLoadEntry={(id) => {

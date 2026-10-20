@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import {
   useEffect,
   useImperativeHandle,
@@ -135,6 +136,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
     <div className="mt-4 rounded-lg bg-app-surface p-3">
       <div className="flex gap-2">
         <button type="button" onClick={fire} className="btn btn-primary btn-lg flex-1">
+          <FieldIcon name="fire" className="h-5 w-5" />
           {shot
             ? ru
               ? 'Огонь ещё'
@@ -153,6 +155,7 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
             onClick={() => setShot(null)}
             className="btn min-h-12"
           >
+            <FieldIcon name="stop" className="h-4 w-4" />
             {ru ? 'Стоп' : 'Stop'}
           </button>
         )}
@@ -162,8 +165,9 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           aria-pressed={sound}
           onClick={() => setSound((value) => !value)}
           title={ru ? 'Звуковой сигнал' : 'Sound'}
-          className={['btn min-h-12', sound ? '' : 'text-app-faint line-through'].join(' ')}
+          className={['btn min-h-12', sound ? '' : 'text-app-faint'].join(' ')}
         >
+          <FieldIcon name={sound ? 'sound' : 'soundOff'} className="h-5 w-5" />
           {ru ? 'Звук' : 'Sound'}
         </button>
       </div>

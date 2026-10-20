@@ -45,7 +45,7 @@ export function NumberField({
       {/* Фиксированная высота строки подписи: поля в соседних
           колонках выравниваются, даже если у одного есть переключатель. */}
       <div className="mb-1.5 flex min-h-7 items-center justify-between gap-2">
-        <label htmlFor={id} className="label flex items-center gap-1.5">
+        <label htmlFor={id} className="label flex items-center gap-1.5 whitespace-nowrap">
           {icon && <FieldIcon name={icon} />}
           {label}
         </label>
@@ -78,7 +78,12 @@ export function NumberField({
 
 interface ToggleProps<T extends string> {
   value: T
-  options: readonly { value: T; label: string; disabled?: boolean }[]
+  options: readonly {
+    value: T
+    label: string
+    disabled?: boolean
+    icon?: FieldIconName
+  }[]
   onChange: (value: T) => void
   label: string
 }
@@ -99,6 +104,7 @@ export function Toggle<T extends string>({
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
         >
+          {option.icon && <FieldIcon name={option.icon} className="h-3.5 w-3.5" />}
           {option.label}
         </button>
       ))}

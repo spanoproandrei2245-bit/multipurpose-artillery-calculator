@@ -9,7 +9,8 @@ import {
 } from 'react'
 
 import { artilleryRegistry } from '../data/artillery/registry'
-import type { ModelId } from '../data/models'
+import { models, type ModelId } from '../data/models'
+import type { ArtilleryCategory } from '../types/gameModel'
 import {
   degToMil,
   isLargeCorrection,
@@ -34,6 +35,7 @@ import {
 } from '../lib/input'
 import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
+import { recentEntries } from '../lib/journal'
 import type {
   AngleUnit,
   JournalDraft,
@@ -93,6 +95,9 @@ interface Props {
   gridInput?: boolean
   // Экспериментальная карта с высотами (из настроек)
   mapInput?: boolean
+  // Метки на карте и метки с экрана игры (из настроек)
+  showMarkers?: boolean
+  showScreenMarkers?: boolean
   // Выбор модели — в одной строке с выбором боеприпаса
   modelSelector?: ReactNode
   // Полоска быстрого выбора сохранённых целей
@@ -112,6 +117,8 @@ export function ArtilleryCalculator({
   initial = null,
   gridInput = false,
   mapInput = false,
+  showMarkers = false,
+  showScreenMarkers = false,
   modelSelector,
   targetBar,
   activeEntry = null,
@@ -475,8 +482,13 @@ export function ArtilleryCalculator({
   const totalRangeCorrection = rangeAdjust + (w?.total ?? 0)
 
   // ---- одновременный удар: все заряды во всех режимах ----
+  // Только орудиям, которые успевают сменить заряд и возвышение между
+  // выстрелами (буксируемые и САУ). Миномёт и РСЗО — нет: заряд мины
+  // меняют руками, а пусковую не перенаведёшь за секунды.
+  const category = models[modelId].category as ArtilleryCategory
+  const mrsiAllowed = category === 'towed' || category === 'spg'
   const mrsiOptions: MrsiOption[] =
-    profile && baseRange !== null
+    mrsiAllowed && profile && baseRange !== null
       ? profileModes.flatMap((item) =>
           (item === mode
             ? results
@@ -502,6 +514,35 @@ export function ArtilleryCalculator({
           )
         )
       : []
+
+  // Быстрый список сохранённых целей на карте
+  const quickTargets = useMemo(
+    () =>
+      recentEntries(journalEntries, 12).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        detail: `${entry.distance} ${ru ? 'м' : 'm'} · ${Math.round(entry.elevation)} ${ru ? 'мил' : 'mil'}`,
+        active: entry.id === (activeEntry?.id ?? null),
+      })),
+    [journalEntries, activeEntry, ru]
+  )
+
+  // Закрепление орудия на карте закрепляет и высоту орудия — как будто
+  // её ввели и заблокировали руками. Освобождение снимает только то
+  // закрепление, которое поставила карта.
+  const heightAutoLocked = useRef(false)
+  function handleGunLock(locked: boolean, height: number | null) {
+    if (locked) {
+      if (height !== null) setOwnHeightRaw(String(Math.round(height)))
+      if (!heightLocked) {
+        heightAutoLocked.current = true
+        setHeightLocked(true)
+      }
+    } else if (heightAutoLocked.current) {
+      heightAutoLocked.current = false
+      setHeightLocked(false)
+    }
+  }
 
   // ---- цели журнала, поставленные на карте ----
   const activeEntryId = activeEntry?.id ?? null
@@ -707,6 +748,10 @@ export function ArtilleryCalculator({
                   language={language}
                   currentTarget={mapTarget}
                   journalTargets={journalTargets}
+                  quickTargets={quickTargets}
+                  onGunLockChange={handleGunLock}
+                  showMarkers={showMarkers}
+                  showScreenMarkers={showScreenMarkers}
                   onPickJournalTarget={onLoadEntry}
                   onApply={(selection) => {
                     setDistance(String(Math.round(selection.distance)))
@@ -934,6 +979,7 @@ export function ArtilleryCalculator({
                 selectedId={ammoId}
                 onSelect={handleAmmoChange}
                 language={language}
+                category={category}
               />
             </Row>
           </dl>
@@ -1081,6 +1127,7 @@ export function ArtilleryCalculator({
                   onClick={() => setCombatOpen(true)}
                   className="btn flex-1"
                 >
+                  <FieldIcon name="combat" className="h-[18px] w-[18px]" />
                   {ru ? 'Боевой экран' : 'Combat screen'}
                   <span className="kbd hidden sm:inline-block">B</span>
                 </button>
@@ -1115,6 +1162,7 @@ export function ArtilleryCalculator({
                   className="field min-w-0 flex-1"
                 />
                 <button type="button" onClick={handleSave} className="btn btn-primary">
+                  <FieldIcon name="save" className="h-[18px] w-[18px]" />
                   {justSaved === 'saved'
                     ? ru
                       ? 'Сохранено ✓'
@@ -1234,7 +1282,10 @@ export function ArtilleryCalculator({
           {results.length > 0 && (
             <details className="disclosure panel p-4 sm:p-5">
               <summary>
-                {ru ? 'Заряды' : 'Charges'}
+                <span className="inline-flex items-center gap-2">
+                  <FieldIcon name="charge" className="h-5 w-5 text-app-muted" />
+                  {ru ? 'Заряды' : 'Charges'}
+                </span>
                 {activeResult && (
                   <span className="tag">
                     {ru ? 'выбран' : 'selected'} {activeResult.charge}
@@ -1379,11 +1430,13 @@ export function ArtilleryCalculator({
           aria-expanded={showKeys}
           className="btn btn-ghost hidden sm:inline-flex"
         >
+          <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
           {ru ? 'Горячие клавиши' : 'Shortcuts'}
           <span className="kbd">?</span>
         </button>
 
         <button type="button" onClick={resetForm} className="btn btn-ghost btn-danger ml-auto">
+          <FieldIcon name="trash" className="h-[18px] w-[18px]" />
           {ru ? 'Очистить поля' : 'Clear inputs'}
         </button>
       </div>

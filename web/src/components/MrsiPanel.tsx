@@ -1,3 +1,4 @@
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState } from 'react'
 
 import { parseNumber, readStoredText, writeStored } from '../lib/input'
@@ -93,7 +94,8 @@ export function MrsiPanel({ options, showMode, language }: Props) {
   return (
     <details className="disclosure mt-4 rounded-lg bg-app-raised p-3">
       <summary>
-        <span className="text-app-text">
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="stack" className="h-5 w-5 text-app-muted" />
           {ru ? 'Одновременный удар · MRSI' : 'Simultaneous impact · MRSI'}
         </span>
         <span className="tag">
@@ -148,6 +150,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
           onClick={start}
           className="btn btn-primary"
         >
+          <FieldIcon name="fire" />
           {startedAt === null
             ? ru
               ? 'Старт MRSI'
