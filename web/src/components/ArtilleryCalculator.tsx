@@ -29,6 +29,7 @@ import {
   numberToField,
   parseNumber,
   readStored,
+  readStoredText,
   writeStored,
 } from '../lib/input'
 import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
@@ -58,6 +59,8 @@ import type { ArtilleryMode } from '../types/artillery'
 import type { Language } from '../types/settings'
 import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
+import { Dropdown } from './Dropdown'
+import { FieldIcon } from './FieldIcon'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
@@ -133,9 +136,23 @@ export function ArtilleryCalculator({
       : (ammunition[0]?.id ?? '')
   )
   const [distance, setDistance] = useState(numberToField(initial?.distance))
-  const [ownHeight, setOwnHeight] = useState(
-    numberToField(initial?.ownHeight)
+  // Высота орудия: блокировка сохраняет значение между запусками и
+  // защищает его от карты, журнала и «Сброса».
+  const [heightLocked, setHeightLocked] = useState(
+    () => readStored<'on' | 'off'>('ownHeightLocked', ['on', 'off'], 'off') === 'on'
   )
+  const [ownHeight, setOwnHeightRaw] = useState(() =>
+    readStored<'on' | 'off'>('ownHeightLocked', ['on', 'off'], 'off') === 'on'
+      ? readStoredText('ownHeightValue')
+      : numberToField(initial?.ownHeight)
+  )
+  const setOwnHeight = (value: string) => {
+    if (!heightLocked) setOwnHeightRaw(value)
+  }
+  useEffect(() => {
+    writeStored('ownHeightLocked', heightLocked ? 'on' : 'off')
+    if (heightLocked) writeStored('ownHeightValue', ownHeight)
+  }, [heightLocked, ownHeight])
   const [targetHeight, setTargetHeight] = useState(
     numberToField(initial?.targetHeight)
   )
@@ -727,7 +744,7 @@ export function ArtilleryCalculator({
         {/* ---- Решение и вводные: «подпись — значение» ---- */}
         <div className="min-w-0">
           <dl>
-            <Row label={ru ? 'Возвышение' : 'Elevation'}>
+            <Row icon="elevation" label={ru ? 'Возвышение' : 'Elevation'}>
               <span
                 className={[
                   'text-2xl font-semibold tabular-nums',
@@ -738,7 +755,7 @@ export function ArtilleryCalculator({
               </span>
               <span className="w-7 text-left text-app-muted">{unitMil}</span>
             </Row>
-            <Row label={ru ? 'Азимут' : 'Azimuth'}>
+            <Row icon="azimuth" label={ru ? 'Азимут' : 'Azimuth'}>
               <span
                 className={[
                   'text-2xl font-semibold tabular-nums',
@@ -751,37 +768,66 @@ export function ArtilleryCalculator({
                 {unitAzimuth}
               </span>
             </Row>
-            <Row label={ru ? 'Время полёта' : 'Time of flight'}>
+            <Row icon="time" label={ru ? 'Время полёта' : 'Time of flight'}>
               {solution ? solution.tof.toFixed(1) : '—'}
               <span className="w-7 text-left text-app-muted">{unitS}</span>
             </Row>
-            <Row label={ru ? 'Заряд' : 'Charge'} htmlFor="calc-charge">
-              <select
-                id="calc-charge"
-                value={chargeValue}
+            <Row icon="charge" label={ru ? 'Заряд' : 'Charge'}>
+              {/* «Быстрый» — заряд с наименьшим временем полёта,
+                  «точный» — с наименьшим «1 мил ≈ X м». Оба
+                  пересчитываются при смене дистанции. */}
+              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg">
+                {(['fastest', 'precise'] as const).map((preference) => (
+                  <button
+                    key={preference}
+                    type="button"
+                    disabled={applicable.length === 0}
+                    aria-pressed={
+                      chosenCharge === null && chargePreference === preference
+                    }
+                    onClick={() => {
+                      setChargePreference(preference)
+                      setChosenCharge(null)
+                      markEdited()
+                    }}
+                  >
+                    {preference === 'fastest'
+                      ? ru ? 'быстрый' : 'fast'
+                      : ru ? 'точный' : 'precise'}
+                  </button>
+                ))}
+              </div>
+              <Dropdown
+                label={ru ? 'Заряд' : 'Charge'}
                 disabled={applicable.length === 0}
-                onChange={(event) => {
-                  const value = event.target.value
+                value={chargeValue}
+                onChange={(value) => {
+                  if (value === 'auto') setChargePreference('lowest')
                   setChosenCharge(value === 'auto' ? null : Number(value))
                   markEdited()
                 }}
-                className="field w-auto"
-              >
-                <option value="auto">
-                  {ru ? 'Авто' : 'Auto'}
-                  {activeResult && chargeValue === 'auto'
-                    ? ` · ${activeResult.charge}`
-                    : ''}
-                </option>
-                {applicable.map((result) => (
-                  <option key={result.charge} value={result.charge}>
-                    {ru ? 'Заряд' : 'Charge'} {result.charge}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  {
+                    value: 'auto',
+                    label:
+                      (ru ? 'Авто' : 'Auto') +
+                      (activeResult && chargeValue === 'auto'
+                        ? ` · ${activeResult.charge}`
+                        : ''),
+                    description: ru ? 'наименьший подходящий' : 'lowest that fits',
+                  },
+                  ...applicable.map((result) => ({
+                    value: String(result.charge),
+                    label: `${ru ? 'Заряд' : 'Charge'} ${result.charge}`,
+                    description: result.solution
+                      ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
+                      : undefined,
+                  })),
+                ]}
+              />
             </Row>
             {profileModes.length > 1 && (
-              <Row label={ru ? 'Траектория' : 'Trajectory'}>
+              <Row icon="trajectory" label={ru ? 'Траектория' : 'Trajectory'}>
                 <Toggle
                   label={ru ? 'Режим траектории' : 'Trajectory mode'}
                   value={mode}
@@ -805,7 +851,7 @@ export function ArtilleryCalculator({
           <div className="my-3 h-px bg-app-border" />
 
           <dl>
-            <Row label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
+            <Row icon="distance" label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
               <InlineNumber
                 id="calc-distance"
                 value={distance}
@@ -816,7 +862,7 @@ export function ArtilleryCalculator({
                 unit={unitM}
               />
             </Row>
-            <Row label={ru ? 'Азимут на цель' : 'Target bearing'} htmlFor="calc-azimuth">
+            <Row icon="azimuth" label={ru ? 'Азимут на цель' : 'Target bearing'} htmlFor="calc-azimuth">
               <Toggle
                 label={ru ? 'Единицы азимута' : 'Azimuth units'}
                 value={azimuthUnit}
@@ -836,15 +882,7 @@ export function ArtilleryCalculator({
                 placeholder={ru ? 'не задан' : 'not set'}
               />
             </Row>
-            <Row label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
-              <InlineNumber
-                id="calc-own-height"
-                value={ownHeight}
-                onChange={edited(setOwnHeight)}
-                unit={unitM}
-              />
-            </Row>
-            <Row label={ru ? 'Высота цели' : 'Target height'} htmlFor="calc-target-height">
+            <Row icon="targetHeight" label={ru ? 'Высота цели' : 'Target height'} htmlFor="calc-target-height">
               <InlineNumber
                 id="calc-target-height"
                 value={targetHeight}
@@ -857,8 +895,40 @@ export function ArtilleryCalculator({
           <div className="my-3 h-px bg-app-border" />
 
           <dl>
-            <Row label={ru ? 'Орудие' : 'Weapon'}>{modelSelector}</Row>
-            <Row label={ru ? 'Снаряд' : 'Shell'}>
+            <Row icon="weapon" label={ru ? 'Орудие' : 'Weapon'}>{modelSelector}</Row>
+            <Row icon="gunHeight" label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
+              <button
+                type="button"
+                aria-pressed={heightLocked}
+                aria-label={
+                  heightLocked
+                    ? ru ? 'Разблокировать высоту орудия' : 'Unlock gun height'
+                    : ru ? 'Заблокировать высоту орудия' : 'Lock gun height'
+                }
+                title={
+                  heightLocked
+                    ? ru ? 'Высота закреплена: её не меняют карта, журнал и сброс' : 'Locked: map, journal and reset leave it alone'
+                    : ru ? 'Закрепить высоту орудия' : 'Lock the gun height'
+                }
+                onClick={() => setHeightLocked((v) => !v)}
+                className={[
+                  'inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors',
+                  heightLocked
+                    ? 'bg-accent-soft text-accent'
+                    : 'bg-app-raised text-app-muted hover:bg-app-raised-hover hover:text-app-text',
+                ].join(' ')}
+              >
+                <FieldIcon name={heightLocked ? 'lock' : 'unlock'} className="h-[18px] w-[18px]" />
+              </button>
+              <InlineNumber
+                id="calc-own-height"
+                value={ownHeight}
+                onChange={edited(setOwnHeight)}
+                readOnly={heightLocked}
+                unit={unitM}
+              />
+            </Row>
+            <Row icon="shell" label={ru ? 'Снаряд' : 'Shell'}>
               <AmmunitionSelector
                 ammunition={ammunition}
                 selectedId={ammoId}

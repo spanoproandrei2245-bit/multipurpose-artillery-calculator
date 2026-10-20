@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { isInvalid } from '../lib/input'
+import { FieldIcon, type FieldIconName } from './FieldIcon'
 
 export const inputClass = 'field field-lg'
 
@@ -19,6 +20,8 @@ interface FieldProps {
   // Текстовое поле без проверки числа (например, координаты)
   inputMode?: 'decimal' | 'numeric'
   validate?: boolean
+  // Значок-подсказка перед подписью
+  icon?: FieldIconName
 }
 
 export function NumberField({
@@ -33,6 +36,7 @@ export function NumberField({
   inputMode = 'decimal',
   onEnter,
   validate = true,
+  icon,
 }: FieldProps) {
   const invalid = validate && isInvalid(value)
 
@@ -41,7 +45,8 @@ export function NumberField({
       {/* Фиксированная высота строки подписи: поля в соседних
           колонках выравниваются, даже если у одного есть переключатель. */}
       <div className="mb-1.5 flex min-h-7 items-center justify-between gap-2">
-        <label htmlFor={id} className="label">
+        <label htmlFor={id} className="label flex items-center gap-1.5">
+          {icon && <FieldIcon name={icon} />}
           {label}
         </label>
         {aside}
@@ -198,16 +203,21 @@ export function Switch({
 export function Row({
   label,
   htmlFor,
+  icon,
   children,
 }: {
   label: ReactNode
   htmlFor?: string
+  icon?: FieldIconName
   children: ReactNode
 }) {
   return (
     <div className="row">
-      <dt className="min-w-0">
-        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+      <dt className="flex min-w-0 items-center gap-2">
+        {icon && <FieldIcon name={icon} className="h-[18px] w-[18px] text-app-muted" />}
+        <span className="min-w-0">
+          {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+        </span>
       </dt>
       <dd className="flex min-w-0 items-center justify-end gap-2">{children}</dd>
     </div>
@@ -222,6 +232,7 @@ export function InlineNumber({
   unit,
   placeholder = '0',
   label,
+  readOnly = false,
 }: {
   id: string
   value: string
@@ -230,6 +241,7 @@ export function InlineNumber({
   placeholder?: string
   // Подпись для экранного диктора, если строка без <label>
   label?: string
+  readOnly?: boolean
 }) {
   return (
     <>
@@ -243,7 +255,8 @@ export function InlineNumber({
         placeholder={placeholder}
         aria-label={label}
         aria-invalid={isInvalid(value)}
-        className="field field-inline"
+        readOnly={readOnly}
+        className={`field field-inline ${readOnly ? 'opacity-60' : ''}`}
       />
       {unit && <span className="w-7 text-left text-app-muted">{unit}</span>}
     </>

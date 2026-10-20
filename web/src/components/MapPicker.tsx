@@ -11,6 +11,13 @@ import {
   type Heightmap,
   type MapPoint,
 } from '../lib/heightmap'
+import {
+  aimPoints,
+  DEFAULT_LINE_WEAPON,
+  LINE_WEAPONS,
+  polylineLength,
+  type LineWeapon,
+} from '../lib/fireLine'
 import { parseGrid } from '../lib/grid'
 import { readStoredText, writeStored } from '../lib/input'
 import {
@@ -37,6 +44,7 @@ import { renderRelief, type ReliefPalette } from '../lib/relief'
 import {
   listBuiltinMaps,
   loadBuiltinMap,
+  mapKind,
   tileLevel,
   visibleTiles,
   type BuiltinMapEntry,
@@ -44,6 +52,7 @@ import {
 } from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
+import { Dropdown } from './Dropdown'
 import { Toggle } from './FormControls'
 import { ScreenMarkers } from './ScreenMarkers'
 
@@ -83,7 +92,7 @@ interface View {
   scale: number
 }
 
-type Placing = 'gun' | 'target' | 'marker'
+type Placing = 'gun' | 'target' | 'marker' | 'line'
 
 // Клик ближе — попадание в метку, пиксели
 const MARKER_HIT_PX = 14
@@ -121,6 +130,26 @@ function readGun(world: string): MapPoint | null {
     // Нет сохранённой позиции
   }
   return null
+}
+
+function readLine(world: string): MapPoint[] {
+  try {
+    const value = JSON.parse(readStoredText(`mapLine:${world}`)) as unknown
+    if (Array.isArray(value)) {
+      return value
+        .filter(
+          (p): p is MapPoint =>
+            typeof p === 'object' &&
+            p !== null &&
+            typeof (p as MapPoint).x === 'number' &&
+            typeof (p as MapPoint).y === 'number'
+        )
+        .slice(0, 50)
+    }
+  } catch {
+    // Нет сохранённой линии
+  }
+  return []
 }
 
 function createReliefCanvas(
@@ -175,6 +204,21 @@ export function MapPicker({
   const [gun, setGun] = useState<MapPoint | null>(null)
   const [target, setTarget] = useState<MapPoint | null>(null)
   const [placing, setPlacing] = useState<Placing>('gun')
+
+  // Линия огня: ломаная из точек, оружие (радиус поражения) и номер
+  // точки прицеливания, по которой стреляют сейчас
+  const [linePoints, setLinePoints] = useState<MapPoint[]>([])
+  const [lineWeaponId, setLineWeaponId] = useState<LineWeapon['id']>(() =>
+    LINE_WEAPONS.find((w) => w.id === readStoredText('lineWeapon'))?.id ??
+    DEFAULT_LINE_WEAPON
+  )
+  const lineWeapon =
+    LINE_WEAPONS.find((w) => w.id === lineWeaponId) ?? LINE_WEAPONS[0]
+  const [lineIndex, setLineIndex] = useState<number | null>(null)
+  const lineAim = useMemo(
+    () => aimPoints(linePoints, lineWeapon.radius),
+    [linePoints, lineWeapon.radius]
+  )
 
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [view, setView] = useState<View | null>(null)
@@ -274,6 +318,8 @@ export function MapPicker({
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
         setGun(readGun(world))
+        setLinePoints(readLine(world))
+        setLineIndex(null)
         setTarget(
           currentTarget?.world === world
             ? { x: currentTarget.x, y: currentTarget.y }
@@ -595,6 +641,56 @@ export function MapPicker({
       ctx.setLineDash([])
     }
 
+    // Линия огня по цели (лесополоса): полоса поражения, ось и точки
+    if (linePoints.length > 0) {
+      const pts = linePoints.map(toScreen)
+      const lineColor = '#ffb020'
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      if (pts.length > 1) {
+        // Полоса шириной в зону поражения
+        ctx.strokeStyle = 'rgba(255,176,32,0.22)'
+        ctx.lineWidth = Math.max(4, lineWeapon.radius * 2 * scale)
+        ctx.beginPath()
+        pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+        ctx.stroke()
+        ctx.strokeStyle = lineColor
+        ctx.lineWidth = 2
+        ctx.setLineDash([7, 5])
+        ctx.beginPath()
+        pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      ctx.lineCap = 'butt'
+      ctx.lineJoin = 'miter'
+      for (const p of pts) {
+        ctx.fillStyle = lineColor
+        ctx.strokeStyle = ink.outline
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      }
+      ctx.font = 'bold 11px ' + sans
+      ctx.textAlign = 'center'
+      lineAim.forEach((point, i) => {
+        const p = toScreen(point)
+        const current = i === lineIndex
+        ctx.strokeStyle = current ? '#ffffff' : lineColor
+        ctx.lineWidth = current ? 2.5 : 1.5
+        ctx.fillStyle = current ? 'rgba(255,176,32,0.9)' : 'rgba(0,0,0,0.65)'
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 9, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        ctx.fillStyle = current ? '#000000' : '#ffffff'
+        ctx.fillText(String(i + 1), p.x, p.y + 4)
+      })
+      ctx.textAlign = 'start'
+    }
+
     // Линия огня
     if (gun && target) {
       const a = toScreen(gun)
@@ -633,7 +729,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -715,6 +811,20 @@ export function MapPicker({
     })
   }
 
+  function changeLine(points: MapPoint[]) {
+    setLinePoints(points)
+    setLineIndex(null)
+    if (map) writeStored(`mapLine:${map.world}`, JSON.stringify(points))
+  }
+
+  /** Точка линии огня — целью расчёта. */
+  function aimAt(index: number) {
+    const point = lineAim[index]
+    if (!point) return
+    setLineIndex(index)
+    placeTarget(point)
+  }
+
   function placeGun(point: MapPoint) {
     if (!map) return
     setGun(point)
@@ -751,6 +861,11 @@ export function MapPicker({
 
     if (action === 'marker') {
       setDraft({ point, label: '', color: markerColor })
+      return
+    }
+
+    if (action === 'line') {
+      changeLine([...linePoints, point])
       return
     }
 
@@ -878,24 +993,37 @@ export function MapPicker({
       {/* ---- Панель под картой ---- */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {(maps.length > 0 || builtin.length > 0) && (
-          <select
-            aria-label={ru ? 'Карта' : 'Map'}
+          <Dropdown
+            label={ru ? 'Карта' : 'Map'}
             value={mapKey}
-            onChange={(event) => openMap(event.target.value)}
-            className="field w-auto"
-          >
-            {!map && <option value="">—</option>}
-            {builtin.map((m) => (
-              <option key={`builtin:${m.world}`} value={`builtin:${m.world}`}>
-                {m.displayName}
-              </option>
-            ))}
-            {maps.map((m) => (
-              <option key={`local:${m.world}`} value={`local:${m.world}`}>
-                {m.world} · {ru ? 'свои высоты' : 'own heights'}
-              </option>
-            ))}
-          </select>
+            onChange={openMap}
+            alignLeft
+            placeholder="—"
+            options={[
+              // Официальные карты — выше карт сообщества
+              ...[...builtin]
+                .sort((a, b) => Number(mapKind(b) === 'official') - Number(mapKind(a) === 'official'))
+                .map((m) => ({
+                value: `builtin:${m.world}`,
+                label: m.displayName,
+                description: m.author ? `© ${m.author}` : undefined,
+                group:
+                  mapKind(m) === 'official'
+                    ? ru
+                      ? 'Официальные'
+                      : 'Official'
+                    : ru
+                      ? 'Сообщество'
+                      : 'Community',
+              })),
+              ...maps.map((m) => ({
+                value: `local:${m.world}`,
+                label: m.world,
+                description: ru ? 'свои высоты' : 'own heights',
+                group: ru ? 'Загруженные' : 'Imported',
+              })),
+            ]}
+          />
         )}
         {(maps.length > 0 || builtin.length > 0) && !adding && (
           <button type="button" className="btn" onClick={() => setAdding(true)}>
@@ -912,6 +1040,7 @@ export function MapPicker({
                 { value: 'gun', label: ru ? 'орудие' : 'gun' },
                 { value: 'target', label: ru ? 'цель' : 'target' },
                 { value: 'marker', label: ru ? 'метка' : 'marker' },
+                { value: 'line', label: ru ? 'линия' : 'line' },
               ]}
             />
             <div className="ml-auto flex gap-1">
@@ -942,6 +1071,125 @@ export function MapPicker({
                 ? 'цель не задана'
                 : 'no target'}
           </p>
+
+          {(placing === 'line' || linePoints.length > 0) && (
+            <div className="mt-3 rounded-lg bg-app-surface p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="label">
+                  {ru ? 'Огонь по линии' : 'Line fire'}
+                </span>
+                <Dropdown
+                  alignLeft
+                  label={ru ? 'Радиус поражения' : 'Kill radius'}
+                  value={lineWeaponId}
+                  onChange={(id) => {
+                    setLineWeaponId(id)
+                    setLineIndex(null)
+                    writeStored('lineWeapon', id)
+                  }}
+                  options={LINE_WEAPONS.map((w) => ({
+                    value: w.id,
+                    label: `${lineWeaponName(w.id, ru)} · ±${w.radius} ${unitM}`,
+                  }))}
+                />
+                <div className="ml-auto flex gap-1">
+                  <button
+                    type="button"
+                    className={buttonClass}
+                    disabled={linePoints.length === 0}
+                    onClick={() => changeLine(linePoints.slice(0, -1))}
+                  >
+                    {ru ? 'Убрать точку' : 'Undo point'}
+                  </button>
+                  <button
+                    type="button"
+                    className={buttonClass}
+                    disabled={linePoints.length === 0}
+                    onClick={() => changeLine([])}
+                  >
+                    {ru ? 'Стереть' : 'Clear'}
+                  </button>
+                </div>
+              </div>
+
+              {linePoints.length === 0 ? (
+                <p className="mt-2 text-[13px] text-app-muted">
+                  {ru
+                    ? 'Расставьте точки по лесополосе, дороге или траншее — приложение разложит по ней точки прицеливания.'
+                    : 'Tap points along a tree line, road or trench — the app lays aim points along it.'}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-[13px] text-app-muted tabular-nums">
+                    {ru ? 'Длина' : 'Length'}{' '}
+                    {Math.round(polylineLength(linePoints))} {unitM} ·{' '}
+                    {ru ? 'точек прицеливания' : 'aim points'} {lineAim.length}{' '}
+                    · {ru ? 'шаг' : 'spacing'} ≤ {lineWeapon.radius * 2} {unitM}
+                  </p>
+                  <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+                    {lineAim.map((point, i) => {
+                      const line = gun ? bearing(gun, point) : null
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          disabled={!gun}
+                          onClick={() => aimAt(i)}
+                          aria-pressed={lineIndex === i}
+                          title={toGridReference(point, 8)}
+                          className={[
+                            'rounded-md px-2.5 py-1 text-[13px] tabular-nums transition-colors',
+                            lineIndex === i
+                              ? 'bg-accent-soft ring-1 ring-accent'
+                              : 'bg-app-raised hover:bg-app-raised-hover',
+                            gun ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+                          ].join(' ')}
+                        >
+                          <b>{i + 1}</b>
+                          {line && (
+                            <span className="ml-1.5 text-app-muted">
+                              {Math.round(line.distance)} {unitM} ·{' '}
+                              {Math.round(line.azimuthMil)}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {!gun && (
+                    <p className="mt-2 text-[13px] text-app-muted">
+                      {ru
+                        ? 'Поставьте орудие — тогда точка станет целью расчёта одним нажатием.'
+                        : 'Place the gun — then one tap makes a point the target.'}
+                    </p>
+                  )}
+                  {gun && lineAim.length > 0 && (
+                    <div className="mt-2 flex gap-1.5">
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={lineIndex === null || lineIndex <= 0}
+                        onClick={() => aimAt((lineIndex ?? 1) - 1)}
+                      >
+                        ← {ru ? 'Предыдущая' : 'Previous'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={lineIndex !== null && lineIndex >= lineAim.length - 1}
+                        onClick={() => aimAt(lineIndex === null ? 0 : lineIndex + 1)}
+                      >
+                        {lineIndex === null
+                          ? ru ? 'Первая точка' : 'First point'
+                          : ru ? 'Следующая' : 'Next'}{' '}
+                        →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {draft && (
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-app-surface p-2">
@@ -1036,6 +1284,19 @@ export function MapPicker({
       )}
     </div>
   )
+}
+
+function lineWeaponName(id: LineWeapon['id'], ru: boolean): string {
+  switch (id) {
+    case 'mortar':
+      return ru ? 'Миномёт' : 'Mortar'
+    case 'artillery':
+      return ru ? 'Артиллерия' : 'Artillery'
+    case 'rocket':
+      return ru ? 'Реактивная' : 'Rocket'
+    case 'rocket-wide':
+      return ru ? 'Реактивная (широкий)' : 'Rocket (wide)'
+  }
 }
 
 function ColorPicker({

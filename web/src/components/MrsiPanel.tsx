@@ -109,6 +109,7 @@ export function MrsiPanel({ options, showMode, language }: Props) {
 
       <NumberField
         id="mrsi-gap"
+        icon="reload"
         className="mt-3"
         label={ru ? 'Перезарядка между выстрелами, с' : 'Reload between rounds, s'}
         value={gap}

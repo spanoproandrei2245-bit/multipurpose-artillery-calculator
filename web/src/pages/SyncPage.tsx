@@ -28,6 +28,7 @@ import {
 import { syncStatusColor, syncStatusText, useSync } from '../lib/syncContext'
 import { useHotkeys } from '../lib/useHotkeys'
 import { useWakeLock } from '../lib/useWakeLock'
+import { Dropdown } from '../components/Dropdown'
 import type { Language } from '../types/settings'
 
 interface Props {
@@ -306,19 +307,16 @@ function RoomCard({ language }: Props) {
           <span className="label">{ru ? 'Сервер связи' : 'Relay server'}</span>
         </summary>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <select
+          <Dropdown
+            label={ru ? 'Сервер связи' : 'Relay server'}
+            alignLeft
             value={sync.server}
-            onChange={(event) =>
-              sync.setServer(event.target.value as SyncServerId)
-            }
-            className="field w-auto py-1.5 text-xs"
-          >
-            {SYNC_SERVERS.map((server) => (
-              <option key={server.id} value={server.id}>
-                {new URL(server.url).hostname}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => sync.setServer(value as SyncServerId)}
+            options={SYNC_SERVERS.map((server) => ({
+              value: server.id,
+              label: new URL(server.url).hostname,
+            }))}
+          />
           <p className="text-xs text-app-muted">
             {ru
               ? 'Бесплатный публичный сервер MQTT. У всех в комнате должен быть один и тот же. Данные зашифрованы кодом комнаты — сервер их не видит.'

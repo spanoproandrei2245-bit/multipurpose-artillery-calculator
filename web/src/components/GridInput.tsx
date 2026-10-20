@@ -64,6 +64,7 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <NumberField
           id="grid-gun"
+          icon="grid"
           label={ru ? 'Сетка орудия' : 'Gun grid'}
           value={gunGrid}
           onChange={setGunGrid}
@@ -74,6 +75,7 @@ export function GridInput({ azimuthUnit, language, onApply }: Props) {
         />
         <NumberField
           id="grid-target"
+          icon="grid"
           label={ru ? 'Сетка цели' : 'Target grid'}
           value={targetGrid}
           onChange={setTargetGrid}

@@ -205,6 +205,7 @@ export function AdjustFire({
         {frame === 'observer' && (
           <NumberField
             id="adjust-observer"
+            icon="observer"
             className="sm:col-span-2"
             label={
               ru
@@ -227,6 +228,7 @@ export function AdjustFire({
 
         <NumberField
           id="adjust-range"
+          icon="distance"
           label={ru ? 'По дальности (м)' : 'Range (m)'}
           value={rangeMiss}
           onChange={setRangeMiss}
@@ -245,6 +247,7 @@ export function AdjustFire({
         />
         <NumberField
           id="adjust-lateral"
+          icon="correction"
           label={ru ? 'По направлению (м)' : 'Deflection (m)'}
           value={lateralMiss}
           onChange={setLateralMiss}

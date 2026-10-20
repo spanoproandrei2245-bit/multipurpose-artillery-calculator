@@ -1,4 +1,5 @@
 import type { Ammunition } from '../types/artillery'
+import { Dropdown } from './Dropdown'
 import type { Language } from '../types/settings'
 
 type AmmunitionOption = Pick<Ammunition, 'id' | 'designation' | 'type'>
@@ -39,17 +40,14 @@ export function AmmunitionSelector({
     ammunition.find((item) => item.id === selectedId) ?? ammunition[0]
 
   return (
-    <select
-      aria-label={ru ? 'Снаряд' : 'Shell'}
+    <Dropdown
+      label={ru ? 'Снаряд' : 'Shell'}
       value={selected.id}
-      onChange={(event) => onSelect(event.target.value)}
-      className="field w-auto"
-    >
-      {ammunition.map((item) => (
-        <option key={item.id} value={item.id}>
-          {formatLabel(item)}
-        </option>
-      ))}
-    </select>
+      onChange={onSelect}
+      options={ammunition.map((item) => ({
+        value: item.id,
+        label: formatLabel(item),
+      }))}
+    />
   )
 }

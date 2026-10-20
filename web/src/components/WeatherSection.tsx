@@ -98,12 +98,14 @@ export function WeatherSection({
           <>
             <NumberField
               id="calc-wind-speed"
+              icon="wind"
               label={ru ? 'Скорость ветра (м/с)' : 'Wind speed (m/s)'}
               value={w.windSpeed}
               onChange={edited(w.setWindSpeed)}
             />
             <NumberField
               id="calc-wind-from"
+              icon="windDirection"
               label={
                 ru
                   ? 'Откуда дует (°, 0 = с севера)'
@@ -117,6 +119,7 @@ export function WeatherSection({
           <>
             <NumberField
               id="calc-headwind"
+              icon="wind"
               label={`HEADWIND (${mps})`}
               value={w.headwind}
               onChange={edited(w.setHeadwind)}
@@ -134,6 +137,7 @@ export function WeatherSection({
             />
             <NumberField
               id="calc-crosswind"
+              icon="wind"
               label={`CROSSWIND (${mps})`}
               value={w.crosswind}
               onChange={edited(w.setCrosswind)}
@@ -159,6 +163,7 @@ export function WeatherSection({
 
         <NumberField
           id="calc-temperature"
+          icon="temperature"
           label={
             ru
               ? `Температура воздуха (°C, стандарт ${STANDARD_TEMPERATURE})`
@@ -169,6 +174,7 @@ export function WeatherSection({
         />
         <NumberField
           id="calc-pressure"
+          icon="pressure"
           label={
             ru ? 'Давление (гПа, стандарт 1013)' : 'Pressure (hPa, standard 1013)'
           }
