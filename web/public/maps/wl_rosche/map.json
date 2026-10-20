@@ -1,0 +1,21 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "wl_rosche",
+  "displayName": "Rosche, Germany (2.0)",
+  "author": "UnitedOperations.net Team",
+  "worldSize": 15360,
+  "background": "#3a4662",
+  "heights": {
+    "file": "heights.bin",
+    "step": 22.5,
+    "size": 683,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 960,
+    "ext": "webp"
+  }
+}

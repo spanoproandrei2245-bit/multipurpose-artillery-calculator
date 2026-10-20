@@ -1,21 +1,80 @@
 {
   "maps": [
     {
+      "world": "beketov",
+      "displayName": "Beketov",
+      "author": "Dead_Kennedy, SenChi",
+      "kind": "community",
+      "worldSize": 20480
+    },
+    {
+      "world": "dogechnya",
+      "displayName": "Dogechnya",
+      "author": "Ghostovich and friends",
+      "kind": "community",
+      "worldSize": 10240
+    },
+    {
+      "world": "farabad",
+      "displayName": "Farabad",
+      "author": "Jacko",
+      "kind": "community",
+      "worldSize": 10752
+    },
+    {
+      "world": "hellanmaa",
+      "displayName": "Hellanmaa",
+      "author": "Temppa",
+      "kind": "community",
+      "worldSize": 8192
+    },
+    {
+      "world": "islapera",
+      "displayName": "Isla Pera",
+      "author": "Jacko",
+      "kind": "community",
+      "worldSize": 10240
+    },
+    {
+      "world": "wl_rosche",
+      "displayName": "Rosche, Germany (2.0)",
+      "author": "UnitedOperations.net Team",
+      "kind": "community",
+      "worldSize": 15360
+    },
+    {
+      "world": "juju_sahatra",
+      "displayName": "Sa'hatra",
+      "author": "jujurat",
+      "kind": "community",
+      "worldSize": 8192
+    },
+    {
+      "world": "vr",
+      "displayName": "Virtual Reality",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 8192
+    },
+    {
       "world": "altis",
       "displayName": "Алтис",
       "author": "Bohemia Interactive",
+      "kind": "official",
       "worldSize": 30720
     },
     {
       "world": "stratis",
       "displayName": "Стратис",
       "author": "Bohemia Interactive",
+      "kind": "official",
       "worldSize": 8192
     },
     {
       "world": "tanoa",
       "displayName": "Таноа",
       "author": "Bohemia Interactive",
+      "kind": "official",
       "worldSize": 15360
     }
   ]

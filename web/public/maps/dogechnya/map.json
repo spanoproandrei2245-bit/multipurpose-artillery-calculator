@@ -1,0 +1,21 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "dogechnya",
+  "displayName": "Dogechnya",
+  "author": "Ghostovich and friends",
+  "worldSize": 10240,
+  "background": "#3a4662",
+  "heights": {
+    "file": "heights.bin",
+    "step": 20,
+    "size": 512,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 853.3333333333334,
+    "ext": "webp"
+  }
+}

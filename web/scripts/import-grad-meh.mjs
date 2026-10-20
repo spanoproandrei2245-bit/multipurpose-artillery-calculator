@@ -181,7 +181,9 @@ async function importMap(source) {
     tiles,
   }
   writeFileSync(new URL('map.json', outDir), JSON.stringify(map, null, 2) + '\n')
-  return { world, displayName: map.displayName, author: map.author, worldSize }
+  // Официальные карты — от Bohemia Interactive, остальные — от сообщества
+  const kind = /bohemia/i.test(map.author) ? 'official' : 'community'
+  return { world, displayName: map.displayName, author: map.author, kind, worldSize }
 }
 
 // ---- список карт ----

@@ -1,0 +1,21 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "beketov",
+  "displayName": "Beketov",
+  "author": "Dead_Kennedy, SenChi",
+  "worldSize": 20480,
+  "background": "#4d545e",
+  "heights": {
+    "file": "heights.bin",
+    "step": 20,
+    "size": 1024,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 6,
+    "metersPerTile": 1024,
+    "ext": "webp"
+  }
+}
