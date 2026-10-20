@@ -44,8 +44,8 @@ export function NumberField({
     <div className={className}>
       {/* Фиксированная высота строки подписи: поля в соседних
           колонках выравниваются, даже если у одного есть переключатель. */}
-      <div className="mb-1.5 flex min-h-7 items-center justify-between gap-2">
-        <label htmlFor={id} className="label flex items-center gap-1.5 whitespace-nowrap">
+      <div className="mb-1.5 flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <label htmlFor={id} className="label flex min-w-0 items-center gap-1.5">
           {icon && <FieldIcon name={icon} />}
           {label}
         </label>

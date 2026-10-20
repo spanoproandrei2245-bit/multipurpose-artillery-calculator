@@ -10,6 +10,10 @@ export interface DropdownOption<T extends string> {
   // Заголовок группы: выводится перед первой опцией с таким заголовком
   group?: string
   disabled?: boolean
+  // Справа в строке: превью, кнопка «в избранное»
+  trailing?: ReactNode
+  // Линия над строкой (отделяет действия от выбора)
+  divider?: boolean
 }
 
 interface DropdownProps<T extends string> {
@@ -25,6 +29,8 @@ interface DropdownProps<T extends string> {
   // Подпись на кнопке вместо подписи выбранной опции
   buttonLabel?: ReactNode
   className?: string
+  // field — поле с фоном; ghost — как значение в строке списка, фон при наведении
+  variant?: 'field' | 'ghost'
 }
 
 /**
@@ -41,6 +47,7 @@ export function Dropdown<T extends string>({
   alignLeft = false,
   buttonLabel,
   className = '',
+  variant = 'field',
 }: DropdownProps<T>) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -147,7 +154,12 @@ export function Dropdown<T extends string>({
             openList()
           }
         }}
-        className="field flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 pr-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
+        className={[
+          'flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50',
+          variant === 'ghost'
+            ? 'h-9 rounded-md pr-1.5 pl-2 text-app-text transition-colors hover:bg-app-raised-hover'
+            : 'field pr-2',
+        ].join(' ')}
       >
         <span className="min-w-0 truncate">
           {buttonLabel ?? current?.label ?? placeholder}
@@ -185,11 +197,12 @@ export function Dropdown<T extends string>({
           {options.map((option, index) => {
             const selected = index === selectedIndex
             const showGroup =
-              option.group !== undefined &&
+              !!option.group &&
               option.group !== options[index - 1]?.group
 
             return (
               <li key={option.value} role="presentation">
+                {option.divider && <div className="mx-1 my-1 h-px bg-app-border" />}
                 {showGroup && (
                   <div className="px-2 pt-2 pb-1 text-[11.5px] font-semibold tracking-wide text-app-faint uppercase">
                     {option.group}
@@ -230,6 +243,7 @@ export function Dropdown<T extends string>({
                       </span>
                     )}
                   </span>
+                  {option.trailing}
                   {selected && (
                     <svg
                       viewBox="0 0 24 24"

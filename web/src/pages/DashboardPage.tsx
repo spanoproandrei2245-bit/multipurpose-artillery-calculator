@@ -13,6 +13,7 @@ import {
   type JournalDraft,
   type JournalEntry,
 } from '../lib/journal'
+import { useFeature } from '../lib/features'
 import { useHotkeys } from '../lib/useHotkeys'
 import type { Language } from '../types/settings'
 
@@ -41,6 +42,7 @@ export function DashboardPage({
   showScreenMarkers,
 }: DashboardPageProps) {
   const journal = useJournal()
+  const showJournal = useFeature('journal')
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
     null
   )
@@ -151,6 +153,7 @@ export function DashboardPage({
         onUpdate={handleUpdate}
       />
 
+      {showJournal && (
       <ShotJournal
         entries={journal.entries}
         language={language}
@@ -161,6 +164,7 @@ export function DashboardPage({
         onClearDay={journal.clearDay}
         onImport={journal.importEntries}
       />
+      )}
     </section>
   )
 }

@@ -7,6 +7,7 @@ import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
 import { SectionHeading, Switch, Toggle } from '../components/FormControls'
+import { setFeature, useFeature } from '../lib/features'
 
 interface SettingsPageProps {
   language: Language
@@ -66,6 +67,11 @@ export function SettingsPage({
   onKeepAwakeChange,
 }: SettingsPageProps) {
   const t = translations[language].settings
+  const ru = language === 'ru'
+  const adjust = useFeature('adjust')
+  const weather = useFeature('weather')
+  const tot = useFeature('tot')
+  const journal = useFeature('journal')
 
   return (
     <section className="space-y-4">
@@ -157,6 +163,59 @@ export function SettingsPage({
             description={t.openOnPhoneDescription}
           >
             <OpenOnPhone language={language} />
+          </Card>
+
+          <Card
+            index="04"
+            title={ru ? 'Разделы калькулятора' : 'Calculator sections'}
+            description={
+              ru
+                ? 'Включайте только то, чем пользуетесь: главный экран останется чистым.'
+                : 'Turn on only what you use to keep the main screen clean.'
+            }
+          >
+            <div className="mt-4 space-y-4">
+              <Switch
+                checked={adjust}
+                onChange={(v) => setFeature('adjust', v)}
+                label={ru ? 'Корректировка огня' : 'Adjust fire'}
+                description={
+                  ru
+                    ? 'Доклады «недолёт / перелёт, левее / правее». По связке стрелок получает уже готовые установки с учётом поправок — включать у него не нужно.'
+                    : 'Short / over, left / right reports. Over the link a gunner gets the corrected settings anyway — no need to enable it there.'
+                }
+              />
+              <Switch
+                checked={weather}
+                onChange={(v) => setFeature('weather', v)}
+                label={ru ? 'Погодные поправки' : 'Weather corrections'}
+                description={
+                  ru
+                    ? 'Ветер, температура, давление. Нужны, только если на сервере включена продвинутая баллистика.'
+                    : 'Wind, temperature, pressure. Only for servers with advanced ballistics.'
+                }
+              />
+              <Switch
+                checked={tot}
+                onChange={(v) => setFeature('tot', v)}
+                label={ru ? 'Огонь по времени' : 'Time on target'}
+                description={
+                  ru
+                    ? 'Задать момент разрыва: выстрел — по отсчёту. Время от наводчика приходит стрелку и без этой настройки.'
+                    : 'Set the impact time and fire on the countdown. A time from the FDC reaches a gunner even without this.'
+                }
+              />
+              <Switch
+                checked={journal}
+                onChange={(v) => setFeature('journal', v)}
+                label={ru ? 'Журнал целей' : 'Target journal'}
+                description={
+                  ru
+                    ? 'Сохранение целей, быстрый список на карте и журнал внизу страницы.'
+                    : 'Saving targets, the quick list on the map and the journal below.'
+                }
+              />
+            </div>
           </Card>
 
           <Card

@@ -132,7 +132,9 @@ export function MrsiPanel({ options, showMode, language }: Props) {
               ].join(' ')}
             >
               <span>
-                {index === 0 ? '0.0' : `+${shot.fireAt.toFixed(1)}`} {unitS}
+                {index === 0
+                  ? ru ? 'сразу' : 'now'
+                  : `+${shot.fireAt.toFixed(1)} ${unitS}`}
               </span>
               <span>
                 {ru ? 'заряд' : 'charge'} {shot.charge}

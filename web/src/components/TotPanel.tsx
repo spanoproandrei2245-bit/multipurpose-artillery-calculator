@@ -108,7 +108,7 @@ export function TotPanel({
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="clock" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Огонь по времени · TOT' : 'Time on target · TOT'}
+          {ru ? 'Огонь по времени' : 'Time on target'}
         </span>
         {impactAt !== null && (
           <span className="tag tag-accent">

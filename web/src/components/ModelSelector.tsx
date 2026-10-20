@@ -115,7 +115,7 @@ export function ModelSelector({
             openList()
           }
         }}
-        className="field flex w-auto max-w-[17rem] cursor-pointer items-center gap-2 py-1 pr-2 pl-1.5 text-left"
+        className="flex h-9 w-auto max-w-[17rem] cursor-pointer items-center gap-2 rounded-md pr-1.5 pl-1.5 text-left text-app-text transition-colors hover:bg-app-raised-hover"
       >
         <ArtilleryIcon category={current.category} size="xs" language={language} />
         <span className="min-w-0 truncate">{current.name}</span>

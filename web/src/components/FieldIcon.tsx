@@ -280,6 +280,8 @@ const paths = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  star: <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />,
+  starFilled: <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" fill="currentColor" />,
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

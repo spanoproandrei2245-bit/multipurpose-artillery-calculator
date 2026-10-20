@@ -36,6 +36,7 @@ import {
 import { reportToAdjustment, sumAdjustments } from '../lib/adjust'
 import type { MrsiOption } from '../lib/mrsi'
 import { recentEntries } from '../lib/journal'
+import { useFeature } from '../lib/features'
 import type {
   AngleUnit,
   JournalDraft,
@@ -66,6 +67,7 @@ import { FieldIcon } from './FieldIcon'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
+import type { FlightShot } from './FlightCanvas'
 import { InlineNumber, Row, SectionHeading, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MrsiPanel } from './MrsiPanel'
@@ -128,6 +130,10 @@ export function ArtilleryCalculator({
   onUpdate,
 }: Props) {
   const ru = language === 'ru'
+  const showAdjust = useFeature('adjust')
+  const showWeather = useFeature('weather')
+  const showTot = useFeature('tot')
+  const showJournal = useFeature('journal')
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
@@ -263,7 +269,7 @@ export function ArtilleryCalculator({
 
   const weatherInputs = useWeatherInputs(
     initial?.weather ?? null,
-    hasWeather,
+    hasWeather && showWeather,
     azimuthDeg
   )
 
@@ -321,6 +327,8 @@ export function ArtilleryCalculator({
 
   // ---- горячие клавиши ----
   const timerRef = useRef<FireTimerHandle>(null)
+  // Снаряд в полёте — для анимации на карте
+  const [flight, setFlight] = useState<FlightShot | null>(null)
   const [showKeys, setShowKeys] = useState(false)
   const [combatOpen, setCombatOpen] = useState(false)
 
@@ -488,7 +496,7 @@ export function ArtilleryCalculator({
   const category = models[modelId].category as ArtilleryCategory
   const mrsiAllowed = category === 'towed' || category === 'spg'
   const mrsiOptions: MrsiOption[] =
-    mrsiAllowed && profile && baseRange !== null
+    mrsiAllowed && solution !== null && profile && baseRange !== null
       ? profileModes.flatMap((item) =>
           (item === mode
             ? results
@@ -518,13 +526,13 @@ export function ArtilleryCalculator({
   // Быстрый список сохранённых целей на карте
   const quickTargets = useMemo(
     () =>
-      recentEntries(journalEntries, 12).map((entry) => ({
+      (showJournal ? recentEntries(journalEntries, 12) : []).map((entry) => ({
         id: entry.id,
         name: entry.name,
         detail: `${entry.distance} ${ru ? 'м' : 'm'} · ${Math.round(entry.elevation)} ${ru ? 'мил' : 'mil'}`,
         active: entry.id === (activeEntry?.id ?? null),
       })),
-    [journalEntries, activeEntry, ru]
+    [journalEntries, activeEntry, ru, showJournal]
   )
 
   // Закрепление орудия на карте закрепляет и высоту орудия — как будто
@@ -749,6 +757,9 @@ export function ArtilleryCalculator({
                   currentTarget={mapTarget}
                   journalTargets={journalTargets}
                   quickTargets={quickTargets}
+                  flight={flight}
+                  category={category}
+                  shellType={selectedAmmo?.type}
                   onGunLockChange={handleGunLock}
                   showMarkers={showMarkers}
                   showScreenMarkers={showScreenMarkers}
@@ -843,6 +854,7 @@ export function ArtilleryCalculator({
                 ))}
               </div>
               <Dropdown
+                variant="ghost"
                 label={ru ? 'Заряд' : 'Charge'}
                 disabled={applicable.length === 0}
                 value={chargeValue}
@@ -957,7 +969,7 @@ export function ArtilleryCalculator({
                 }
                 onClick={() => setHeightLocked((v) => !v)}
                 className={[
-                  'inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors',
+                  'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
                   heightLocked
                     ? 'bg-accent-soft text-accent'
                     : 'bg-app-raised text-app-muted hover:bg-app-raised-hover hover:text-app-text',
@@ -984,7 +996,7 @@ export function ArtilleryCalculator({
             </Row>
           </dl>
 
-          {targetBar}
+          {showJournal && targetBar}
 
           {/* ---- Состояние расчёта и предупреждения ---- */}
           <div className="mt-4 space-y-2">
@@ -1112,6 +1124,9 @@ export function ArtilleryCalculator({
 
               {!combatOpen && (
                 <FireTimer
+                  category={category}
+                  shellType={selectedAmmo?.type}
+                  onShotChange={setFlight}
                   ref={timerRef}
                   tof={solution.tof}
                   language={language}
@@ -1131,7 +1146,7 @@ export function ArtilleryCalculator({
                   {ru ? 'Боевой экран' : 'Combat screen'}
                   <span className="kbd hidden sm:inline-block">B</span>
                 </button>
-                {activeEntry && onUpdate && (
+                {showJournal && activeEntry && onUpdate && (
                   <button
                     type="button"
                     onClick={handleUpdate}
@@ -1148,6 +1163,7 @@ export function ArtilleryCalculator({
                 )}
               </div>
 
+              {showJournal && (
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
@@ -1172,6 +1188,7 @@ export function ArtilleryCalculator({
                       : 'Save'}
                 </button>
               </div>
+              )}
 
               {combatOpen && (
                 <CombatScreen
@@ -1227,6 +1244,7 @@ export function ArtilleryCalculator({
       {/* ---- Дополнительно: раскрывающиеся разделы ---- */}
       <div className="mt-12 grid items-start gap-3 lg:grid-cols-2">
         <div className="min-w-0 space-y-3">
+          {(showAdjust || adjustHistory.length > 0) && (
           <AdjustFire
             history={adjustHistory}
             onAdd={(entry) => {
@@ -1245,8 +1263,9 @@ export function ArtilleryCalculator({
             azimuthUnit={azimuthUnit}
             language={language}
           />
+          )}
 
-          {hasWeather ? (
+          {!showWeather ? null : hasWeather ? (
             <WeatherSection
               inputs={weatherInputs}
               defaultOpen={(initial?.weather ?? null) !== null}
@@ -1263,7 +1282,7 @@ export function ArtilleryCalculator({
             )
           )}
 
-          {solution && (
+          {solution && (showTot || totAt !== null) && (
             <TotPanel
               tof={solution.tof}
               impactAt={totAt}

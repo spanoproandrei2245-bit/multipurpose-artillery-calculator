@@ -52,8 +52,12 @@ import {
 } from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
-import { Dropdown } from './Dropdown'
+import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
+import { FlightCanvas, type FlightShot } from './FlightCanvas'
+import { shellKind } from '../lib/shellKind'
+import type { ArtilleryCategory } from '../types/gameModel'
+import { MAPS_BASE } from '../lib/builtinMaps'
 import { ScreenMarkers } from './ScreenMarkers'
 
 export interface MapSelection {
@@ -92,6 +96,10 @@ interface Props {
   currentTarget?: MapTarget | null
   // Быстрый выбор сохранённых целей: список слева на карте
   quickTargets?: readonly QuickTarget[]
+  // Снаряд в полёте: анимация от орудия к цели
+  flight?: FlightShot | null
+  category?: ArtilleryCategory
+  shellType?: string
   // Орудие закреплено на карте (true) или освобождено (false); высота —
   // высота орудия в точке, м, если известна
   onGunLockChange?: (locked: boolean, height: number | null) => void
@@ -206,12 +214,35 @@ export function MapPicker({
   showMarkers = false,
   showScreenMarkers = false,
   quickTargets = [],
+  flight = null,
+  category = 'mortar',
+  shellType = 'HE',
   onGunLockChange,
 }: Props) {
   const ru = language === 'ru'
   const unitM = ru ? 'м' : 'm'
 
   const [maps, setMaps] = useState<StoredMapInfo[]>([])
+  // Избранные карты: ключи пунктов списка, показываются сверху
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const value = JSON.parse(readStoredText('favMaps')) as unknown
+      return Array.isArray(value)
+        ? value.filter((k): k is string => typeof k === 'string')
+        : []
+    } catch {
+      return []
+    }
+  })
+  function toggleFavorite(key: string) {
+    setFavorites((current) => {
+      const next = current.includes(key)
+        ? current.filter((k) => k !== key)
+        : [...current, key]
+      writeStored('favMaps', JSON.stringify(next))
+      return next
+    })
+  }
   // Встроенные карты (спутник + высоты) и тайлы открытой карты
   const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
   const [tiles, setTiles] = useState<MapTiles | null>(null)
@@ -761,9 +792,33 @@ export function MapPicker({
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
+  const pointsRef = useRef<{ gun: MapPoint | null; target: MapPoint | null }>({
+    gun: null,
+    target: null,
+  })
   useEffect(() => {
     viewRef.current = activeView
+    pointsRef.current = { gun, target }
   })
+
+  // Где рисовать полёт: от орудия к цели в координатах холста
+  const flightEnds = useCallback(() => {
+    const v = viewRef.current
+    const { gun: g, target: t } = pointsRef.current
+    if (!v || !g || !t) return null
+    const ax = (g.x - v.x0) * v.scale
+    const ay = (v.y0 - g.y) * v.scale
+    const bx = (t.x - v.x0) * v.scale
+    const by = (v.y0 - t.y) * v.scale
+    return {
+      ax,
+      ay,
+      bx,
+      by,
+      arc: Math.min(90, Math.hypot(bx - ax, by - ay) * 0.3),
+      scale: 1.5,
+    }
+  }, [])
 
   function zoomAt(factor: number, sx: number, sy: number) {
     const current = viewRef.current
@@ -851,6 +906,22 @@ export function MapPicker({
     if (!point) return
     setLineIndex(index)
     placeTarget(point)
+  }
+
+  // Замок орудия выезжает после «удержания» курсора на кнопке орудия
+  const [lockShown, setLockShown] = useState(false)
+  const lockTimer = useRef<number | null>(null)
+  function cancelLockTimer() {
+    if (lockTimer.current !== null) window.clearTimeout(lockTimer.current)
+    lockTimer.current = null
+  }
+  function startLockHold(ms: number) {
+    cancelLockTimer()
+    lockTimer.current = window.setTimeout(() => setLockShown(true), ms)
+  }
+  function endLockHold() {
+    cancelLockTimer()
+    setLockShown(false)
   }
 
   function toggleGunLock() {
@@ -945,6 +1016,95 @@ export function MapPicker({
 
   const showLoader = adding || !map
 
+  // ---- список карт: избранные сверху, потом по происхождению ----
+  const ADD_MAP = '__add__'
+  const mapEntries: {
+    key: string
+    name: string
+    author: string
+    group: string
+    preview: string | null
+  }[] = [
+    ...[...builtin]
+      .sort(
+        (x, y) =>
+          Number(mapKind(y) === 'official') - Number(mapKind(x) === 'official')
+      )
+      .map((m) => ({
+        key: `builtin:${m.world}`,
+        name: m.displayName,
+        author: m.author,
+        group:
+          mapKind(m) === 'official'
+            ? ru ? 'Официальные' : 'Official'
+            : ru ? 'Сообщество' : 'Community',
+        preview: `${MAPS_BASE}${m.world}/tiles/0/0_0.webp`,
+      })),
+    ...maps.map((m) => ({
+      key: `local:${m.world}`,
+      name: m.world,
+      author: ru ? 'свои высоты' : 'own heights',
+      group: ru ? 'Загруженные' : 'Imported',
+      preview: null,
+    })),
+  ]
+  function mapLabel(key: string): string {
+    return mapEntries.find((e) => e.key === key)?.name ?? '—'
+  }
+  const favoriteGroup = ru ? 'Избранные' : 'Favourites'
+  const mapOptions: DropdownOption<string>[] = [
+    ...mapEntries
+      .filter((e) => favorites.includes(e.key))
+      .map((e) => ({ ...e, group: favoriteGroup })),
+    ...mapEntries.filter((e) => !favorites.includes(e.key)),
+  ]
+    .map((e) => ({
+      value: e.key,
+      label: e.name,
+      description: e.author ? (
+        <span className="text-[11.5px] opacity-60">{e.author}</span>
+      ) : undefined,
+      group: e.group,
+      icon: <MapGlyph />,
+      trailing: (
+        <span className="flex shrink-0 items-center gap-1.5">
+          {e.preview && (
+            <img
+              src={e.preview}
+              alt=""
+              loading="lazy"
+              className="h-9 w-9 rounded object-cover"
+            />
+          )}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={
+              favorites.includes(e.key)
+                ? ru ? 'Убрать из избранного' : 'Remove from favourites'
+                : ru ? 'В избранное' : 'Add to favourites'
+            }
+            title={
+              favorites.includes(e.key)
+                ? ru ? 'Убрать из избранного' : 'Remove from favourites'
+                : ru ? 'В избранное' : 'Add to favourites'
+            }
+            onClick={(event) => {
+              event.stopPropagation()
+              toggleFavorite(e.key)
+            }}
+            className={[
+              'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
+              favorites.includes(e.key) ? 'text-warn' : 'text-app-faint',
+            ].join(' ')}
+          >
+            <FieldIcon name={favorites.includes(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
+          </button>
+        </span>
+      ),
+    }))
+mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою карту…' : 'Add your own map…',    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
+
   return (
     <div>
       {showLoader && (
@@ -996,9 +1156,31 @@ export function MapPicker({
           />
           <p className="text-[13px] text-app-muted">
             {ru
-              ? 'Карта рисуется из высот: чужие изображения карт не нужны. Высоты хранятся только на этом устройстве.'
-              : 'The map is drawn from the heights, no map images needed. Heights stay on this device.'}
+              ? 'Способ 1 (выше): карта рисуется из высот, чужие изображения не нужны. Высоты хранятся только на этом устройстве.'
+              : 'Method 1 (above): the map is drawn from the heights, no map images needed. Heights stay on this device.'}
           </p>
+          <details className="text-[13px] text-app-muted">
+            <summary className="cursor-pointer text-app-text-2">
+              {ru ? 'Способ 2: спутниковый снимок через grad_meh' : 'Method 2: satellite imagery via grad_meh'}
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+              <li>
+                {ru
+                  ? 'Включите на своём компьютере мод Gruppe Adler Map Exporter (grad_meh) и выгрузите карту: в папке Arma 3 появится grad_meh/<карта> со снимком (sat), высотами (dem.asc.gz) и meta.json.'
+                  : 'Run the Gruppe Adler Map Exporter (grad_meh) mod and export the map: Arma 3/grad_meh/<map> gets the imagery (sat), heights (dem.asc.gz) and meta.json.'}
+              </li>
+              <li>
+                {ru
+                  ? 'Разработчик приложения превращает папку в встроенную карту командой npm run maps:import -- "<путь к папке карты>" — так добавлены карты сообщества из списка.'
+                  : 'The app developer turns the folder into a built-in map with npm run maps:import -- "<map folder>" — this is how the community maps in the list were added.'}
+              </li>
+              <li>
+                {ru
+                  ? 'Оговорка: сетка высот из grad_meh грубее игровой (шаг ~20 м, у нас — после прореживания), поэтому высоты у цели могут отличаться на метры. Снимок — только для ориентира; для точных высот надёжнее способ 1.'
+                  : 'Caveat: the grad_meh height grid is coarser than the game’s (~20 m step, thinned further here), so heights at a target can be off by metres. The imagery is for orientation; method 1 is more reliable for exact heights.'}
+              </li>
+            </ol>
+          </details>
           {map && (
             <button type="button" className="btn self-start" onClick={() => setAdding(false)}>
               {ru ? 'Назад к карте' : 'Back to the map'}
@@ -1022,6 +1204,18 @@ export function MapPicker({
             className="block cursor-crosshair touch-none rounded-lg"
           />
 
+          {flight && gun && target && (
+            <FlightCanvas
+              shot={flight}
+              category={category}
+              kind={shellKind(shellType)}
+              ends={flightEnds}
+              width={size.width}
+              height={size.height}
+              className="pointer-events-none absolute top-0 left-0"
+            />
+          )}
+
           {/* Справа: что ставит касание */}
           <div
             role="toolbar"
@@ -1040,18 +1234,18 @@ export function MapPicker({
               ] as { id: Placing; icon: FieldIconName; ru: string; en: string }[]
             ).map((tool) => {
               const active = placing === tool.id
-              const disabled = tool.id === 'gun' && gunLocked
-              return (
+              const locked = tool.id === 'gun' && gunLocked
+              const button = (
                 <button
-                  key={tool.id}
                   type="button"
                   aria-pressed={active}
-                  disabled={disabled}
+                  aria-disabled={locked}
                   title={ru ? tool.ru : tool.en}
                   aria-label={ru ? tool.ru : tool.en}
-                  onClick={() => setPlacing(tool.id)}
+                  onClick={() => !locked && setPlacing(tool.id)}
                   className={[
-                    'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                    'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
+                    locked ? 'opacity-40' : '',
                     active
                       ? 'bg-accent-solid text-white'
                       : 'text-white/80 hover:bg-white/15',
@@ -1060,26 +1254,57 @@ export function MapPicker({
                   <FieldIcon name={tool.icon} className="h-5 w-5" />
                 </button>
               )
+              if (tool.id !== 'gun') return <span key={tool.id}>{button}</span>
+
+              // Орудие: если подержать курсор (или палец) на кнопке, слева
+              // выезжает замок. Закреплённое орудие показывает замок всегда.
+              return (
+                <div
+                  key={tool.id}
+                  className="relative"
+                  onPointerEnter={(event) => {
+                    if (event.pointerType === 'mouse') startLockHold(450)
+                  }}
+                  onPointerLeave={(event) => {
+                    if (event.pointerType === 'mouse') endLockHold()
+                  }}
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== 'mouse') startLockHold(500)
+                  }}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'mouse') cancelLockTimer()
+                  }}
+                  onPointerCancel={cancelLockTimer}
+                  onContextMenu={(event) => event.preventDefault()}
+                >
+                  {(lockShown || gunLocked) && (
+                    <div className="absolute top-0 right-full pr-1.5">
+                      <button
+                        type="button"
+                        aria-pressed={gunLocked}
+                        disabled={!gun}
+                        title={
+                          gunLocked
+                            ? ru ? 'Орудие закреплено — нажмите, чтобы освободить' : 'Gun locked — tap to unlock'
+                            : ru ? 'Закрепить орудие (и его высоту)' : 'Lock the gun (and its height)'
+                        }
+                        aria-label={ru ? 'Закрепить орудие' : 'Lock the gun'}
+                        onClick={toggleGunLock}
+                        className={[
+                          'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                          gunLocked
+                            ? 'bg-warn/90 text-black'
+                            : 'bg-black/70 text-white/90 hover:bg-black/85',
+                        ].join(' ')}
+                      >
+                        <FieldIcon name={gunLocked ? 'lock' : 'unlock'} className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                  {button}
+                </div>
+              )
             })}
-            <div className="mx-1 h-px bg-white/20" />
-            <button
-              type="button"
-              aria-pressed={gunLocked}
-              disabled={!gun}
-              title={
-                gunLocked
-                  ? ru ? 'Орудие закреплено — нажмите, чтобы освободить' : 'Gun locked — tap to unlock'
-                  : ru ? 'Закрепить орудие (и его высоту)' : 'Lock the gun (and its height)'
-              }
-              aria-label={ru ? 'Закрепить орудие' : 'Lock the gun'}
-              onClick={toggleGunLock}
-              className={[
-                'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35',
-                gunLocked ? 'bg-warn/90 text-black' : 'text-white/80 hover:bg-white/15',
-              ].join(' ')}
-            >
-              <FieldIcon name={gunLocked ? 'lock' : 'unlock'} className="h-5 w-5" />
-            </button>
           </div>
 
           {/* Слева: быстрый выбор сохранённых целей */}
@@ -1138,40 +1363,17 @@ export function MapPicker({
           <Dropdown
             label={ru ? 'Карта' : 'Map'}
             value={mapKey}
-            onChange={openMap}
+            onChange={(key) => (key === ADD_MAP ? setAdding(true) : openMap(key))}
             alignLeft
             placeholder="—"
-            options={[
-              // Официальные карты — выше карт сообщества
-              ...[...builtin]
-                .sort((a, b) => Number(mapKind(b) === 'official') - Number(mapKind(a) === 'official'))
-                .map((m) => ({
-                value: `builtin:${m.world}`,
-                label: m.displayName,
-                description: m.author ? `© ${m.author}` : undefined,
-                group:
-                  mapKind(m) === 'official'
-                    ? ru
-                      ? 'Официальные'
-                      : 'Official'
-                    : ru
-                      ? 'Сообщество'
-                      : 'Community',
-              })),
-              ...maps.map((m) => ({
-                value: `local:${m.world}`,
-                label: m.world,
-                description: ru ? 'свои высоты' : 'own heights',
-                group: ru ? 'Загруженные' : 'Imported',
-              })),
-            ]}
+            buttonLabel={
+              <span className="flex items-center gap-2">
+                <MapGlyph />
+                {mapLabel(mapKey)}
+              </span>
+            }
+            options={mapOptions}
           />
-        )}
-        {(maps.length > 0 || builtin.length > 0) && !adding && (
-          <button type="button" className="btn" onClick={() => setAdding(true)}>
-            <FieldIcon name="plus" />
-            {ru ? 'Карта' : 'Map'}
-          </button>
         )}
         {map && !adding && (
           <>
@@ -1538,5 +1740,14 @@ function MarkerList({
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Значок карты слева от названия в списке карт. */
+function MapGlyph() {
+  return (
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+      <FieldIcon name="map" className="h-4 w-4" />
+    </span>
   )
 }

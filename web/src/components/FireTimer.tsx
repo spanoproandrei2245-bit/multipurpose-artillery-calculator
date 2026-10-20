@@ -9,6 +9,9 @@ import {
 
 import { readStored, writeStored } from '../lib/input'
 import { playSound } from '../lib/sound'
+import { shellKind } from '../lib/shellKind'
+import type { ArtilleryCategory } from '../types/gameModel'
+import { FlightCanvas, type FlightShot } from './FlightCanvas'
 import { ProgressBar } from './FormControls'
 import type { Language } from '../types/settings'
 
@@ -27,6 +30,11 @@ interface Props {
   ref?: Ref<FireTimerHandle>
   // Выстрел здесь (кнопка или клавиша) — например, сообщить связке
   onFire?: () => void
+  // Класс орудия и тип снаряда — от них зависит анимация полёта
+  category?: ArtilleryCategory
+  shellType?: string
+  // Полёт начался (shot) или закончился / остановлен (null)
+  onShotChange?: (shot: FlightShot | null) => void
 }
 
 // За сколько секунд до разрыва предупреждать («сплэш»),
@@ -45,7 +53,15 @@ interface Shot {
  * Таймер «Огонь → разрыв»: отсчёт по времени полёта,
  * сигнал за 5 с до разрыва и в момент разрыва.
  */
-export function FireTimer({ tof, language, ref, onFire }: Props) {
+export function FireTimer({
+  tof,
+  language,
+  ref,
+  onFire,
+  category = 'mortar',
+  shellType = 'HE',
+  onShotChange,
+}: Props) {
   const ru = language === 'ru'
 
   const [shot, setShot] = useState<Shot | null>(null)
@@ -53,6 +69,14 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
   const [sound, setSound] = useState(
     () => readStored('timerSound', ['on', 'off'], 'on') === 'on'
   )
+
+  const shotChangeRef = useRef(onShotChange)
+  useEffect(() => {
+    shotChangeRef.current = onShotChange
+  })
+  useEffect(() => {
+    shotChangeRef.current?.(shot)
+  }, [shot])
 
   const splashSignaled = useRef(false)
   const impactSignaled = useRef(false)
@@ -171,6 +195,15 @@ export function FireTimer({ tof, language, ref, onFire }: Props) {
           {ru ? 'Звук' : 'Sound'}
         </button>
       </div>
+
+      {shot && (
+        <FlightCanvas
+          shot={shot}
+          category={category}
+          kind={shellKind(shellType)}
+          className="mt-3 block rounded-md bg-black/20"
+        />
+      )}
 
       <div className="mt-3" aria-live="polite">
         <div className="flex items-baseline justify-between gap-3">

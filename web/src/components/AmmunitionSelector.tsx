@@ -40,7 +40,7 @@ export function AmmunitionSelector({
 
   if (ammunition.length === 1) {
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex h-9 items-center gap-2 pr-[1.375rem] pl-1.5">
         <ShellIcon category={category} type={ammunition[0].type} language={language} />
         {formatLabel(ammunition[0])}
       </span>
@@ -55,6 +55,7 @@ export function AmmunitionSelector({
       label={ru ? 'Снаряд' : 'Shell'}
       value={selected.id}
       onChange={onSelect}
+      variant="ghost"
       options={ammunition.map((item) => ({
         value: item.id,
         label: formatLabel(item),
