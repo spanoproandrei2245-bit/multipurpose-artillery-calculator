@@ -12,17 +12,20 @@ export type FeatureId =
   | 'table'
   // Не раздел, а подсказки: подсказки при наведении и пояснительные плашки
   | 'hints'
+  // Заряды, которые не достают до цели, не показываются
+  | 'hideUnfit'
 
 const KEY_PREFIX = 'feature:'
+const DEFAULT_ON: ReadonlySet<FeatureId> = new Set<FeatureId>(['hints', 'hideUnfit'])
 const listeners = new Set<() => void>()
 
 function read(id: FeatureId): boolean {
   try {
     const value = localStorage.getItem(KEY_PREFIX + id)
-    // Подсказки включены, пока их не выключили
-    return id === 'hints' ? value !== 'off' : value === 'on'
+    // Подсказки и скрытие неподходящих зарядов включены, пока их не выключили
+    return DEFAULT_ON.has(id) ? value !== 'off' : value === 'on'
   } catch {
-    return id === 'hints'
+    return DEFAULT_ON.has(id)
   }
 }
 
@@ -52,6 +55,6 @@ export function useFeature(id: FeatureId): boolean {
   return useSyncExternalStore(
     subscribe,
     () => snapshot(id),
-    () => id === 'hints'
+    () => DEFAULT_ON.has(id)
   )
 }

@@ -65,6 +65,7 @@ export function SettingsPage({
   const journal = useFeature('journal')
   const table = useFeature('table')
   const hints = useFeature('hints')
+  const hideUnfit = useFeature('hideUnfit')
   const flightStyle = useFlightStyle()
   const flightOnMap = useFlightOnMap()
 
@@ -223,6 +224,12 @@ export function SettingsPage({
                 }
               />
               </FeaturePreview>
+              <Switch
+                checked={hideUnfit}
+                onChange={(v) => setFeature('hideUnfit', v)}
+                label={t('settingsPage.hide-unfit')}
+                description={t('settingsPage.hide-unfit-description')}
+              />
               <FeaturePreview id="journal">
               <Switch
                 checked={journal}

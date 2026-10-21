@@ -1,17 +1,11 @@
-import { t } from '../i18n'
-import { FieldIcon } from './FieldIcon'
-import {
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  type Ref,
-} from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 
-import { readStored, writeStored } from '../lib/input'
+import { t } from '../i18n'
 import { playSound } from '../lib/sound'
 import { shellKind } from '../lib/shellKind'
+import { useTimerSound } from '../lib/timerSound'
 import type { ArtilleryCategory } from '../types/gameModel'
+import { FieldIcon } from './FieldIcon'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
 import { ProgressBar } from './FormControls'
 
@@ -34,6 +28,13 @@ interface Props {
   shellType?: string
   // Полёт начался (shot) или закончился / остановлен (null)
   onShotChange?: (shot: FlightShot | null) => void
+  // bar — кнопка «Огонь» вверху страницы: полоса состояния появляется только в полёте;
+  // full — боевой экран: полоса состояния видна всегда
+  variant?: 'bar' | 'full'
+  // Нет решения — стрелять нечем
+  disabled?: boolean
+  // Кнопка боевого экрана рядом с «Огонь»
+  onCombat?: () => void
 }
 
 // За сколько секунд до разрыва предупреждать («сплэш»),
@@ -41,7 +42,6 @@ interface Props {
 const SPLASH_WARNING_S = 5
 // Сколько показывать «Разрыв» после падения
 const IMPACT_HOLD_MS = 4000
-
 
 interface Shot {
   firedAt: number
@@ -59,13 +59,13 @@ export function FireTimer({
   category = 'mortar',
   shellType = 'HE',
   onShotChange,
+  variant = 'full',
+  disabled = false,
+  onCombat,
 }: Props) {
-
   const [shot, setShot] = useState<Shot | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const [sound, setSound] = useState(
-    () => readStored('timerSound', ['on', 'off'], 'on') === 'on'
-  )
+  const sound = useTimerSound()
 
   const shotChangeRef = useRef(onShotChange)
   useEffect(() => {
@@ -77,10 +77,6 @@ export function FireTimer({
 
   const splashSignaled = useRef(false)
   const impactSignaled = useRef(false)
-
-  useEffect(() => {
-    writeStored('timerSound', sound ? 'on' : 'off')
-  }, [sound])
 
   // Тикаем, пока снаряд в полёте и немного после разрыва.
   useEffect(() => {
@@ -115,6 +111,7 @@ export function FireTimer({
   }))
 
   function fire() {
+    if (disabled) return
     start()
     onFire?.()
   }
@@ -153,14 +150,21 @@ export function FireTimer({
     impact: t('fireTimer.impact'),
   }[phase]
 
+  const bar = variant === 'bar'
+  const showStatus = !bar || shot !== null
+
   return (
-    <div className="mt-4 rounded-lg bg-app-surface p-3">
+    <div className={bar ? '' : 'mt-4 rounded-lg bg-app-surface p-3'}>
       <div className="flex gap-2">
-        <button type="button" data-tour="fire" onClick={fire} className="btn btn-primary btn-lg flex-1">
+        <button
+          type="button"
+          data-tour="fire"
+          disabled={disabled}
+          onClick={fire}
+          className="btn btn-primary btn-lg flex-1"
+        >
           <FieldIcon name="fire" className="h-5 w-5" />
-          {shot
-            ? t('fireTimer.fire-again')
-            : t('fireTimer.fire')}
+          {shot ? t('fireTimer.fire-again') : t('fireTimer.fire')}
           <span className="hidden rounded bg-white/20 px-1.5 text-[12px] font-medium sm:inline">
             F
           </span>
@@ -177,16 +181,18 @@ export function FireTimer({
           </button>
         )}
 
-        <button
-          type="button"
-          aria-pressed={sound}
-          onClick={() => setSound((value) => !value)}
-          title={t('fireTimer.sound')}
-          className={['btn min-h-12', sound ? '' : 'text-app-faint'].join(' ')}
-        >
-          <FieldIcon name={sound ? 'sound' : 'soundOff'} className="h-5 w-5" />
-          {t('fireTimer.sound-2')}
-        </button>
+        {onCombat && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onCombat}
+            title={`${t('artilleryCalculator.combat-screen')} (B)`}
+            aria-label={t('artilleryCalculator.combat-screen')}
+            className="btn min-h-12 w-12 shrink-0 px-0"
+          >
+            <FieldIcon name="combat" className="h-6 w-6" />
+          </button>
+        )}
       </div>
 
       {shot && (
@@ -198,31 +204,33 @@ export function FireTimer({
         />
       )}
 
-      <div className="mt-3" aria-live="polite">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
-            {phaseLabel}
-            {phase === 'idle' &&
-              ` · ${t('fireTimer.beep-at')} ${SPLASH_WARNING_S} ${t('unit.s')}`}
-          </span>
-          <span
-            className={[
-              'text-xl font-semibold tabular-nums',
-              alert ? 'text-danger' : 'text-app-text',
-            ].join(' ')}
-          >
-            {left === null
-              ? tof.toFixed(1)
-              : phase === 'impact'
-                ? '0.0'
-                : left.toFixed(1)}
-            <span className="ml-1 text-[13px] font-normal text-app-muted">
-              {t('unit.s')}
+      {showStatus && (
+        <div className="mt-3" aria-live="polite">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
+              {phaseLabel}
+              {phase === 'idle' &&
+                ` · ${t('fireTimer.beep-at')} ${SPLASH_WARNING_S} ${t('unit.s')}`}
             </span>
-          </span>
+            <span
+              className={[
+                'text-xl font-semibold tabular-nums',
+                alert ? 'text-danger' : 'text-app-text',
+              ].join(' ')}
+            >
+              {left === null
+                ? tof.toFixed(1)
+                : phase === 'impact'
+                  ? '0.0'
+                  : left.toFixed(1)}
+              <span className="ml-1 text-[13px] font-normal text-app-muted">
+                {t('unit.s')}
+              </span>
+            </span>
+          </div>
+          <ProgressBar progress={progress} alert={alert} className="mt-2" />
         </div>
-        <ProgressBar progress={progress} alert={alert} className="mt-2" />
-      </div>
+      )}
     </div>
   )
 }

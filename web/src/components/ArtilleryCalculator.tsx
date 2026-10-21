@@ -21,6 +21,7 @@ import {
   normalizeAngle,
   overallRange,
   profileHasWeather,
+  pickBest,
   pickCharge,
   solveAllCharges,
   type ChargePreference,
@@ -137,14 +138,18 @@ export function ArtilleryCalculator({
   const showJournal = useFeature('journal')
   const showTable = useFeature('table')
   const showHints = useFeature('hints')
+  const hideUnfit = useFeature('hideUnfit')
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
   // Режим из загруженной записи журнала, если модель его поддерживает
-  const [mode, setMode] = useState<ArtilleryMode>(() =>
+  // Траектория: выбранная вручную или «авто» — лучшая по приоритету заряда
+  const [modeChoice, setModeChoice] = useState<ArtilleryMode | 'auto'>(() =>
     initial?.mode && reference.availableModes.includes(initial.mode)
       ? initial.mode
-      : reference.availableModes[0]
+      : reference.availableModes.length > 1
+        ? 'auto'
+        : reference.availableModes[0]
   )
   const [ammoId, setAmmoId] = useState(
     initial && ammunition.some((a) => a.id === initial.ammoId)
@@ -285,29 +290,43 @@ export function ArtilleryCalculator({
   ].some(isInvalid)
 
   // ---- расчёт ----
-  const results =
-    profile && baseRange !== null
-      ? solveAllCharges(
-          profile,
-          mode,
-          selectedAmmo?.charges,
-          baseRange,
-          heightDifference,
-          weatherInputs.weather
-        )
-      : []
-
-  const applicable = results.filter((r) => r.solution !== null)
-
   // Режимы, для которых у боеприпаса есть таблицы
   const profileModes = MODES.filter(
     (item) => profile?.modes[item] !== undefined
   )
 
+  // Все способы выстрела по текущей дистанции: каждая траектория и заряд
+  const modeResults =
+    profile && baseRange !== null
+      ? profileModes.map((item) => ({
+          mode: item,
+          results: solveAllCharges(
+            profile,
+            item,
+            selectedAmmo?.charges,
+            baseRange,
+            heightDifference,
+            weatherInputs.weather
+          ),
+        }))
+      : []
+
+  // «Авто»: лучший способ по приоритету среди всех траекторий
+  const autoBest =
+    modeChoice === 'auto' ? pickBest(modeResults, chargePreference) : undefined
+  const mode: ArtilleryMode =
+    modeChoice === 'auto'
+      ? (autoBest?.group.mode ?? profileModes[0] ?? reference.availableModes[0])
+      : modeChoice
+
+  const results = modeResults.find((group) => group.mode === mode)?.results ?? []
+
+  const applicable = results.filter((r) => r.solution !== null)
+
   // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
     applicable.find((r) => r.charge === chosenCharge) ??
-    pickCharge(results, chargePreference)
+    (modeChoice === 'auto' ? autoBest?.result : pickCharge(results, chargePreference))
 
   const solution = activeResult?.solution ?? null
   const range = overallRange(results)
@@ -379,9 +398,9 @@ export function ArtilleryCalculator({
   }
   useHotkeys(hotkeys)
 
-  function changeMode(value: ArtilleryMode) {
-    if (value === mode) return
-    setMode(value)
+  function changeMode(value: ArtilleryMode | 'auto') {
+    if (value === modeChoice) return
+    setModeChoice(value)
     setChosenCharge(null)
     markEdited()
   }
@@ -505,24 +524,6 @@ export function ArtilleryCalculator({
   // меняют руками, а пусковую не перенаведёшь за секунды.
   const category = models[modelId].category as ArtilleryCategory
   const mrsiAllowed = category === 'towed' || category === 'spg'
-  // Все способы выстрела по текущей дистанции: каждый режим и заряд
-  const modeResults =
-    profile && baseRange !== null
-      ? profileModes.map((item) => ({
-          mode: item,
-          results:
-            item === mode
-              ? results
-              : solveAllCharges(
-                  profile,
-                  item,
-                  selectedAmmo?.charges,
-                  baseRange,
-                  heightDifference,
-                  weatherInputs.weather
-                ),
-        }))
-      : []
   const mrsiOptions: MrsiOption[] =
     mrsiAllowed && solution !== null
       ? modeResults.flatMap(({ mode: item, results: list }) =>
@@ -835,6 +836,23 @@ export function ArtilleryCalculator({
 
         {/* ---- Решение и вводные: «подпись — значение» ---- */}
         <div className="min-w-0">
+          {/* «Огонь» и боевой экран — сверху: главное действие под рукой */}
+          {!combatOpen && (
+            <div className="mb-3">
+              <FireTimer
+                variant="bar"
+                category={category}
+                shellType={selectedAmmo?.type}
+                onShotChange={setFlight}
+                ref={timerRef}
+                tof={solution?.tof ?? 0}
+                disabled={!solution}
+                onFire={handleFire}
+                onCombat={() => solution && setCombatOpen(true)}
+              />
+            </div>
+          )}
+
           <div className="relative">
             <dl>
               <Row icon="elevation" label={t('artilleryCalculator.elevation')}>
@@ -896,27 +914,36 @@ export function ArtilleryCalculator({
                   setChosenCharge(null)
                   markEdited()
                 }}
+                iconOnly
                 options={[
-                  { value: 'lowest', label: t('artilleryCalculator.lowest'), disabled: applicable.length === 0 },
-                  { value: 'fastest', label: t('artilleryCalculator.fastest'), disabled: applicable.length === 0 },
-                  { value: 'precise', label: t('artilleryCalculator.precise'), disabled: applicable.length === 0 },
+                  { value: 'lowest', icon: 'lowCharge', label: t('artilleryCalculator.priority-lowest'), disabled: applicable.length === 0 },
+                  { value: 'fastest', icon: 'fire', label: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
+                  { value: 'precise', icon: 'correction', label: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
                 ]}
               />
             </Row>
             {profileModes.length > 1 && (
               <Row icon="trajectory" control="full" label={t('artilleryCalculator.trajectory')}>
                 <Toggle
-                  className="flex-1 [&>button]:flex-1 [&>button]:justify-center"
+                  className="min-w-0 flex-1 overflow-hidden [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
                   label={t('artilleryCalculator.trajectory-mode')}
-                  value={mode}
+                  value={modeChoice}
                   onChange={changeMode}
-                  options={profileModes.map((item) => ({
-                    value: item,
-                    label:
-                      item === 'HIGH'
-                        ? t('artilleryCalculator.high')
-                        : t('artilleryCalculator.low'),
-                  }))}
+                  options={[
+                    {
+                      value: 'auto' as const,
+                      icon: 'auto' as const,
+                      label: t('artilleryCalculator.auto'),
+                      title: t('artilleryCalculator.trajectory-auto'),
+                    },
+                    ...profileModes.map((item) => ({
+                      value: item,
+                      label:
+                        item === 'HIGH'
+                          ? t('artilleryCalculator.high')
+                          : t('artilleryCalculator.low'),
+                    })),
+                  ]}
                 />
               </Row>
             )}
@@ -934,9 +961,10 @@ export function ArtilleryCalculator({
                       : t('artilleryCalculator.low-trajectory'),
                 }))}
                 activeMode={mode}
+                hideUnfit={hideUnfit}
                 activeCharge={activeResult?.charge ?? null}
                 onPick={(pickedMode, charge) => {
-                  if (pickedMode !== mode) setMode(pickedMode)
+                  setModeChoice(pickedMode)
                   setChosenCharge(charge)
                   markEdited()
                 }}
@@ -1144,29 +1172,9 @@ export function ArtilleryCalculator({
                 )}
               </ul>
 
-              {!combatOpen && (
-                <FireTimer
-                  category={category}
-                  shellType={selectedAmmo?.type}
-                  onShotChange={setFlight}
-                  ref={timerRef}
-                  tof={solution.tof}
-                  onFire={handleFire}
-                />
-              )}
-
               <SyncStatusLine />
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCombatOpen(true)}
-                  className="btn flex-1"
-                >
-                  <FieldIcon name="combat" className="h-[18px] w-[18px]" />
-                  {t('artilleryCalculator.combat-screen')}
-                  <span className="kbd hidden sm:inline-block">B</span>
-                </button>
                 {showJournal && activeEntry && onUpdate && (
                   <button
                     type="button"

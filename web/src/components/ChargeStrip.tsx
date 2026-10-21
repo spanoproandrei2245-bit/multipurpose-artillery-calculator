@@ -15,6 +15,8 @@ interface Props {
   activeMode: ArtilleryMode
   activeCharge: number | null
   onPick: (mode: ArtilleryMode, charge: number) => void
+  // Не показывать заряды, которые не достают до цели
+  hideUnfit?: boolean
 }
 
 /**
@@ -22,13 +24,25 @@ interface Props {
  * траектория) — карточкой с возвышением и временем полёта. Видно сразу,
  * какой брать и какие есть альтернативы: ⚡ — быстрее всех, ◎ — точнее всех.
  */
-export function ChargeStrip({ groups, activeMode, activeCharge, onPick, }: Props) {
+export function ChargeStrip({
+  groups,
+  activeMode,
+  activeCharge,
+  onPick,
+  hideUnfit = false,
+}: Props) {
   const unitMil = t('unit.mil')
   const unitS = t('unit.s')
 
   return (
     <div className="space-y-2.5" aria-label={t('chargeStrip.ways-to-fire')}>
       {groups.map((group) => {
+        const visible = hideUnfit
+          ? group.results.filter((r) => r.solution !== null)
+          : group.results
+        // Траектория, по которой до цели не достать, при скрытии пропадает целиком
+        if (visible.length === 0) return null
+        const lowest = pickCharge(group.results, 'lowest')?.charge
         const fastest = pickCharge(group.results, 'fastest')?.charge
         const precise = pickCharge(group.results, 'precise')?.charge
         const several = group.results.filter((r) => r.solution !== null).length > 1
@@ -37,8 +51,8 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, }: Props
             {groups.length > 1 && (
               <p className="label mb-1.5">{group.label}</p>
             )}
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-1.5">
-              {group.results.map((result) => {
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
+              {visible.map((result) => {
                 const solution = result.solution
                 const usable = solution !== null
                 const active =
@@ -71,6 +85,11 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, }: Props
                       <b className="text-lg leading-none text-app-text tabular-nums">
                         {result.charge}
                       </b>
+                      {usable && several && result.charge === lowest && (
+                        <span title={t('chargeStrip.lowest-charge')} className="text-app-muted">
+                          <FieldIcon name="lowCharge" className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       {usable && several && result.charge === fastest && (
                         <span title={t('chargeStrip.fastest')} className="text-warn">
                           <FieldIcon name="fire" className="h-3.5 w-3.5" />
@@ -82,7 +101,7 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, }: Props
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 text-[12px] text-app-muted tabular-nums">
+                    <span className="mt-0.5 text-[12px] whitespace-nowrap text-app-muted tabular-nums">
                       {usable
                         ? `${Math.round(solution.elevation)} ${unitMil} · ${solution.tof.toFixed(1)} ${unitS}`
                         : `${result.minRange}–${result.maxRange} ${t('unit.m')}`}

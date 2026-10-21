@@ -13,7 +13,8 @@ import {
   SOUND_EVENTS,
   type SoundEvent,
 } from '../lib/sound'
-import { SectionHeading } from './FormControls'
+import { setTimerSound, useTimerSound } from '../lib/timerSound'
+import { SectionHeading, Switch } from './FormControls'
 
 const LABELS: Record<SoundEvent, MessageKey> = {
   fire: 'soundSettings.fire-button-pressed',
@@ -29,6 +30,7 @@ export function SoundSettings() {
   const [volume, setVolumeState] = useState(getVolume)
   const [names, setNames] = useState(readNames)
   const [error, setError] = useState<string | null>(null)
+  const timerSound = useTimerSound()
   const inputs = useRef<Partial<Record<SoundEvent, HTMLInputElement>>>({})
 
   useEffect(() => onCustomSoundsChange(() => setNames(readNames())), [])
@@ -63,6 +65,15 @@ export function SoundSettings() {
       <p className="mt-3 text-sm text-app-muted">
         {t('soundSettings.your-own-file-for-each')}
       </p>
+
+      <div className="mt-4">
+        <Switch
+          checked={timerSound}
+          onChange={setTimerSound}
+          label={t('soundSettings.timer-sound')}
+          description={t('soundSettings.timer-sound-description')}
+        />
+      </div>
 
       <label className="mt-4 flex items-center gap-3">
         <span className="label">{t('soundSettings.volume')}</span>

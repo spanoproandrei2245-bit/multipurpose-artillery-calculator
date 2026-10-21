@@ -12,6 +12,7 @@ import {
   isNearTableEdge,
   isWideGap,
   metersPerMil,
+  pickBest,
   pickCharge,
   lateralCorrectionMil,
   milToDeg,
@@ -23,6 +24,7 @@ import {
   solveAllCharges,
   weatherCorrection,
   windComponents,
+  type ChargeResult,
   type Weather,
 } from './ballistics'
 
@@ -322,5 +324,56 @@ describe('LOW mode', () => {
     expect(isWideGap(LOW_ROWS, 1300)).toBe(true)
     expect(isWideGap(LOW_ROWS, 1400)).toBe(false)
     expect(isWideGap(WEATHER_ROWS, 2025)).toBe(false)
+  })
+})
+
+describe('pickBest', () => {
+  const result = (
+    charge: number,
+    tof: number,
+    metersPerMil: number,
+    nearEdge = false
+  ): ChargeResult => ({
+    charge,
+    minRange: 0,
+    maxRange: 9999,
+    solution: { elevation: 1000, tof } as ChargeResult['solution'],
+    metersPerMil,
+    nearEdge,
+    wideGap: false,
+  })
+
+  const high = { mode: 'HIGH' as const, results: [result(1, 40, 8), result(2, 30, 6)] }
+  const low = { mode: 'LOW' as const, results: [result(1, 20, 12), result(3, 15, 9)] }
+
+  it('fastest — самый короткий полёт среди всех траекторий', () => {
+    const best = pickBest([high, low], 'fastest')
+    expect(best?.group.mode).toBe('LOW')
+    expect(best?.result.charge).toBe(3)
+  })
+
+  it('precise — наименьшая ошибка на 1 мил среди всех траекторий', () => {
+    const best = pickBest([high, low], 'precise')
+    expect(best?.group.mode).toBe('HIGH')
+    expect(best?.result.charge).toBe(2)
+  })
+
+  it('lowest — меньший номер заряда, при равенстве первая траектория', () => {
+    const best = pickBest([high, low], 'lowest')
+    expect(best?.group.mode).toBe('HIGH')
+    expect(best?.result.charge).toBe(1)
+  })
+
+  it('заряд у края таблицы уступает остальным', () => {
+    const edge = { mode: 'LOW' as const, results: [result(1, 5, 1, true)] }
+    expect(pickBest([high, edge], 'fastest')?.group.mode).toBe('HIGH')
+    // если других нет — берётся и он
+    expect(pickBest([edge], 'fastest')?.group.mode).toBe('LOW')
+  })
+
+  it('нет подходящих зарядов — undefined', () => {
+    const none = { mode: 'HIGH' as const, results: [{ ...result(1, 1, 1), solution: null }] }
+    expect(pickBest([none], 'fastest')).toBeUndefined()
+    expect(pickBest([], 'lowest')).toBeUndefined()
   })
 })

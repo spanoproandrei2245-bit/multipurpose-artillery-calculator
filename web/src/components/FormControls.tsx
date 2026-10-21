@@ -83,10 +83,14 @@ interface ToggleProps<T extends string> {
     label: string
     disabled?: boolean
     icon?: FieldIconName
+    // Подсказка при наведении (по умолчанию её нет)
+    title?: string
   }[]
   onChange: (value: T) => void
   label: string
   className?: string
+  // Только значки: подпись остаётся в подсказке и для экранного диктора
+  iconOnly?: boolean
 }
 
 export function Toggle<T extends string>({
@@ -95,6 +99,7 @@ export function Toggle<T extends string>({
   onChange,
   label,
   className = '',
+  iconOnly = false,
 }: ToggleProps<T>) {
   const ref = useRef<HTMLDivElement>(null)
   // Подвижная «таблетка» под выбранной кнопкой: переключение скользит
@@ -136,11 +141,15 @@ export function Toggle<T extends string>({
           key={option.value}
           type="button"
           disabled={option.disabled}
+          title={iconOnly ? option.label : option.title}
+          aria-label={iconOnly ? option.label : undefined}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
         >
-          {option.icon && <FieldIcon name={option.icon} className="h-3.5 w-3.5" />}
-          {option.label}
+          {option.icon && (
+            <FieldIcon name={option.icon} className={iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} />
+          )}
+          {!iconOnly && option.label}
         </button>
       ))}
     </div>

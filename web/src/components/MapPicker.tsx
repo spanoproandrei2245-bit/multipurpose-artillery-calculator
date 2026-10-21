@@ -1051,7 +1051,7 @@ export function MapPicker({
       )}
 
       {map && (
-        <div ref={containerRef} data-tour="map" className="relative w-full">
+        <div ref={containerRef} data-tour="map" className="relative w-full rounded-lg ring-1 ring-app-line-strong">
           <canvas
             ref={setCanvas}
             width={Math.round(size.width * ratio)}

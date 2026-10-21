@@ -533,3 +533,33 @@ export function overallRange(results: readonly ChargeResult[]) {
     max: Math.max(...results.map((r) => r.maxRange)),
   }
 }
+
+/**
+ * Лучший способ выстрела среди всех траекторий: для каждой траектории берётся
+ * лучший заряд по приоритету, потом они сравниваются между собой.
+ * lowest — меньший номер заряда (при равенстве — первая траектория),
+ * fastest — меньшее время полёта, precise — меньшая ошибка на 1 мил.
+ * Заряды у края таблицы проигрывают любым другим.
+ */
+export function pickBest<G extends { results: readonly ChargeResult[] }>(
+  groups: readonly G[],
+  preference: ChargePreference
+): { group: G; result: ChargeResult } | undefined {
+  const candidates = groups.flatMap((group) => {
+    const result = pickCharge(group.results, preference)
+    return result ? [{ group, result }] : []
+  })
+  if (candidates.length === 0) return undefined
+
+  const safe = candidates.filter((c) => !c.result.nearEdge)
+  const pool = safe.length > 0 ? safe : candidates
+
+  const score = (c: (typeof pool)[number]) =>
+    preference === 'lowest'
+      ? c.result.charge
+      : preference === 'fastest'
+        ? c.result.solution!.tof
+        : (c.result.metersPerMil ?? Number.POSITIVE_INFINITY)
+
+  return pool.reduce((best, c) => (score(c) < score(best) ? c : best))
+}

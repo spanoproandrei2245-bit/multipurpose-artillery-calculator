@@ -54,7 +54,7 @@ const BASIC: Step[] = [
   {
     target: byTour('fire'),
     title: 'fireTimer.fire',
-    text: 'tour.the-button-or-the-f',
+    text: 'tour.fire-text',
   },
   {
     target: byTour('settings'),
@@ -100,9 +100,9 @@ const ADVANCED: Step[] = [
     text: 'tour.the-fdc-and-gunners-connect',
   },
   {
-    target: byTour('help'),
-    title: 'footer.help',
-    text: 'tour.tutorials-the-list-of-shortcuts',
+    target: byTour('hotkeys'),
+    title: 'tour.keys-title',
+    text: 'tour.keys-text',
   },
   {
     target: byTour('theme'),
