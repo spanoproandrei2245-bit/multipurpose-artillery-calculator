@@ -31,6 +31,10 @@ interface DropdownProps<T extends string> {
   className?: string
   // field — поле с фоном; ghost — как значение в строке списка, фон при наведении
   variant?: 'field' | 'ghost'
+  // Кнопка занимает всю ширину контейнера, шеврон — справа
+  fullWidth?: boolean
+  // Список раскрывается вверх (у нижнего края страницы)
+  up?: boolean
 }
 
 /**
@@ -48,6 +52,8 @@ export function Dropdown<T extends string>({
   buttonLabel,
   className = '',
   variant = 'field',
+  fullWidth = false,
+  up = false,
 }: DropdownProps<T>) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -155,13 +161,15 @@ export function Dropdown<T extends string>({
           }
         }}
         className={[
-          'flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50',
+          fullWidth
+            ? 'flex w-full cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50'
+            : 'flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50',
           variant === 'ghost'
             ? 'h-9 rounded-md pr-1.5 pl-2 text-app-text transition-colors hover:bg-app-raised-hover'
-            : 'field pr-2',
+            : 'field h-9 py-0 pr-2',
         ].join(' ')}
       >
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 flex-1 truncate">
           {buttonLabel ?? current?.label ?? placeholder}
         </span>
         <svg
@@ -190,7 +198,8 @@ export function Dropdown<T extends string>({
           aria-activedescendant={`${id}-opt-${active}`}
           onKeyDown={handleListKey}
           className={[
-            'absolute z-30 mt-1 max-h-80 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none',
+            'absolute z-30 max-h-80 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none',
+            up ? 'bottom-full mb-1' : 'mt-1',
             alignLeft ? 'left-0' : 'right-0',
           ].join(' ')}
         >

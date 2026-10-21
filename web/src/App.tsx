@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 
 import { Footer, type View } from './components/Footer'
 import { HotkeysDialog } from './components/HotkeysDialog'
@@ -124,6 +125,42 @@ function App() {
   const ru = language === 'ru'
   const back = () => setView('dashboard')
 
+  // Смена темы: круг расходится от кнопки; без поддержки браузера — сразу
+  function toggleTheme(origin: { x: number; y: number }) {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { ready: Promise<void> }
+    }
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!doc.startViewTransition || reduced) {
+      setTheme(next)
+      return
+    }
+    const radius = Math.hypot(
+      Math.max(origin.x, window.innerWidth - origin.x),
+      Math.max(origin.y, window.innerHeight - origin.y)
+    )
+    const transition = doc.startViewTransition(() => {
+      document.documentElement.classList.toggle('dark', next === 'dark')
+      flushSync(() => setTheme(next))
+    })
+    void transition.ready.then(() =>
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${origin.x}px ${origin.y}px)`,
+            `circle(${radius}px at ${origin.x}px ${origin.y}px)`,
+          ],
+        },
+        {
+          duration: 650,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      )
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-4 sm:px-6 lg:pt-14">
@@ -164,9 +201,6 @@ function App() {
             >
               <SettingsPage
                 language={language}
-                onLanguageChange={setLanguage}
-                theme={theme}
-                onThemeChange={setTheme}
                 gridInput={gridInput}
                 onGridInputChange={setGridInput}
                 mapInput={mapInput}
@@ -191,6 +225,8 @@ function App() {
         onViewChange={setView}
         language={language}
         onLanguageChange={setLanguage}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     </div>
   )

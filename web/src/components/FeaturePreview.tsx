@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useFeature } from '../lib/features'
 import type { Language } from '../types/settings'
 
 export type PreviewId =
@@ -303,7 +304,9 @@ export function FeaturePreview({
   language: Language
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(false)
+  const hints = useFeature('hints')
+  const [openRaw, setOpen] = useState(false)
+  const open = openRaw && hints
   const timer = useRef<number | null>(null)
 
   useEffect(

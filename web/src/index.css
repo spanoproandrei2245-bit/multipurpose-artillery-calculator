@@ -440,3 +440,31 @@ html.overlay body {
     animation-duration: 0ms !important;
   }
 }
+
+/* Смена темы: круг расходится от кнопки (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Значок темы поворачивается при смене */
+@keyframes theme-icon-spin {
+  from {
+    transform: rotate(-90deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+.theme-icon {
+  animation: theme-icon-spin 0.45s ease-out;
+}

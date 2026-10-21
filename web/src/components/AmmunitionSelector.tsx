@@ -47,7 +47,8 @@ export function AmmunitionSelector({
       label={ru ? 'Снаряд' : 'Shell'}
       value={selected.id}
       onChange={onSelect}
-      variant="ghost"
+      fullWidth
+      className="min-w-0 flex-1"
       options={ammunition.map((item) => ({
         value: item.id,
         label: formatLabel(item),

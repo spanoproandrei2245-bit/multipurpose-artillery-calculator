@@ -1,20 +1,17 @@
 import type { ReactNode } from 'react'
 
-import type { Language, Theme } from '../types/settings'
+import type { Language } from '../types/settings'
 import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
 import { FeaturePreview } from '../components/FeaturePreview'
-import { SectionHeading, Switch, Toggle } from '../components/FormControls'
+import { SectionHeading, Switch } from '../components/FormControls'
 import { setFeature, useFeature } from '../lib/features'
 
 interface SettingsPageProps {
   language: Language
-  onLanguageChange: (language: Language) => void
-  theme: Theme
-  onThemeChange: (theme: Theme) => void
   gridInput: boolean
   onGridInputChange: (value: boolean) => void
   mapInput: boolean
@@ -53,9 +50,6 @@ function Card({
 
 export function SettingsPage({
   language,
-  onLanguageChange,
-  theme,
-  onThemeChange,
   gridInput,
   onGridInputChange,
   mapInput,
@@ -74,41 +68,14 @@ export function SettingsPage({
   const tot = useFeature('tot')
   const journal = useFeature('journal')
   const table = useFeature('table')
+  const hints = useFeature('hints')
 
   return (
     <section className="space-y-4">
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <Card index="01" title={t.preferences}>
-            <div className="mt-4 flex flex-wrap gap-6">
-              <div>
-                <p className="label mb-1.5">{t.language}</p>
-                <Toggle
-                  label={t.language}
-                  value={language}
-                  onChange={onLanguageChange}
-                  options={[
-                    { value: 'ru', label: 'Русский' },
-                    { value: 'en', label: 'English' },
-                  ]}
-                />
-              </div>
-
-              <div>
-                <p className="label mb-1.5">{t.theme}</p>
-                <Toggle
-                  label={t.theme}
-                  value={theme}
-                  onChange={onThemeChange}
-                  options={[
-                    { value: 'dark', label: t.dark },
-                    { value: 'light', label: t.light },
-                  ]}
-                />
-              </div>
-            </div>
-
-            <div className="mt-5">
+            <div className="mt-1">
               <FeaturePreview id="keepAwake" language={language}>
               <Switch
                 checked={keepAwake}
@@ -122,6 +89,19 @@ export function SettingsPage({
                 }
               />
               </FeaturePreview>
+            </div>
+
+            <div className="mt-5">
+              <Switch
+                checked={hints}
+                onChange={(v) => setFeature('hints', v)}
+                label={ru ? 'Подсказки' : 'Hints'}
+                description={
+                  ru
+                    ? 'Пояснительные плашки и демонстрации при наведении на функции в настройках.'
+                    : 'Explanatory notes and the demos shown when hovering features in settings.'
+                }
+              />
             </div>
 
             <p className="label mt-5 text-app-faint">{t.autoSave}</p>

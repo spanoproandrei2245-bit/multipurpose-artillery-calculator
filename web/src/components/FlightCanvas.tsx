@@ -34,7 +34,7 @@ interface Props {
   height?: number
 }
 
-const SIDE_HEIGHT = 84
+const SIDE_HEIGHT = 60
 
 /**
  * Анимация полёта снаряда: рисуется, пока идёт полёт и показываются
@@ -94,34 +94,30 @@ export function FlightCanvas({
         geometry = ends()
       } else {
         // Боковой вид: земля, орудие слева, цель справа
-        const ground = cssH - 14
+        const ground = cssH - 10
         geometry = {
-          ax: 22,
+          ax: 14,
           ay: ground,
-          bx: cssW - 26,
+          bx: cssW - 18,
           by: ground,
-          arc: cssH * 0.72,
+          arc: cssH * 0.7,
           scale: 1,
         }
-        ctx.strokeStyle = 'rgba(160,166,173,0.35)'
+        // Тонкая линия земли, орудие — точка, цель — кольцо
+        ctx.strokeStyle = 'rgba(160,166,173,0.25)'
         ctx.lineWidth = 1
         ctx.beginPath()
-        ctx.moveTo(8, ground + 4)
-        ctx.lineTo(cssW - 8, ground + 4)
+        ctx.moveTo(8, ground + 5)
+        ctx.lineTo(cssW - 8, ground + 5)
         ctx.stroke()
-        // Орудие и цель
-        ctx.fillStyle = 'rgba(67,147,228,0.95)'
+        ctx.fillStyle = 'rgba(67,147,228,0.9)'
         ctx.beginPath()
-        ctx.arc(geometry.ax, ground, 4, 0, Math.PI * 2)
+        ctx.arc(geometry.ax, ground + 5, 2.5, 0, Math.PI * 2)
         ctx.fill()
-        ctx.strokeStyle = 'rgba(228,116,116,0.95)'
-        ctx.lineWidth = 2
-        const x = geometry.bx
+        ctx.strokeStyle = 'rgba(228,116,116,0.9)'
+        ctx.lineWidth = 1.2
         ctx.beginPath()
-        ctx.moveTo(x - 5, ground - 5)
-        ctx.lineTo(x + 5, ground + 5)
-        ctx.moveTo(x + 5, ground - 5)
-        ctx.lineTo(x - 5, ground + 5)
+        ctx.arc(geometry.bx, ground + 5, 3.5, 0, Math.PI * 2)
         ctx.stroke()
       }
 

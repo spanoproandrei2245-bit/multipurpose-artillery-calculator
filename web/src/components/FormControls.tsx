@@ -86,6 +86,7 @@ interface ToggleProps<T extends string> {
   }[]
   onChange: (value: T) => void
   label: string
+  className?: string
 }
 
 export function Toggle<T extends string>({
@@ -93,9 +94,10 @@ export function Toggle<T extends string>({
   options,
   onChange,
   label,
+  className = '',
 }: ToggleProps<T>) {
   return (
-    <div role="group" aria-label={label} className="seg">
+    <div role="group" aria-label={label} className={`seg ${className}`}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -210,11 +212,17 @@ export function Row({
   label,
   htmlFor,
   icon,
+  control,
+  unit,
   children,
 }: {
   label: ReactNode
   htmlFor?: string
   icon?: FieldIconName
+  // Единая ширина контролов справа: full — на всю ширину, unit — поле
+  // с единицей справа (единицы выровнены в одну колонку)
+  control?: 'full' | 'unit'
+  unit?: string
   children: ReactNode
 }) {
   return (
@@ -225,7 +233,25 @@ export function Row({
           {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
         </span>
       </dt>
-      <dd className="flex min-w-0 items-center justify-end gap-2">{children}</dd>
+      <dd className="flex min-w-0 items-center justify-end gap-2">
+        {control ? (
+          <>
+            <div
+              className={[
+                'flex min-w-0 items-center gap-2',
+                control === 'unit' ? 'w-[13.5rem]' : 'w-[15.75rem]',
+              ].join(' ')}
+            >
+              {children}
+            </div>
+            {control === 'unit' && (
+              <span className="w-7 text-left text-app-muted">{unit}</span>
+            )}
+          </>
+        ) : (
+          children
+        )}
+      </dd>
     </div>
   )
 }
@@ -239,6 +265,7 @@ export function InlineNumber({
   placeholder = '0',
   label,
   readOnly = false,
+  block = false,
 }: {
   id: string
   value: string
@@ -247,6 +274,8 @@ export function InlineNumber({
   placeholder?: string
   // Подпись для экранного диктора, если строка без <label>
   label?: string
+  // Поле тянется на всю ширину контейнера (в строке с единой шириной)
+  block?: boolean
   readOnly?: boolean
 }) {
   return (
@@ -262,7 +291,7 @@ export function InlineNumber({
         aria-label={label}
         aria-invalid={isInvalid(value)}
         readOnly={readOnly}
-        className={`field field-inline ${readOnly ? 'opacity-60' : ''}`}
+        className={`field ${block ? 'h-9 min-w-0 flex-1 text-right' : 'field-inline'} ${readOnly ? 'opacity-60' : ''}`}
       />
       {unit && <span className="w-7 text-left text-app-muted">{unit}</span>}
     </>

@@ -131,6 +131,7 @@ export function ArtilleryCalculator({
   const showTot = useFeature('tot')
   const showJournal = useFeature('journal')
   const showTable = useFeature('table')
+  const showHints = useFeature('hints')
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
@@ -832,11 +833,11 @@ export function ArtilleryCalculator({
               {solution ? solution.tof.toFixed(1) : '—'}
               <span className="w-7 text-left text-app-muted">{unitS}</span>
             </Row>
-            <Row icon="charge" label={ru ? 'Заряд' : 'Charge'}>
+            <Row icon="charge" control="full" label={ru ? 'Заряд' : 'Charge'}>
               {/* «Быстрый» — заряд с наименьшим временем полёта,
                   «точный» — с наименьшим «1 мил ≈ X м». Оба
                   пересчитываются при смене дистанции. */}
-              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg">
+              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg min-w-0 flex-1 [&>button]:flex-1 [&>button]:justify-center">
                 {(['fastest', 'precise'] as const).map((preference) => (
                   <button
                     key={preference}
@@ -858,7 +859,8 @@ export function ArtilleryCalculator({
                 ))}
               </div>
               <Dropdown
-                variant="ghost"
+                fullWidth
+                className="w-[7.5rem] shrink-0"
                 label={ru ? 'Заряд' : 'Charge'}
                 disabled={applicable.length === 0}
                 value={chargeValue}
@@ -888,8 +890,9 @@ export function ArtilleryCalculator({
               />
             </Row>
             {profileModes.length > 1 && (
-              <Row icon="trajectory" label={ru ? 'Траектория' : 'Trajectory'}>
+              <Row icon="trajectory" control="full" label={ru ? 'Траектория' : 'Trajectory'}>
                 <Toggle
+                  className="flex-1 [&>button]:flex-1 [&>button]:justify-center"
                   label={ru ? 'Режим траектории' : 'Trajectory mode'}
                   value={mode}
                   onChange={changeMode}
@@ -927,7 +930,7 @@ export function ArtilleryCalculator({
           </div>
 
           <dl>
-            <Row icon="distance" label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
+            <Row icon="distance" control="unit" unit={unitM} label={ru ? 'Дистанция' : 'Distance'} htmlFor="calc-distance">
               <InlineNumber
                 id="calc-distance"
                 value={distance}
@@ -935,10 +938,10 @@ export function ArtilleryCalculator({
                   setDistance(value)
                   setMapTarget(null)
                 })}
-                unit={unitM}
+                block
               />
             </Row>
-            <Row icon="azimuth" label={ru ? 'Азимут на цель' : 'Target bearing'} htmlFor="calc-azimuth">
+            <Row icon="azimuth" control="full" label={ru ? 'Азимут на цель' : 'Target bearing'} htmlFor="calc-azimuth">
               <Toggle
                 label={ru ? 'Единицы азимута' : 'Azimuth units'}
                 value={azimuthUnit}
@@ -956,14 +959,15 @@ export function ArtilleryCalculator({
                   setMapTarget(null)
                 })}
                 placeholder={ru ? 'не задан' : 'not set'}
+                block
               />
             </Row>
-            <Row icon="targetHeight" label={ru ? 'Высота цели' : 'Target height'} htmlFor="calc-target-height">
+            <Row icon="targetHeight" control="unit" unit={unitM} label={ru ? 'Высота цели' : 'Target height'} htmlFor="calc-target-height">
               <InlineNumber
                 id="calc-target-height"
                 value={targetHeight}
                 onChange={edited(setTargetHeight)}
-                unit={unitM}
+                block
               />
             </Row>
           </dl>
@@ -971,8 +975,10 @@ export function ArtilleryCalculator({
           <div className="my-3 h-px bg-app-border" />
 
           <dl>
-            <Row icon="weapon" label={ru ? 'Орудие' : 'Weapon'}>{modelSelector}</Row>
-            <Row icon="gunHeight" label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
+            <Row icon="weapon" control="full" label={ru ? 'Орудие' : 'Weapon'}>
+              {modelSelector}
+            </Row>
+            <Row icon="gunHeight" control="unit" unit={unitM} label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
               <button
                 type="button"
                 aria-pressed={heightLocked}
@@ -1001,10 +1007,10 @@ export function ArtilleryCalculator({
                 value={ownHeight}
                 onChange={edited(setOwnHeight)}
                 readOnly={heightLocked}
-                unit={unitM}
+                block
               />
             </Row>
-            <Row icon="shell" label={ru ? 'Снаряд' : 'Shell'}>
+            <Row icon="shell" control="full" label={ru ? 'Снаряд' : 'Shell'}>
               <AmmunitionSelector
                 ammunition={ammunition}
                 selectedId={ammoId}
@@ -1043,7 +1049,7 @@ export function ArtilleryCalculator({
               </p>
             )}
 
-            {heightIncomplete && (
+            {showHints && heightIncomplete && (
               <p className={`${alertClass} text-app-muted`}>
                 {ru
                   ? 'Введите обе высоты — пока поправка на высоту не применяется.'

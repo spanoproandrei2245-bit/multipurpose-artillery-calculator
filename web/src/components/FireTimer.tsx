@@ -201,7 +201,7 @@ export function FireTimer({
           shot={shot}
           category={category}
           kind={shellKind(shellType)}
-          className="mt-3 block rounded-md bg-black/20"
+          className="mt-2 block"
         />
       )}
 
