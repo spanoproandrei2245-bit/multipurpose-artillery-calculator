@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 
 import {
@@ -6,7 +7,6 @@ import {
   parseWorkshopLink,
   type MapRequest,
 } from '../lib/mapRequests'
-import type { Language } from '../types/settings'
 import { FieldIcon } from './FieldIcon'
 
 /**
@@ -15,13 +15,11 @@ import { FieldIcon } from './FieldIcon'
  * любой.
  */
 export function MapRequests({
-  language,
   onClose,
 }: {
-  language: Language
+  
   onClose: () => void
 }) {
-  const ru = language === 'ru'
   const [link, setLink] = useState('')
   const [name, setName] = useState('')
   const [requests, setRequests] = useState<MapRequest[] | null>(null)
@@ -54,7 +52,7 @@ export function MapRequests({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={ru ? 'Предложить карту' : 'Suggest a map'}
+      aria-label={t('mapRequests.suggest-a-map')}
       className="tour-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
@@ -64,12 +62,12 @@ export function MapRequests({
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-app-text">
-            {ru ? 'Предложить карту' : 'Suggest a map'}
+            {t('mapRequests.suggest-a-map')}
           </h2>
           <button
             type="button"
             className="btn btn-ghost px-2"
-            aria-label={ru ? 'Закрыть' : 'Close'}
+            aria-label={t('combatScreen.close')}
             onClick={onClose}
           >
             <FieldIcon name="close" className="h-5 w-5" />
@@ -77,9 +75,7 @@ export function MapRequests({
         </div>
 
         <p className="mt-2 text-[13.5px] text-app-muted">
-          {ru
-            ? 'Вставьте ссылку на мод карты в Steam Workshop. Чем больше голосов у карты, тем раньше она появится.'
-            : 'Paste the Steam Workshop link of the map mod. The more votes a map has, the sooner it is added.'}
+          {t('mapRequests.paste-the-steam-workshop-link')}
         </p>
 
         <input
@@ -93,24 +89,20 @@ export function MapRequests({
           value={name}
           maxLength={60}
           onChange={(event) => setName(event.target.value)}
-          placeholder={ru ? 'Название карты (необязательно)' : 'Map name (optional)'}
+          placeholder={t('mapRequests.map-name-optional')}
           className="field mt-2"
         />
 
         {link.trim() !== '' && !parsed && (
           <p className="mt-2 text-[13px] text-danger">
-            {ru
-              ? 'Это не ссылка на мод в Steam Workshop.'
-              : 'That is not a Steam Workshop link.'}
+            {t('mapRequests.that-is-not-a-steam')}
           </p>
         )}
 
         {existing ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-app-raised px-3 py-2 text-[13.5px]">
             <span className="text-app-text-2">
-              {ru
-                ? `Эта карта уже запрошена (${existing.votes}). Проголосуйте за неё:`
-                : `This map is already requested (${existing.votes}). Vote for it:`}
+              {t('mapRequests.this-map-is-already-requested', existing.votes)}
             </span>
             <a
               href={existing.issueUrl}
@@ -118,7 +110,7 @@ export function MapRequests({
               rel="noreferrer"
               className="btn btn-sm btn-primary"
             >
-              {ru ? 'Голосовать' : 'Vote'}
+              {t('mapRequests.vote')}
             </a>
           </div>
         ) : (
@@ -131,32 +123,28 @@ export function MapRequests({
               onClick={(event) => !parsed && event.preventDefault()}
               className={`btn btn-primary ${parsed ? '' : 'pointer-events-none opacity-40'}`}
             >
-              {ru ? 'Предложить на GitHub' : 'Suggest on GitHub'}
+              {t('mapRequests.suggest-on-github')}
             </a>
             <span className="text-[12.5px] text-app-muted">
-              {ru
-                ? 'Откроется готовая заявка, нужна учётная запись GitHub.'
-                : 'A ready-made request opens; a GitHub account is required.'}
+              {t('mapRequests.a-ready-made-request-opens')}
             </span>
           </div>
         )}
 
         <h3 className="mt-5 font-semibold text-app-text">
-          {ru ? 'Запрошенные карты' : 'Requested maps'}
+          {t('mapRequests.requested-maps')}
         </h3>
         {failed ? (
           <p className="mt-2 text-[13.5px] text-app-muted">
-            {ru
-              ? 'Не удалось загрузить список (нет сети или превышен лимит GitHub). Попробуйте позже.'
-              : 'Could not load the list (offline or GitHub rate limit). Try again later.'}
+            {t('mapRequests.could-not-load-the-list')}
           </p>
         ) : requests === null ? (
           <p className="mt-2 text-[13.5px] text-app-muted">
-            {ru ? 'Загрузка…' : 'Loading…'}
+            {t('app.loading')}
           </p>
         ) : requests.length === 0 ? (
           <p className="mt-2 text-[13.5px] text-app-muted">
-            {ru ? 'Пока никто ничего не предложил.' : 'Nothing has been suggested yet.'}
+            {t('mapRequests.nothing-has-been-suggested-yet')}
           </p>
         ) : (
           <ul className="mt-2 space-y-1.5">
@@ -188,16 +176,14 @@ export function MapRequests({
                   rel="noreferrer"
                   className="btn btn-sm"
                 >
-                  {ru ? 'Голосовать' : 'Vote'}
+                  {t('mapRequests.vote')}
                 </a>
               </li>
             ))}
           </ul>
         )}
         <p className="mt-3 text-[12px] text-app-faint">
-          {ru
-            ? 'Голос — это 👍 на странице заявки в GitHub.'
-            : 'A vote is a 👍 on the request page on GitHub.'}
+          {t('mapRequests.a-vote-is-a-on')}
         </p>
       </div>
     </div>

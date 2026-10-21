@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import { useEffect, useState } from 'react'
 
@@ -17,7 +18,6 @@ import {
   writeStored,
 } from '../lib/input'
 import type { AngleUnit } from '../lib/journal'
-import type { Language } from '../types/settings'
 import { NumberField, Toggle } from './FormControls'
 
 export interface AdjustmentEntry extends Adjustment {
@@ -35,7 +35,6 @@ interface Props {
   // Азимут орудие → цель, мил; нужен для режима наблюдателя
   gunAzimuthMil: number | null
   azimuthUnit: AngleUnit
-  language: Language
 }
 
 /**
@@ -51,11 +50,9 @@ export function AdjustFire({
   onReset,
   gunAzimuthMil,
   azimuthUnit,
-  language,
 }: Props) {
-  const ru = language === 'ru'
-  const unitM = ru ? 'м' : 'm'
-  const unitAngle = azimuthUnit === 'mil' ? (ru ? 'мил' : 'mil') : '°'
+  const unitM = t('unit.m')
+  const unitAngle = azimuthUnit === 'mil' ? (t('unit.mil')) : '°'
 
   const [frame, setFrame] = useState<Frame>(() =>
     readStored<Frame>('adjustFrame', ['gun', 'observer'], 'gun')
@@ -103,28 +100,20 @@ export function AdjustFire({
     if (rangeValue > 0) {
       const side =
         rangeSide === 'short'
-          ? ru
-            ? 'недолёт'
-            : 'short'
-          : ru
-            ? 'перелёт'
-            : 'over'
+          ? t('adjustFire.short')
+          : t('adjustFire.over')
       parts.push(`${side} ${rangeValue}`)
     }
     if (lateralValue > 0) {
       const side =
         lateralSide === 'left'
-          ? ru
-            ? 'левее'
-            : 'left'
-          : ru
-            ? 'правее'
-            : 'right'
+          ? t('adjustFire.left')
+          : t('adjustFire.right')
       parts.push(`${side} ${lateralValue}`)
     }
     const text = parts.join(', ')
     return frame === 'observer'
-      ? `${text} (${ru ? 'набл.' : 'obs.'} ${observerAzimuth.trim()} ${unitAngle})`
+      ? `${text} (${t('adjustFire.obs')} ${observerAzimuth.trim()} ${unitAngle})`
       : text
   }
 
@@ -150,21 +139,17 @@ export function AdjustFire({
     const parts: string[] = []
     if (Math.round(adjustment.range) !== 0) {
       parts.push(
-        `${ru ? 'дальность' : 'range'} ${formatSigned(adjustment.range, 0)} ${unitM}`
+        `${t('adjustFire.range')} ${formatSigned(adjustment.range, 0)} ${unitM}`
       )
     }
     if (Math.round(adjustment.lateral) !== 0) {
       const side =
         adjustment.lateral > 0
-          ? ru
-            ? 'вправо'
-            : 'right'
-          : ru
-            ? 'влево'
-            : 'left'
+          ? t('adjustFire.right-2')
+          : t('adjustFire.left-2')
       parts.push(`${side} ${Math.abs(adjustment.lateral).toFixed(0)} ${unitM}`)
     }
-    return parts.length > 0 ? parts.join(' · ') : ru ? 'нет' : 'none'
+    return parts.length > 0 ? parts.join(' · ') : t('adjustFire.none')
   }
 
   const hasTotal = history.length > 0
@@ -178,7 +163,7 @@ export function AdjustFire({
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="correction" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Корректировка огня' : 'Adjust fire'}
+          {t('adjustFire.adjust-fire')}
         </span>
         {hasTotal && (
           <span className="tag tag-accent truncate">{describe(total)}</span>
@@ -188,17 +173,17 @@ export function AdjustFire({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <span className="label flex items-center gap-1.5">
           <FieldIcon name="line" />
-          {ru ? 'Доклад по линии' : 'Report along'}
+          {t('adjustFire.report-along')}
         </span>
         <Toggle
-          label={ru ? 'Чья линия доклада' : 'Report frame'}
+          label={t('adjustFire.report-frame')}
           value={frame}
           onChange={setFrame}
           options={[
-            { value: 'gun', label: ru ? 'орудие — цель' : 'gun–target', icon: 'gun' },
+            { value: 'gun', label: t('adjustFire.gun-target'), icon: 'gun' },
             {
               value: 'observer',
-              label: ru ? 'наблюдатель — цель' : 'observer–target',
+              label: t('adjustFire.observer-target'),
               icon: 'observer',
             },
           ]}
@@ -212,20 +197,14 @@ export function AdjustFire({
             icon="observer"
             className="sm:col-span-2"
             label={
-              ru
-                ? `Азимут наблюдатель → цель (${unitAngle})`
-                : `Observer → target azimuth (${unitAngle})`
+              t('adjustFire.observer-target-azimuth', unitAngle)
             }
             value={observerAzimuth}
             onChange={setObserverAzimuth}
             hint={
               gunAzimuthMil === null
-                ? ru
-                  ? 'Нужен и азимут орудия на цель — введите его выше.'
-                  : 'The gun azimuth to target is also required — enter it above.'
-                : ru
-                  ? 'Наблюдатель докладывает «левее / правее» так, как видит сам, глядя на цель.'
-                  : 'The observer reports left / right as seen while looking at the target.'
+                ? t('adjustFire.the-gun-azimuth-to-target')
+                : t('adjustFire.the-observer-reports-left-right')
             }
           />
         )}
@@ -233,18 +212,18 @@ export function AdjustFire({
         <NumberField
           id="adjust-range"
           icon="distance"
-          label={ru ? 'По дальности (м)' : 'Range (m)'}
+          label={t('adjustFire.range-m')}
           value={rangeMiss}
           onChange={setRangeMiss}
           onEnter={add}
           aside={
             <Toggle
-              label={ru ? 'Недолёт или перелёт' : 'Short or over'}
+              label={t('adjustFire.short-or-over')}
               value={rangeSide}
               onChange={setRangeSide}
               options={[
-                { value: 'short', label: ru ? 'недолёт' : 'short', icon: 'arrowDown' },
-                { value: 'over', label: ru ? 'перелёт' : 'over', icon: 'arrowUp' },
+                { value: 'short', label: t('adjustFire.short'), icon: 'arrowDown' },
+                { value: 'over', label: t('adjustFire.over'), icon: 'arrowUp' },
               ]}
             />
           }
@@ -252,18 +231,18 @@ export function AdjustFire({
         <NumberField
           id="adjust-lateral"
           icon="correction"
-          label={ru ? 'По направлению (м)' : 'Deflection (m)'}
+          label={t('adjustFire.deflection-m')}
           value={lateralMiss}
           onChange={setLateralMiss}
           onEnter={add}
           aside={
             <Toggle
-              label={ru ? 'Левее или правее' : 'Left or right'}
+              label={t('adjustFire.left-or-right')}
               value={lateralSide}
               onChange={setLateralSide}
               options={[
-                { value: 'left', label: ru ? 'левее' : 'left', icon: 'arrowLeft' },
-                { value: 'right', label: ru ? 'правее' : 'right', icon: 'arrowRight' },
+                { value: 'left', label: t('adjustFire.left'), icon: 'arrowLeft' },
+                { value: 'right', label: t('adjustFire.right'), icon: 'arrowRight' },
               ]}
             />
           }
@@ -275,11 +254,11 @@ export function AdjustFire({
           <>
             <button type="button" onClick={onUndo} className="btn">
               <FieldIcon name="undo" />
-              {ru ? 'Отменить последний' : 'Undo last'}
+              {t('adjustFire.undo-last')}
             </button>
             <button type="button" onClick={onReset} className="btn btn-danger">
               <FieldIcon name="trash" />
-              {ru ? 'Сбросить' : 'Reset'}
+              {t('adjustFire.reset')}
             </button>
           </>
         )}
@@ -290,7 +269,7 @@ export function AdjustFire({
           className="btn btn-primary"
         >
           <FieldIcon name="correction" />
-          {ru ? 'Учесть разрыв' : 'Apply'}
+          {t('adjustFire.apply')}
           <span className="hidden opacity-70 sm:inline">↵</span>
         </button>
       </div>
@@ -299,7 +278,7 @@ export function AdjustFire({
         <div className="mt-4 border-t border-app-border pt-3">
           <p className="text-sm">
             <span className="label">
-              {ru ? 'Итого для орудия' : 'Total for the gun'}
+              {t('adjustFire.total-for-the-gun')}
             </span>{' '}
             <span className="mono-num ml-1 text-accent">{describe(total)}</span>
           </p>

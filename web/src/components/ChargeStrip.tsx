@@ -1,6 +1,6 @@
+import { t } from '../i18n'
 import { pickCharge, type ChargeResult } from '../lib/ballistics'
 import type { ArtilleryMode } from '../types/artillery'
-import type { Language } from '../types/settings'
 import { FieldIcon } from './FieldIcon'
 
 export interface ChargeGroup {
@@ -15,7 +15,6 @@ interface Props {
   activeMode: ArtilleryMode
   activeCharge: number | null
   onPick: (mode: ArtilleryMode, charge: number) => void
-  language: Language
 }
 
 /**
@@ -23,13 +22,12 @@ interface Props {
  * траектория) — карточкой с возвышением и временем полёта. Видно сразу,
  * какой брать и какие есть альтернативы: ⚡ — быстрее всех, ◎ — точнее всех.
  */
-export function ChargeStrip({ groups, activeMode, activeCharge, onPick, language }: Props) {
-  const ru = language === 'ru'
-  const unitMil = ru ? 'мил' : 'mil'
-  const unitS = ru ? 'с' : 's'
+export function ChargeStrip({ groups, activeMode, activeCharge, onPick, }: Props) {
+  const unitMil = t('unit.mil')
+  const unitS = t('unit.s')
 
   return (
-    <div className="space-y-2.5" aria-label={ru ? 'Способы выстрела' : 'Ways to fire'}>
+    <div className="space-y-2.5" aria-label={t('chargeStrip.ways-to-fire')}>
       {groups.map((group) => {
         const fastest = pickCharge(group.results, 'fastest')?.charge
         const precise = pickCharge(group.results, 'precise')?.charge
@@ -55,9 +53,9 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, language
                     title={
                       usable
                         ? result.metersPerMil !== null
-                          ? `1 ${unitMil} ≈ ${result.metersPerMil.toFixed(1)} ${ru ? 'м' : 'm'}`
+                          ? `1 ${unitMil} ≈ ${result.metersPerMil.toFixed(1)} ${t('unit.m')}`
                           : undefined
-                        : `${result.minRange}–${result.maxRange} ${ru ? 'м' : 'm'}`
+                        : `${result.minRange}–${result.maxRange} ${t('unit.m')}`
                     }
                     className={[
                       'relative flex flex-col items-start rounded-lg px-2.5 py-1.5 text-left transition-all duration-200',
@@ -74,12 +72,12 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, language
                         {result.charge}
                       </b>
                       {usable && several && result.charge === fastest && (
-                        <span title={ru ? 'Самый быстрый' : 'Fastest'} className="text-warn">
+                        <span title={t('chargeStrip.fastest')} className="text-warn">
                           <FieldIcon name="fire" className="h-3.5 w-3.5" />
                         </span>
                       )}
                       {usable && several && result.charge === precise && (
-                        <span title={ru ? 'Самый точный' : 'Most precise'} className="text-info">
+                        <span title={t('chargeStrip.most-precise')} className="text-info">
                           <FieldIcon name="correction" className="h-3.5 w-3.5" />
                         </span>
                       )}
@@ -87,7 +85,7 @@ export function ChargeStrip({ groups, activeMode, activeCharge, onPick, language
                     <span className="mt-0.5 text-[12px] text-app-muted tabular-nums">
                       {usable
                         ? `${Math.round(solution.elevation)} ${unitMil} · ${solution.tof.toFixed(1)} ${unitS}`
-                        : `${result.minRange}–${result.maxRange} ${ru ? 'м' : 'm'}`}
+                        : `${result.minRange}–${result.maxRange} ${t('unit.m')}`}
                     </span>
                   </button>
                 )

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
@@ -113,9 +114,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
     setShot(next)
     setExcluded(new Set())
     setNotice(
-      ru
-        ? `Найдено меток: ${blobs.length}. Лишние можно отключить кликом.`
-        : `Markers found: ${blobs.length}. Click one to skip it.`
+      t('screenMarkers.markers-found-click-one-to', blobs.length)
     )
     return next
   }
@@ -139,15 +138,11 @@ export function ScreenMarkers({ world, author, language }: Props) {
       })
       setLive(true)
       setNotice(
-        ru
-          ? 'Захват идёт. Откройте карту в игре и нажмите «Снимок» (в программе для ПК — Ctrl+Alt+S).'
-          : 'Capturing. Open the map in game and press "Snapshot" (desktop app: Ctrl+Alt+S).'
+        t('screenMarkers.capturing-open-the-map-in')
       )
     } catch {
       setNotice(
-        ru
-          ? 'Захват экрана недоступен или отменён. Вставьте скриншот (Ctrl+V) или выберите файл.'
-          : 'Screen capture is unavailable or was cancelled. Paste a screenshot (Ctrl+V) or pick a file.'
+        t('screenMarkers.screen-capture-is-unavailable-or')
       )
     }
   }
@@ -176,12 +171,10 @@ export function ScreenMarkers({ world, author, language }: Props) {
           return
         }
       }
-      setNotice(ru ? 'В буфере нет картинки.' : 'No image in the clipboard.')
+      setNotice(t('screenMarkers.no-image-in-the-clipboard'))
     } catch {
       setNotice(
-        ru
-          ? 'Браузер не дал прочитать буфер — нажмите Ctrl+V, пока эта панель открыта.'
-          : 'The browser blocked the clipboard — press Ctrl+V while this panel is open.'
+        t('screenMarkers.the-browser-blocked-the-clipboard')
       )
     }
   }
@@ -220,9 +213,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
       addMarker({ world, x: found.x, y: found.y, label: '', color: found.color, author, source: 'screen' })
     )
     setNotice(
-      ru
-        ? `На карте: новых ${plan.add.length}, убрано ${plan.remove.length}, без изменений ${detected.length - plan.add.length}.`
-        : `Map: ${plan.add.length} new, ${plan.remove.length} removed, ${detected.length - plan.add.length} unchanged.`
+      t('screenMarkers.map-new-removed-unchanged', plan.add.length, plan.remove.length, detected.length - plan.add.length)
     )
   }
 
@@ -294,18 +285,14 @@ export function ScreenMarkers({ world, author, language }: Props) {
     setCalibrating(false)
     if (!result) {
       setNotice(
-        ru
-          ? 'Точки слишком близко или координаты совпадают — возьмите пересечения подальше друг от друга.'
-          : 'The points are too close or have the same grid — pick intersections further apart.'
+        t('screenMarkers.the-points-are-too-close')
       )
       return
     }
     setCalibration(result)
     writeStored(`screenCalibration:${world}`, JSON.stringify(result))
     setNotice(
-      ru
-        ? `Калибровка готова: ${result.scale.toFixed(2)} м на пиксель.`
-        : `Calibrated: ${result.scale.toFixed(2)} m per pixel.`
+      t('screenMarkers.calibrated-m-per-pixel', result.scale.toFixed(2))
     )
   }
 
@@ -320,39 +307,37 @@ export function ScreenMarkers({ world, author, language }: Props) {
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="marker" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Метки с экрана игры' : 'Markers from the game screen'}
+          {t('screenMarkers.markers-from-the-game-screen')}
         </span>
         <span className="tag tag-warn">
-          {ru ? 'эксперимент' : 'experimental'}
+          {t('gridInput.experimental')}
         </span>
       </summary>
 
       <p className="mt-2 text-xs text-app-muted">
-        {ru
-          ? 'Программа смотрит только на картинку экрана — в игру ничего не встраивается. Ищутся цветные метки (красные, синие, зелёные, оранжевые, жёлтые, фиолетовые); чёрные не отличить от сетки.'
-          : 'Only the screen image is read — nothing is injected into the game. Coloured markers are detected (red, blue, green, orange, yellow, purple); black ones look like the grid.'}
+        {t('screenMarkers.only-the-screen-image-is')}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {live ? (
           <>
             <button type="button" className={buttonClass} onClick={() => snapshot()}>
-              {ru ? 'Снимок' : 'Snapshot'}
+              {t('screenMarkers.snapshot')}
             </button>
             <button type="button" className={buttonClass} onClick={stopCapture}>
-              {ru ? 'Остановить захват' : 'Stop capture'}
+              {t('screenMarkers.stop-capture')}
             </button>
           </>
         ) : (
           <button type="button" className={buttonClass} onClick={() => void startCapture()}>
-            {ru ? 'Захват экрана' : 'Capture screen'}
+            {t('screenMarkers.capture-screen')}
           </button>
         )}
         <button type="button" className={buttonClass} onClick={() => void pasteImage()}>
-          {ru ? 'Вставить скриншот' : 'Paste screenshot'}
+          {t('screenMarkers.paste-screenshot')}
         </button>
         <label className={buttonClass}>
-          {ru ? 'Файл' : 'File'}
+          {t('screenMarkers.file')}
           <input
             type="file"
             accept="image/*"
@@ -385,16 +370,10 @@ export function ScreenMarkers({ world, author, language }: Props) {
               }}
             >
               {calibrating
-                ? ru
-                  ? 'Отменить калибровку'
-                  : 'Cancel calibration'
+                ? t('screenMarkers.cancel-calibration')
                 : calibration
-                  ? ru
-                    ? 'Калибровать заново'
-                    : 'Recalibrate'
-                  : ru
-                    ? 'Калибровать'
-                    : 'Calibrate'}
+                  ? t('screenMarkers.recalibrate')
+                  : t('screenMarkers.calibrate')}
             </button>
             <button
               type="button"
@@ -402,7 +381,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
               disabled={!calibration || calibrating}
               onClick={() => apply(shot, excluded)}
             >
-              {ru ? 'Перенести на карту' : 'Put on the map'}
+              {t('screenMarkers.put-on-the-map')}
             </button>
             {live && (
               <label className="flex items-center gap-1 text-xs text-app-text">
@@ -413,30 +392,26 @@ export function ScreenMarkers({ world, author, language }: Props) {
                   onChange={(event) => setAuto(event.target.checked)}
                   className="accent-[var(--color-accent)]"
                 />
-                {ru ? 'Обновлять каждые 10 с' : 'Refresh every 10 s'}
+                {t('screenMarkers.refresh-every-10-s')}
               </label>
             )}
           </div>
 
           {calibrating && (
             <p className="mt-2 rounded-md bg-app-raised px-3 py-2 text-xs text-warn">
-              {ru
-                ? `Точка ${points.length + 1} из 2: кликните пересечение линий сетки и введите его координату (например 045 078). Точки — подальше друг от друга.`
-                : `Point ${points.length + 1} of 2: click a grid line intersection and enter its grid (e.g. 045 078). Keep the points far apart.`}
+              {t('screenMarkers.point-of-2-click-a', points.length + 1)}
             </p>
           )}
           {!calibration && !calibrating && (
             <p className="mt-2 text-xs text-app-muted">
-              {ru
-                ? 'Нужна калибровка: две точки сетки на снимке. Пока карту в игре не сдвигали и не меняли масштаб, она подходит и для следующих снимков.'
-                : 'Calibrate first: two grid points on the snapshot. It stays valid while the in-game map is not moved or zoomed.'}
+              {t('screenMarkers.calibrate-first-two-grid-points')}
             </p>
           )}
 
           {pending && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <span className="text-app-muted">
-                {ru ? 'Координата пересечения' : 'Intersection grid'}
+                {t('screenMarkers.intersection-grid')}
               </span>
               <input
                 autoFocus
@@ -467,7 +442,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
               calibrating ? 'cursor-crosshair' : 'cursor-pointer',
             ].join(' ')}
           >
-            <img src={shot.url} alt={ru ? 'Снимок карты' : 'Map snapshot'} className="block w-full select-none" draggable={false} />
+            <img src={shot.url} alt={t('screenMarkers.map-snapshot')} className="block w-full select-none" draggable={false} />
             <svg
               viewBox={`0 0 ${shot.image.width} ${shot.image.height}`}
               className="pointer-events-none absolute inset-0 h-full w-full"

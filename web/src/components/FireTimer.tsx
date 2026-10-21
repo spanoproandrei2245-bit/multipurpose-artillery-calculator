@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import {
   useEffect,
@@ -13,7 +14,6 @@ import { shellKind } from '../lib/shellKind'
 import type { ArtilleryCategory } from '../types/gameModel'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
 import { ProgressBar } from './FormControls'
-import type { Language } from '../types/settings'
 
 /** Управление таймером снаружи (горячие клавиши). */
 export interface FireTimerHandle {
@@ -26,7 +26,6 @@ export interface FireTimerHandle {
 interface Props {
   // Время полёта текущего решения, с
   tof: number
-  language: Language
   ref?: Ref<FireTimerHandle>
   // Выстрел здесь (кнопка или клавиша) — например, сообщить связке
   onFire?: () => void
@@ -55,14 +54,12 @@ interface Shot {
  */
 export function FireTimer({
   tof,
-  language,
   ref,
   onFire,
   category = 'mortar',
   shellType = 'HE',
   onShotChange,
 }: Props) {
-  const ru = language === 'ru'
 
   const [shot, setShot] = useState<Shot | null>(null)
   const [now, setNow] = useState(() => Date.now())
@@ -150,10 +147,10 @@ export function FireTimer({
 
   const alert = phase === 'splash' || phase === 'impact'
   const phaseLabel = {
-    idle: ru ? 'Готов' : 'Ready',
-    flight: ru ? 'Полёт' : 'In flight',
-    splash: ru ? 'Сплэш' : 'Splash',
-    impact: ru ? 'Разрыв' : 'Impact',
+    idle: t('fireTimer.ready'),
+    flight: t('fireTimer.in-flight'),
+    splash: t('fireTimer.splash'),
+    impact: t('fireTimer.impact'),
   }[phase]
 
   return (
@@ -162,12 +159,8 @@ export function FireTimer({
         <button type="button" data-tour="fire" onClick={fire} className="btn btn-primary btn-lg flex-1">
           <FieldIcon name="fire" className="h-5 w-5" />
           {shot
-            ? ru
-              ? 'Огонь ещё'
-              : 'Fire again'
-            : ru
-              ? 'Огонь'
-              : 'Fire'}
+            ? t('fireTimer.fire-again')
+            : t('fireTimer.fire')}
           <span className="hidden rounded bg-white/20 px-1.5 text-[12px] font-medium sm:inline">
             F
           </span>
@@ -180,7 +173,7 @@ export function FireTimer({
             className="btn min-h-12"
           >
             <FieldIcon name="stop" className="h-4 w-4" />
-            {ru ? 'Стоп' : 'Stop'}
+            {t('fireTimer.stop')}
           </button>
         )}
 
@@ -188,11 +181,11 @@ export function FireTimer({
           type="button"
           aria-pressed={sound}
           onClick={() => setSound((value) => !value)}
-          title={ru ? 'Звуковой сигнал' : 'Sound'}
+          title={t('fireTimer.sound')}
           className={['btn min-h-12', sound ? '' : 'text-app-faint'].join(' ')}
         >
           <FieldIcon name={sound ? 'sound' : 'soundOff'} className="h-5 w-5" />
-          {ru ? 'Звук' : 'Sound'}
+          {t('fireTimer.sound-2')}
         </button>
       </div>
 
@@ -210,7 +203,7 @@ export function FireTimer({
           <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
             {phaseLabel}
             {phase === 'idle' &&
-              ` · ${ru ? 'сигнал за' : 'beep at'} ${SPLASH_WARNING_S} ${ru ? 'с' : 's'}`}
+              ` · ${t('fireTimer.beep-at')} ${SPLASH_WARNING_S} ${t('unit.s')}`}
           </span>
           <span
             className={[
@@ -224,7 +217,7 @@ export function FireTimer({
                 ? '0.0'
                 : left.toFixed(1)}
             <span className="ml-1 text-[13px] font-normal text-app-muted">
-              {ru ? 'с' : 's'}
+              {t('unit.s')}
             </span>
           </span>
         </div>

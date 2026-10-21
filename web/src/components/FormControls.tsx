@@ -247,6 +247,7 @@ export function Row({
   icon,
   control,
   unit,
+  tourId,
   children,
 }: {
   label: ReactNode
@@ -256,10 +257,12 @@ export function Row({
   // с единицей справа (единицы выровнены в одну колонку)
   control?: 'full' | 'unit'
   unit?: string
+  // Для обучения: подсвечиваемая строка
+  tourId?: string
   children: ReactNode
 }) {
   return (
-    <div className="row">
+    <div className="row" data-tour={tourId}>
       <dt className="flex min-w-0 items-center gap-2">
         {icon && <FieldIcon name={icon} className="h-[18px] w-[18px] text-app-muted" />}
         <span className="min-w-0">

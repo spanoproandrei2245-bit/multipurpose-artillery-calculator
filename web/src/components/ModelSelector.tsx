@@ -1,14 +1,12 @@
+import { t } from '../i18n'
 import { useEffect, useId, useRef, useState } from 'react'
 
 import { models, type ModelId } from '../data/models'
-import { translations } from '../i18n/translations'
-import type { Language } from '../types/settings'
 import { ArtilleryIcon } from './ArtilleryIcon'
 
 interface ModelSelectorProps {
   value: ModelId
   onChange: (value: ModelId) => void
-  language: Language
 }
 
 const modelIds = Object.keys(models) as ModelId[]
@@ -21,9 +19,7 @@ const modelIds = Object.keys(models) as ModelId[]
 export function ModelSelector({
   value,
   onChange,
-  language,
 }: ModelSelectorProps) {
-  const t = translations[language].modelSelector
   const id = useId()
   const listId = `${id}-list`
 
@@ -100,7 +96,7 @@ export function ModelSelector({
 
   return (
     <div ref={rootRef} className="flex min-w-0 flex-1 items-center gap-2">
-      <ArtilleryIcon category={current.category} language={language} />
+      <ArtilleryIcon category={current.category} />
       <div className="relative min-w-0 flex-1">
       <button
         ref={buttonRef}
@@ -109,7 +105,7 @@ export function ModelSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        aria-label={t.label}
+        aria-label={t('modelSelector.label')}
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -142,7 +138,7 @@ export function ModelSelector({
           id={listId}
           role="listbox"
           tabIndex={-1}
-          aria-label={t.label}
+          aria-label={t('modelSelector.label')}
           aria-activedescendant={`${id}-opt-${active}`}
           onKeyDown={handleListKey}
           className="absolute right-0 z-30 mt-1 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none"
@@ -164,7 +160,7 @@ export function ModelSelector({
                   index === active ? 'bg-app-raised-hover' : '',
                 ].join(' ')}
               >
-                <ArtilleryIcon category={model.category} language={language} />
+                <ArtilleryIcon category={model.category} />
 
                 <span className="min-w-0 flex-1">
                   <span

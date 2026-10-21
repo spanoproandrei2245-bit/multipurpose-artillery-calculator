@@ -1,3 +1,4 @@
+import { t, type MessageKey } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -119,19 +120,19 @@ type Placing = 'gun' | 'target' | 'marker' | 'line'
 // Клик ближе — попадание в метку, пиксели
 const MARKER_HIT_PX = 14
 
-const COLOR_NAMES: Record<MarkerColor, { ru: string; en: string }> = {
-  red: { ru: 'красная', en: 'red' },
-  orange: { ru: 'оранжевая', en: 'orange' },
-  yellow: { ru: 'жёлтая', en: 'yellow' },
-  green: { ru: 'зелёная', en: 'green' },
-  blue: { ru: 'синяя', en: 'blue' },
-  purple: { ru: 'фиолетовая', en: 'purple' },
-  black: { ru: 'чёрная', en: 'black' },
+const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
+  red: 'mapPicker.red',
+  orange: 'mapPicker.orange',
+  yellow: 'mapPicker.yellow',
+  green: 'mapPicker.green',
+  blue: 'mapPicker.blue',
+  purple: 'mapPicker.purple',
+  black: 'mapPicker.black',
 }
 
-function markerTitle(marker: MapMarker, ru: boolean): string {
-  const color = ru ? COLOR_NAMES[marker.color].ru : COLOR_NAMES[marker.color].en
-  return marker.label || `${ru ? 'Метка' : 'Marker'} (${color})`
+function markerTitle(marker: MapMarker): string {
+  const color = t(COLOR_NAMES[marker.color])
+  return marker.label || `${t('mapPicker.marker')} (${color})`
 }
 
 const MAX_SCALE = 4
@@ -220,7 +221,7 @@ export function MapPicker({
   onGunLockChange,
 }: Props) {
   const ru = language === 'ru'
-  const unitM = ru ? 'м' : 'm'
+  const unitM = t('unit.m')
 
   const flightOnMap = useFlightOnMap()
   // Избранные карты: ключи пунктов списка, показываются сверху
@@ -306,12 +307,8 @@ export function MapPicker({
   const author =
     sync.callsign.trim() ||
     (sync.role === 'gunner'
-      ? ru
-        ? 'стрелок'
-        : 'gunner'
-      : ru
-        ? 'наводчик'
-        : 'FDC')
+      ? t('mapPicker.gunner')
+      : t('mapPicker.fdc'))
   const allMarkers = useMarkers()
   const markers = useMemo(
     () =>
@@ -387,7 +384,7 @@ export function MapPicker({
         setView(null)
       })
       .catch(() =>
-        setNotice(ru ? 'Не удалось открыть карту.' : 'Could not open the map.')
+        setNotice(t('mapPicker.could-not-open-the-map'))
       )
   }
 
@@ -564,7 +561,7 @@ export function MapPicker({
       ctx.fill()
       ctx.stroke()
 
-      const text = `${markerTitle(marker, ru)} · ${formatAge(now - marker.createdAt, ru)}`
+      const text = `${markerTitle(marker)} · ${formatAge(now - marker.createdAt)}`
       const width = ctx.measureText(text).width
       ctx.fillStyle = ink.plate
       ctx.fillRect(p.x + 11, p.y - 9, width + 8, 18)
@@ -682,7 +679,7 @@ export function MapPicker({
         ctx.setLineDash([])
       }
       // Подпись на верхней точке дальнего кольца
-      const label = `${ru ? 'макс' : 'max'} ${Math.round(reach.max)} ${unitM}`
+      const label = `${t('mapPicker.max')} ${Math.round(reach.max)} ${unitM}`
       ctx.font = '11px ' + sans
       const w = ctx.measureText(label).width
       const ly = c.y - reach.max * scale
@@ -981,15 +978,15 @@ export function MapPicker({
         author: m.author,
         group:
           mapKind(m) === 'official'
-            ? ru ? 'Официальные' : 'Official'
-            : ru ? 'Сообщество' : 'Community',
+            ? t('mapPicker.official')
+            : t('mapPicker.community'),
         preview: `${MAPS_BASE}${m.world}/tiles/0/0_0.webp`,
       })),
   ]
   function mapLabel(key: string): string {
     return mapEntries.find((e) => e.key === key)?.name ?? '—'
   }
-  const favoriteGroup = ru ? 'Избранные' : 'Favourites'
+  const favoriteGroup = t('mapPicker.favourites')
   const mapOptions: DropdownOption<string>[] = [
     ...mapEntries
       .filter((e) => favorites.includes(e.key))
@@ -1019,13 +1016,13 @@ export function MapPicker({
             tabIndex={-1}
             aria-label={
               favorites.includes(e.key)
-                ? ru ? 'Убрать из избранного' : 'Remove from favourites'
-                : ru ? 'В избранное' : 'Add to favourites'
+                ? t('mapPicker.remove-from-favourites')
+                : t('mapPicker.add-to-favourites')
             }
             title={
               favorites.includes(e.key)
-                ? ru ? 'Убрать из избранного' : 'Remove from favourites'
-                : ru ? 'В избранное' : 'Add to favourites'
+                ? t('mapPicker.remove-from-favourites')
+                : t('mapPicker.add-to-favourites')
             }
             onClick={(event) => {
               event.stopPropagation()
@@ -1041,13 +1038,13 @@ export function MapPicker({
         </span>
       ),
     }))
-mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить карту…' : 'Suggest a map…',    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
+mapOptions.push({    value: ADD_MAP,    label: t('mapPicker.suggest-a-map'),    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
 
   return (
     <div>
       {!map && (
         <div className="flex aspect-square items-center justify-center rounded-lg bg-app-surface">
-          <p className="label">{ru ? 'Загрузка карты…' : 'Loading the map…'}</p>
+          <p className="label">{t('artilleryCalculator.loading-the-map')}</p>
         </div>
       )}
 
@@ -1082,19 +1079,19 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
           <div
             role="toolbar"
             data-tour="tools"
-            aria-label={ru ? 'Что ставит касание' : 'Tap places'}
+            aria-label={t('mapPicker.tap-places')}
             aria-orientation="vertical"
             className="absolute top-2 right-2 flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
           >
             {(
               [
-                { id: 'gun', icon: 'gun', ru: 'Орудие', en: 'Gun' },
-                { id: 'target', icon: 'target', ru: 'Цель', en: 'Target' },
+                { id: 'gun', icon: 'gun', label: 'mapPicker.gun', },
+                { id: 'target', icon: 'target', label: 'artilleryCalculator.target', },
                 ...(showMarkers
-                  ? [{ id: 'marker', icon: 'marker', ru: 'Метка', en: 'Marker' }]
+                  ? [{ id: 'marker', icon: 'marker', label: 'mapPicker.marker', }]
                   : []),
-                { id: 'line', icon: 'line', ru: 'Огневая линия', en: 'Fire line' },
-              ] as { id: Placing; icon: FieldIconName; ru: string; en: string }[]
+                { id: 'line', icon: 'line', label: 'mapPicker.fire-line', },
+              ] as { id: Placing; icon: FieldIconName; label: MessageKey }[]
             ).map((tool) => {
               const active = placing === tool.id
               const locked = tool.id === 'gun' && gunLocked
@@ -1103,8 +1100,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                   type="button"
                   aria-pressed={active}
                   aria-disabled={locked}
-                  title={ru ? tool.ru : tool.en}
-                  aria-label={ru ? tool.ru : tool.en}
+                  title={t(tool.label)}
+                  aria-label={t(tool.label)}
                   onClick={() => !locked && setPlacing(tool.id)}
                   className={[
                     'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
@@ -1148,10 +1145,10 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                         disabled={!gun}
                         title={
                           gunLocked
-                            ? ru ? 'Орудие закреплено — нажмите, чтобы освободить' : 'Gun locked — tap to unlock'
-                            : ru ? 'Закрепить орудие (и его высоту)' : 'Lock the gun (and its height)'
+                            ? t('mapPicker.gun-locked-tap-to-unlock')
+                            : t('mapPicker.lock-the-gun-and-its')
                         }
-                        aria-label={ru ? 'Закрепить орудие' : 'Lock the gun'}
+                        aria-label={t('mapPicker.lock-the-gun')}
                         onClick={toggleGunLock}
                         className={[
                           'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-35',
@@ -1181,7 +1178,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                   className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
                 >
                   <FieldIcon name="list" className="h-5 w-5" />
-                  {ru ? 'Цели' : 'Targets'}
+                  {t('mapPicker.targets')}
                   <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
                     {quickTargets.length}
                   </span>
@@ -1189,8 +1186,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                 <button
                   type="button"
                   disabled={quickTargets.length === 0}
-                  title={ru ? 'Экспорт целей в файл' : 'Export targets to a file'}
-                  aria-label={ru ? 'Экспорт целей' : 'Export targets'}
+                  title={t('mapPicker.export-targets-to-a-file')}
+                  aria-label={t('mapPicker.export-targets')}
                   onClick={targetActions.exportAll}
                   className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -1198,8 +1195,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                 </button>
                 <button
                   type="button"
-                  title={ru ? 'Импорт целей из файла' : 'Import targets from a file'}
-                  aria-label={ru ? 'Импорт целей' : 'Import targets'}
+                  title={t('mapPicker.import-targets-from-a-file')}
+                  aria-label={t('mapPicker.import-targets')}
                   onClick={() => importRef.current?.click()}
                   className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
                 >
@@ -1221,21 +1218,19 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                 <ul className="max-h-[min(22rem,60%)] w-56 max-w-full overflow-y-auto rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm">
                   {quickTargets.length === 0 && (
                     <li className="px-2 py-1.5 text-[12.5px] text-white/60">
-                      {ru
-                        ? 'Пока пусто. Рассчитайте установки и сохраните цель — или импортируйте файл.'
-                        : 'Empty so far. Work out a solution and save a target — or import a file.'}
+                      {t('mapPicker.empty-so-far-work-out')}
                     </li>
                   )}
-                  {quickTargets.map((t) => (
-                    <li key={t.id} className="group relative">
-                      {renamingId === t.id ? (
+                  {quickTargets.map((qt) => (
+                    <li key={qt.id} className="group relative">
+                      {renamingId === qt.id ? (
                         <input
                           autoFocus
                           value={renameValue}
                           maxLength={60}
                           onChange={(event) => setRenameValue(event.target.value)}
                           onBlur={() => {
-                            targetActions.rename(t.id, renameValue)
+                            targetActions.rename(qt.id, renameValue)
                             setRenamingId(null)
                           }}
                           onKeyDown={(event) => {
@@ -1248,28 +1243,28 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                         <>
                           <button
                             type="button"
-                            aria-current={t.active ? 'true' : undefined}
-                            onClick={() => onPickJournalTarget?.(t.id)}
+                            aria-current={qt.active ? 'true' : undefined}
+                            onClick={() => onPickJournalTarget?.(qt.id)}
                             className={[
                               'flex w-full cursor-pointer flex-col rounded-md py-1 pr-14 pl-2 text-left transition-colors',
-                              t.active
+                              qt.active
                                 ? 'bg-accent-solid text-white'
                                 : 'text-white/90 hover:bg-white/15',
                             ].join(' ')}
                           >
-                            <span className="truncate text-[13px] font-medium">{t.name}</span>
+                            <span className="truncate text-[13px] font-medium">{qt.name}</span>
                             <span className="truncate text-[11.5px] tabular-nums opacity-70">
-                              {t.detail}
+                              {qt.detail}
                             </span>
                           </button>
                           <span className="absolute top-1/2 right-1 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                             <button
                               type="button"
-                              aria-label={ru ? 'Переименовать' : 'Rename'}
-                              title={ru ? 'Переименовать' : 'Rename'}
+                              aria-label={t('mapPicker.rename')}
+                              title={t('mapPicker.rename')}
                               onClick={() => {
-                                setRenamingId(t.id)
-                                setRenameValue(t.name)
+                                setRenamingId(qt.id)
+                                setRenameValue(qt.name)
                               }}
                               className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
                             >
@@ -1277,9 +1272,9 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                             </button>
                             <button
                               type="button"
-                              aria-label={ru ? 'Удалить' : 'Delete'}
-                              title={ru ? 'Удалить' : 'Delete'}
-                              onClick={() => targetActions.remove(t.id)}
+                              aria-label={t('mapPicker.delete')}
+                              title={t('mapPicker.delete')}
+                              onClick={() => targetActions.remove(qt.id)}
                               className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
                             >
                               <FieldIcon name="trash" className="h-3.5 w-3.5" />
@@ -1300,14 +1295,14 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
               <span className="inline-block h-2 w-2 rounded-full bg-gun" />
               {gun
                 ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
-                : ru ? 'орудие не задано' : 'no gun'}
+                : t('mapPicker.no-gun')}
             </span>
             <span className="text-white/30">|</span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-full bg-target" />
               {target
                 ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
-                : ru ? 'цель не задана' : 'no target'}
+                : t('mapPicker.no-target')}
             </span>
           </div>
         </div>
@@ -1324,7 +1319,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
         {builtin.length > 0 && <MapGlyph big />}
         {builtin.length > 0 && (
           <Dropdown
-            label={ru ? 'Карта' : 'Map'}
+            tourId="map-select"
+            label={t('mapPicker.map')}
             value={mapKey}
             onChange={(key) => (key === ADD_MAP ? setSuggesting(true) : openMap(key))}
             alignLeft
@@ -1340,7 +1336,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
               <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}><FieldIcon name="plus" /></button>
               <button type="button" className="btn" onClick={() => setView(null)}>
                 <FieldIcon name="fit" />
-                {ru ? 'Вся' : 'Fit'}
+                {t('mapPicker.fit')}
               </button>
             </div>
           </>
@@ -1353,11 +1349,11 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
             <div className="mt-3 rounded-lg bg-app-surface p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="label">
-                  {ru ? 'Огонь по линии' : 'Line fire'}
+                  {t('mapPicker.line-fire')}
                 </span>
                 <Dropdown
                   alignLeft
-                  label={ru ? 'Радиус поражения' : 'Kill radius'}
+                  label={t('mapPicker.kill-radius')}
                   value={lineWeaponId}
                   onChange={(id) => {
                     setLineWeaponId(id)
@@ -1366,7 +1362,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                   }}
                   options={LINE_WEAPONS.map((w) => ({
                     value: w.id,
-                    label: `${lineWeaponName(w.id, ru)} · ±${w.radius} ${unitM}`,
+                    label: `${lineWeaponName(w.id)} · ±${w.radius} ${unitM}`,
                   }))}
                 />
                 <div className="ml-auto flex gap-1">
@@ -1376,7 +1372,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                     disabled={linePoints.length === 0}
                     onClick={() => changeLine(linePoints.slice(0, -1))}
                   >
-                    {ru ? 'Убрать точку' : 'Undo point'}
+                    {t('mapPicker.undo-point')}
                   </button>
                   <button
                     type="button"
@@ -1384,24 +1380,22 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                     disabled={linePoints.length === 0}
                     onClick={() => changeLine([])}
                   >
-                    {ru ? 'Стереть' : 'Clear'}
+                    {t('mapPicker.clear')}
                   </button>
                 </div>
               </div>
 
               {linePoints.length === 0 ? (
                 <p className="mt-2 text-[13px] text-app-muted">
-                  {ru
-                    ? 'Расставьте точки по лесополосе, дороге или траншее — приложение разложит по ней точки прицеливания.'
-                    : 'Tap points along a tree line, road or trench — the app lays aim points along it.'}
+                  {t('mapPicker.tap-points-along-a-tree')}
                 </p>
               ) : (
                 <>
                   <p className="mt-2 text-[13px] text-app-muted tabular-nums">
-                    {ru ? 'Длина' : 'Length'}{' '}
+                    {t('mapPicker.length')}{' '}
                     {Math.round(polylineLength(linePoints))} {unitM} ·{' '}
-                    {ru ? 'точек прицеливания' : 'aim points'} {lineAim.length}{' '}
-                    · {ru ? 'шаг' : 'spacing'} ≤ {lineWeapon.radius * 2} {unitM}
+                    {t('mapPicker.aim-points')} {lineAim.length}{' '}
+                    · {t('mapPicker.spacing')} ≤ {lineWeapon.radius * 2} {unitM}
                   </p>
                   <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
                     {lineAim.map((point, i) => {
@@ -1435,9 +1429,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                   </div>
                   {!gun && (
                     <p className="mt-2 text-[13px] text-app-muted">
-                      {ru
-                        ? 'Поставьте орудие — тогда точка станет целью расчёта одним нажатием.'
-                        : 'Place the gun — then one tap makes a point the target.'}
+                      {t('mapPicker.place-the-gun-then-one')}
                     </p>
                   )}
                   {gun && lineAim.length > 0 && (
@@ -1448,7 +1440,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                         disabled={lineIndex === null || lineIndex <= 0}
                         onClick={() => aimAt((lineIndex ?? 1) - 1)}
                       >
-                        ← {ru ? 'Предыдущая' : 'Previous'}
+                        ← {t('mapPicker.previous')}
                       </button>
                       <button
                         type="button"
@@ -1457,8 +1449,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                         onClick={() => aimAt(lineIndex === null ? 0 : lineIndex + 1)}
                       >
                         {lineIndex === null
-                          ? ru ? 'Первая точка' : 'First point'
-                          : ru ? 'Следующая' : 'Next'}{' '}
+                          ? t('mapPicker.first-point')
+                          : t('mapPicker.next')}{' '}
                         →
                       </button>
                     </div>
@@ -1477,7 +1469,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                 autoFocus
                 value={draft.label}
                 maxLength={40}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Label (optional)'}
+                placeholder={t('mapPicker.label-optional')}
                 onChange={(event) =>
                   setDraft({ ...draft, label: event.target.value })
                 }
@@ -1490,13 +1482,12 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
               <ColorPicker
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
-                language={language}
               />
               <button type="button" onClick={saveDraft} className="btn btn-primary">
-                {ru ? 'Поставить' : 'Place'}
+                {t('mapPicker.place')}
               </button>
               <button type="button" onClick={() => setDraft(null)} className="btn">
-                {ru ? 'Отмена' : 'Cancel'}
+                {t('mapPicker.cancel')}
               </button>
             </div>
           )}
@@ -1506,7 +1497,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
             <summary>
               <span className="inline-flex items-center gap-2">
                 <FieldIcon name="marker" className="h-5 w-5 text-app-muted" />
-                {ru ? 'Метки' : 'Markers'}
+                {t('mapPicker.markers')}
               </span>
               <span className="tag">{markers.length}</span>
             </summary>
@@ -1514,13 +1505,12 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
             <MarkerList
               markers={markers}
               now={now}
-              language={language}
               onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
             />
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="label">
-                {ru ? 'Метка по координате' : 'Marker by grid'}
+                {t('mapPicker.marker-by-grid')}
               </span>
               <input
                 value={gridDraft}
@@ -1538,7 +1528,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
                 disabled={!parseGrid(gridDraft)}
                 className={buttonClass}
               >
-                {ru ? 'Добавить' : 'Add'}
+                {t('mapPicker.add')}
               </button>
             </div>
           </details>
@@ -1550,39 +1540,37 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить кар
         </>
       )}
       {suggesting && (
-        <MapRequests language={language} onClose={() => setSuggesting(false)} />
+        <MapRequests onClose={() => setSuggesting(false)} />
       )}
     </div>
   )
 }
 
-function lineWeaponName(id: LineWeapon['id'], ru: boolean): string {
+function lineWeaponName(id: LineWeapon["id"]): string {
   switch (id) {
     case 'mortar':
-      return ru ? 'Миномёт' : 'Mortar'
+      return t('mapPicker.mortar')
     case 'artillery':
-      return ru ? 'Артиллерия' : 'Artillery'
+      return t('mapPicker.artillery')
     case 'rocket':
-      return ru ? 'Реактивная' : 'Rocket'
+      return t('mapPicker.rocket')
     case 'rocket-wide':
-      return ru ? 'Реактивная (широкий)' : 'Rocket (wide)'
+      return t('mapPicker.rocket-wide')
   }
 }
 
 function ColorPicker({
   value,
   onChange,
-  language,
 }: {
   value: MarkerColor
   onChange: (color: MarkerColor) => void
-  language: Language
+  
 }) {
-  const ru = language === 'ru'
   return (
     <div
       role="radiogroup"
-      aria-label={ru ? 'Цвет' : 'Colour'}
+      aria-label={t('mapPicker.colour')}
       className="flex gap-1"
     >
       {MARKER_COLORS.map((color) => (
@@ -1591,7 +1579,7 @@ function ColorPicker({
           type="button"
           role="radio"
           aria-checked={value === color}
-          aria-label={ru ? COLOR_NAMES[color].ru : COLOR_NAMES[color].en}
+          aria-label={t(COLOR_NAMES[color])}
           onClick={() => onChange(color)}
           style={{ backgroundColor: MARKER_RGB[color] }}
           className={[
@@ -1607,21 +1595,17 @@ function ColorPicker({
 function MarkerList({
   markers,
   now,
-  language,
   onTarget,
 }: {
   markers: MapMarker[]
   now: number
-  language: Language
+  
   onTarget: (marker: MapMarker) => void
 }) {
-  const ru = language === 'ru'
   if (markers.length === 0) {
     return (
       <p className="mt-3 text-xs text-app-muted">
-        {ru
-          ? 'Меток нет. Режим «метка» — клик по карте; в связке метки видят все в комнате.'
-          : 'No markers. "Marker" mode — click the map; in a link everyone in the room sees them.'}
+        {t('mapPicker.no-markers-marker-mode-click')}
       </p>
     )
   }
@@ -1638,29 +1622,29 @@ function MarkerList({
             style={{ backgroundColor: MARKER_RGB[marker.color] }}
           />
           <span className="min-w-0 flex-1 truncate text-app-text">
-            {markerTitle(marker, ru)}
+            {markerTitle(marker)}
             <span className="label ml-2 text-[12.5px]">
               {marker.author}
-              {marker.source === 'screen' && (ru ? ' · с экрана' : ' · from screen')}
+              {marker.source === 'screen' && (t('mapPicker.from-screen'))}
             </span>
           </span>
           <span className="text-xs text-app-muted">
             {toGridReference(marker, 8)}
           </span>
           <span className="mono-num w-24 text-right text-[12.5px] text-app-muted">
-            {formatAge(now - marker.createdAt, ru)}
+            {formatAge(now - marker.createdAt)}
           </span>
           <button
             type="button"
             onClick={() => onTarget(marker)}
             className="btn btn-sm"
           >
-            {ru ? 'Цель' : 'Target'}
+            {t('artilleryCalculator.target')}
           </button>
           <button
             type="button"
             onClick={() => removeMarker(marker.id)}
-            aria-label={ru ? 'Удалить метку' : 'Delete marker'}
+            aria-label={t('mapPicker.delete-marker')}
             className="cursor-pointer px-1.5 text-app-muted hover:text-danger"
           >
             ×

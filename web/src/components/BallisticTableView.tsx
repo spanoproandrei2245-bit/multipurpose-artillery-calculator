@@ -1,3 +1,4 @@
+import { t, type MessageKey } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import { useState } from 'react'
 
@@ -6,7 +7,6 @@ import type {
   BallisticProfile,
   BallisticRow,
 } from '../types/artillery'
-import type { Language } from '../types/settings'
 
 interface Props {
   profile: BallisticProfile
@@ -17,35 +17,33 @@ interface Props {
   activeCharge: number | null
   // Дальность текущего решения: соседние строки подсвечиваются
   highlightRange: number | null
-  language: Language
 }
 
 interface Column {
-  ru: string
-  en: string
-  unit: { ru: string; en: string }
+  label: MessageKey
+  unit: MessageKey
 }
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
 
-const m = { ru: 'м', en: 'm' }
-const mil = { ru: 'мил', en: 'mil' }
-const s = { ru: 'с', en: 's' }
+const m = 'unit.m'
+const mil = 'unit.mil'
+const s = 'unit.s'
 
 // Заголовки повторяют столбцы игровой таблицы ACE3.
 const COLUMNS: Column[] = [
-  { ru: 'Дальн.', en: 'Range', unit: m },
-  { ru: 'Возв.', en: 'Elev', unit: mil },
-  { ru: 'ΔВозв./100 м', en: 'D elev/100 m', unit: mil },
-  { ru: 'ΔВремя/100 м', en: 'D TOF/100 m', unit: s },
-  { ru: 'Время', en: 'TOF', unit: s },
-  { ru: 'Азим. бок. 1 м/с', en: 'Az. cross 1 m/s', unit: mil },
-  { ru: 'Ветер встр.', en: 'Wind head', unit: m },
-  { ru: 'Ветер попут.', en: 'Wind tail', unit: m },
-  { ru: 'Темп. −1°', en: 'Temp dec', unit: m },
-  { ru: 'Темп. +1°', en: 'Temp inc', unit: m },
-  { ru: 'Плотн. −1%', en: 'Dens. dec', unit: m },
-  { ru: 'Плотн. +1%', en: 'Dens. inc', unit: m },
+  { label: 'ballisticTableView.range', unit: m },
+  { label: 'ballisticTableView.elev', unit: mil },
+  { label: 'ballisticTableView.d-elev-100-m', unit: mil },
+  { label: 'ballisticTableView.d-tof-100-m', unit: s },
+  { label: 'ballisticTableView.tof', unit: s },
+  { label: 'ballisticTableView.az-cross-1-m-s', unit: mil },
+  { label: 'ballisticTableView.wind-head', unit: m },
+  { label: 'ballisticTableView.wind-tail', unit: m },
+  { label: 'ballisticTableView.temp-dec', unit: m },
+  { label: 'ballisticTableView.temp-inc', unit: m },
+  { label: 'ballisticTableView.dens-dec', unit: m },
+  { label: 'ballisticTableView.dens-inc', unit: m },
 ]
 
 function formatCell(value: number | null, column: number): string {
@@ -87,9 +85,7 @@ export function BallisticTableView({
   charges,
   activeCharge,
   highlightRange,
-  language,
 }: Props) {
-  const ru = language === 'ru'
   const tables = profile.modes[mode] ?? {}
 
   const available = Object.keys(tables)
@@ -119,14 +115,14 @@ export function BallisticTableView({
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="table" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Таблица стрельбы из игры' : 'In-game range table'}
+          {t('ballisticTableView.in-game-range-table')}
         </span>
       </summary>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
       <div
         role="group"
-        aria-label={ru ? 'Заряд таблицы' : 'Table charge'}
+        aria-label={t('ballisticTableView.table-charge')}
         className="seg flex-wrap"
       >
         {available.map((charge) => (
@@ -136,7 +132,7 @@ export function BallisticTableView({
             aria-pressed={charge === shown}
             onClick={() => setPicked(charge)}
           >
-            {ru ? 'Заряд' : 'Charge'} {charge}
+            {t('artilleryCalculator.charge')} {charge}
           </button>
         ))}
       </div>
@@ -144,7 +140,7 @@ export function BallisticTableView({
       {/* Режимы HIGH / LOW: без данных режим недоступен */}
       <div
         role="group"
-        aria-label={ru ? 'Режим таблицы' : 'Table mode'}
+        aria-label={t('ballisticTableView.table-mode')}
         className="seg"
       >
         {MODES.map((item) => {
@@ -158,9 +154,7 @@ export function BallisticTableView({
               title={
                 exists
                   ? undefined
-                  : ru
-                    ? 'Нет данных для этого режима'
-                    : 'No data for this mode'
+                  : t('ballisticTableView.no-data-for-this-mode')
               }
               onClick={() => onModeChange(item)}
             >
@@ -182,10 +176,10 @@ export function BallisticTableView({
                   className="border-b border-app-line-strong px-2 py-2 align-bottom font-medium text-app-muted"
                 >
                   <span className="block whitespace-nowrap text-[12.5px]">
-                    {ru ? column.ru : column.en}
+                    {t(column.label)}
                   </span>
                   <span className="block font-normal text-app-faint">
-                    {ru ? column.unit.ru : column.unit.en}
+                    {t(column.unit)}
                   </span>
                 </th>
               ))}
@@ -220,9 +214,7 @@ export function BallisticTableView({
       </div>
 
       <p className="mt-2 text-xs text-app-muted">
-        {ru
-          ? 'Перепечатано со скриншотов игры. Если значение расходится с игрой — проверьте web/data-sources.'
-          : 'Transcribed from in-game screenshots. If a value differs from the game, check web/data-sources.'}
+        {t('ballisticTableView.transcribed-from-in-game-screenshots')}
       </p>
     </details>
   )

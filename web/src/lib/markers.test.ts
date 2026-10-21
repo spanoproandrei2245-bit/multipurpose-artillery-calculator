@@ -1,3 +1,4 @@
+import { setLanguage } from '../i18n'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -38,9 +39,11 @@ describe('parseMarker', () => {
 
 describe('age', () => {
   it('formats minutes and hours', () => {
-    expect(formatAge(20_000, true)).toBe('только что')
-    expect(formatAge(5 * 60_000, true)).toBe('5 мин')
-    expect(formatAge(65 * 60_000, false)).toBe('1 h 5 min')
+    expect(formatAge(20_000)).toBe('только что')
+    expect(formatAge(5 * 60_000)).toBe('5 мин')
+    setLanguage('en')
+    expect(formatAge(65 * 60_000)).toBe('1 h 5 min')
+    setLanguage('ru')
   })
 
   it('fades old markers but keeps them visible', () => {

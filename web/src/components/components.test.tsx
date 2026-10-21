@@ -188,7 +188,6 @@ describe('ChargeStrip', () => {
         activeMode="HIGH"
         activeCharge={list.find((r) => r.solution)?.charge ?? null}
         onPick={onPick}
-        language="ru"
       />
     )
     const buttons = screen.getAllByRole('button')
@@ -213,7 +212,6 @@ describe('ChargeStrip', () => {
         activeMode="HIGH"
         activeCharge={null}
         onPick={() => {}}
-        language="ru"
       />
     )
     expect(screen.getByText('Навесная траектория')).toBeInTheDocument()
@@ -232,7 +230,6 @@ describe('ChargeStrip', () => {
         activeMode="HIGH"
         activeCharge={null}
         onPick={onPick}
-        language="en"
       />
     )
     const low = screen.getByText('L').parentElement!

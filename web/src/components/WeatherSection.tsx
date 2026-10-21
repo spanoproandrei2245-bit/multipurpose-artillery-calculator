@@ -1,15 +1,14 @@
+import { t } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import { STANDARD_TEMPERATURE } from '../lib/ballistics'
 import { formatSigned } from '../lib/input'
 import type { WeatherInputs } from '../lib/useWeatherInputs'
-import type { Language } from '../types/settings'
 import { NumberField, Toggle } from './FormControls'
 
 interface Props {
   inputs: WeatherInputs
   // Погода сохранена в загруженной записи — раскрыть сразу
   defaultOpen: boolean
-  language: Language
   // Любое изменение сбрасывает отметку «Сохранено»
   onEdit: () => void
 }
@@ -17,11 +16,9 @@ interface Props {
 export function WeatherSection({
   inputs: w,
   defaultOpen,
-  language,
   onEdit,
 }: Props) {
-  const ru = language === 'ru'
-  const mps = ru ? 'м/с' : 'm/s'
+  const mps = t('unit.mps')
 
   // Краткая сводка для свёрнутого заголовка
   function summary(): string {
@@ -29,22 +26,22 @@ export function WeatherSection({
     if (w.windMode === 'vector') {
       if (w.windSpeed.trim() !== '') {
         parts.push(
-          `${ru ? 'ветер' : 'wind'} ${w.windSpeed} ${mps}` +
-            (w.windFrom.trim() !== '' ? ` ${ru ? 'с' : 'from'} ${w.windFrom}°` : '')
+          `${t('artilleryCalculator.wind')} ${w.windSpeed} ${mps}` +
+            (w.windFrom.trim() !== '' ? ` ${t('weatherSection.from')} ${w.windFrom}°` : '')
         )
       }
     } else {
       if (w.headwind.trim() !== '') {
-        const head = w.headSide === 'head' ? (ru ? 'встр.' : 'head') : ru ? 'попут.' : 'tail'
+        const head = w.headSide === 'head' ? (t('weatherSection.head')) : t('weatherSection.tail')
         parts.push(`${head} ${w.headwind} ${mps}`)
       }
       if (w.crosswind.trim() !== '') {
-        const side = w.crossSide === 'left' ? (ru ? 'слева' : 'left') : ru ? 'справа' : 'right'
-        parts.push(`${ru ? 'бок.' : 'cross'} ${side} ${w.crosswind} ${mps}`)
+        const side = w.crossSide === 'left' ? (t('weatherSection.left')) : t('weatherSection.right')
+        parts.push(`${t('weatherSection.cross')} ${side} ${w.crosswind} ${mps}`)
       }
     }
     if (w.temperature.trim() !== '') parts.push(`${w.temperature} °C`)
-    if (w.pressure.trim() !== '') parts.push(`${w.pressure} ${ru ? 'гПа' : 'hPa'}`)
+    if (w.pressure.trim() !== '') parts.push(`${w.pressure} ${t('unit.hpa')}`)
     return parts.join(' · ')
   }
 
@@ -63,7 +60,7 @@ export function WeatherSection({
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="weather" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Погодные поправки' : 'Weather corrections'}
+          {t('weatherSection.weather-corrections')}
         </span>
         {w.entered && (
           <span className="tag tag-accent truncate">{summary()}</span>
@@ -71,25 +68,23 @@ export function WeatherSection({
       </summary>
 
       <p className="mt-4 text-xs text-app-muted">
-        {ru
-          ? 'Нужны, только если на сервере включены продвинутые поправки (advanced corrections). Пустое поле — стандартные условия. Данные — с Kestrel 4500.'
-          : 'Only needed when advanced corrections are enabled on the server. An empty field means standard conditions. Read the values from the Kestrel 4500.'}
+        {t('weatherSection.only-needed-when-advanced-corrections')}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span className="label">{ru ? 'Ветер' : 'Wind'}</span>
+        <span className="label">{t('weatherSection.wind')}</span>
         <Toggle
-          label={ru ? 'Способ ввода ветра' : 'Wind input'}
+          label={t('weatherSection.wind-input')}
           value={w.windMode}
           onChange={edited(w.setWindMode)}
           options={[
             {
               value: 'vector',
-              label: ru ? 'Скорость и направление' : 'Speed & direction',
+              label: t('weatherSection.speed-direction'),
             },
             {
               value: 'components',
-              label: ru ? 'Встречный / боковой' : 'Head / cross',
+              label: t('weatherSection.head-cross'),
             },
           ]}
         />
@@ -101,7 +96,7 @@ export function WeatherSection({
             <NumberField
               id="calc-wind-speed"
               icon="wind"
-              label={ru ? 'Скорость ветра (м/с)' : 'Wind speed (m/s)'}
+              label={t('weatherSection.wind-speed-m-s')}
               value={w.windSpeed}
               onChange={edited(w.setWindSpeed)}
             />
@@ -109,9 +104,7 @@ export function WeatherSection({
               id="calc-wind-from"
               icon="windDirection"
               label={
-                ru
-                  ? 'Откуда дует (°, 0 = с севера)'
-                  : 'Wind from (°, 0 = from north)'
+                t('weatherSection.wind-from-0-from-north')
               }
               value={w.windFrom}
               onChange={edited(w.setWindFrom)}
@@ -127,12 +120,12 @@ export function WeatherSection({
               onChange={edited(w.setHeadwind)}
               aside={
                 <Toggle
-                  label={ru ? 'Встречный или попутный' : 'Head or tail'}
+                  label={t('weatherSection.head-or-tail')}
                   value={w.headSide}
                   onChange={edited(w.setHeadSide)}
                   options={[
-                    { value: 'head', label: ru ? 'встречный' : 'head' },
-                    { value: 'tail', label: ru ? 'попутный' : 'tail' },
+                    { value: 'head', label: t('weatherSection.head-2') },
+                    { value: 'tail', label: t('weatherSection.tail-2') },
                   ]}
                 />
               }
@@ -145,20 +138,18 @@ export function WeatherSection({
               onChange={edited(w.setCrosswind)}
               aside={
                 <Toggle
-                  label={ru ? 'Откуда боковой ветер' : 'Crosswind from'}
+                  label={t('weatherSection.crosswind-from')}
                   value={w.crossSide}
                   onChange={edited(w.setCrossSide)}
                   options={[
-                    { value: 'left', label: ru ? '← слева' : '← left' },
-                    { value: 'right', label: ru ? 'справа →' : 'right →' },
+                    { value: 'left', label: t('weatherSection.left-2') },
+                    { value: 'right', label: t('weatherSection.right-2') },
                   ]}
                 />
               }
             />
             <p className="text-xs text-app-muted sm:col-span-2">
-              {ru
-                ? 'Стоя лицом к цели. Минус на экране HEADWIND — попутный ветер. Сторону бокового ветра Kestrel не показывает — смотрите стрелку ветра ACE или дым.'
-                : 'Facing the target. A minus on the HEADWIND screen means tailwind. The Kestrel does not show the crosswind side — use the ACE wind arrow or smoke.'}
+              {t('weatherSection.facing-the-target-a-minus')}
             </p>
           </>
         )}
@@ -167,9 +158,7 @@ export function WeatherSection({
           id="calc-temperature"
           icon="temperature"
           label={
-            ru
-              ? `Температура воздуха (°C, стандарт ${STANDARD_TEMPERATURE})`
-              : `Air temperature (°C, standard ${STANDARD_TEMPERATURE})`
+            t('weatherSection.air-temperature-c-standard', STANDARD_TEMPERATURE)
           }
           value={w.temperature}
           onChange={edited(w.setTemperature)}
@@ -178,7 +167,7 @@ export function WeatherSection({
           id="calc-pressure"
           icon="pressure"
           label={
-            ru ? 'Давление (гПа, стандарт 1013)' : 'Pressure (hPa, standard 1013)'
+            t('weatherSection.pressure-hpa-standard-1013')
           }
           value={w.pressure}
           onChange={edited(w.setPressure)}
@@ -188,9 +177,7 @@ export function WeatherSection({
       <div className="mt-3 space-y-1 text-[12.5px] text-app-muted">
         {w.windMode === 'vector' && w.windIncomplete && (
           <p className="rounded-md bg-app-raised px-3 py-2 font-sans text-xs text-warn">
-            {ru
-              ? 'Для ветра укажите направление и азимут на цель — пока ветер не учитывается.'
-              : 'Enter the wind direction and the azimuth to target — wind is not applied yet.'}
+            {t('weatherSection.enter-the-wind-direction-and')}
           </p>
         )}
 
@@ -198,22 +185,20 @@ export function WeatherSection({
           !w.windIncomplete &&
           (w.wind.headwind !== 0 || w.wind.crosswind !== 0) && (
             <p>
-              {ru ? 'Встречный' : 'Headwind'} {formatSigned(w.wind.headwind)}{' '}
+              {t('weatherSection.headwind')} {formatSigned(w.wind.headwind)}{' '}
               {mps}
               {' · '}
-              {ru ? 'боковой' : 'crosswind'}{' '}
+              {t('weatherSection.crosswind')}{' '}
               {formatSigned(w.wind.crosswind)} {mps}
             </p>
           )}
 
         {w.densityValue !== null && (
           <p>
-            {ru ? 'Плотность воздуха' : 'Air density'}:{' '}
+            {t('weatherSection.air-density')}:{' '}
             {w.densityValue.toFixed(1)} %
             {w.temperatureValue === null &&
-              (ru
-                ? ` (при ${STANDARD_TEMPERATURE} °C)`
-                : ` (at ${STANDARD_TEMPERATURE} °C)`)}
+              (t('weatherSection.at-c', STANDARD_TEMPERATURE))}
           </p>
         )}
       </div>
@@ -228,7 +213,7 @@ export function WeatherSection({
             }}
             className="btn btn-sm btn-danger"
           >
-            {ru ? 'Сбросить погоду' : 'Reset weather'}
+            {t('weatherSection.reset-weather')}
           </button>
         </div>
       )}

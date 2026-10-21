@@ -1,17 +1,16 @@
+import { t } from '../i18n'
 import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState } from 'react'
 
 import { parseNumber, readStoredText, writeStored } from '../lib/input'
 import { planMrsi, type MrsiOption } from '../lib/mrsi'
 import { playSound } from '../lib/sound'
-import type { Language } from '../types/settings'
 import { NumberField } from './FormControls'
 
 interface Props {
   options: readonly MrsiOption[]
   // Показывать режим у выстрела (у модели есть HIGH и LOW)
   showMode: boolean
-  language: Language
 }
 
 const DEFAULT_GAP = 4
@@ -22,10 +21,9 @@ const COUNTDOWN = [3, 2, 1]
  * Одновременный удар (MRSI): одно орудие стреляет на разных зарядах
  * с задержками, и все снаряды падают на цель одновременно.
  */
-export function MrsiPanel({ options, showMode, language }: Props) {
-  const ru = language === 'ru'
-  const unitS = ru ? 'с' : 's'
-  const unitMil = ru ? 'мил' : 'mil'
+export function MrsiPanel({ options, showMode, }: Props) {
+  const unitS = t('unit.s')
+  const unitMil = t('unit.mil')
 
   const [gap, setGap] = useState(
     () => readStoredText('mrsiGap') || String(DEFAULT_GAP)
@@ -96,24 +94,22 @@ export function MrsiPanel({ options, showMode, language }: Props) {
       <summary>
         <span className="inline-flex items-center gap-2 text-app-text">
           <FieldIcon name="stack" className="h-5 w-5 text-app-muted" />
-          {ru ? 'Одновременный удар · MRSI' : 'Simultaneous impact · MRSI'}
+          {t('mrsiPanel.simultaneous-impact-mrsi')}
         </span>
         <span className="tag">
-          {plan.length} {ru ? 'выстр.' : 'rounds'}
+          {plan.length} {t('mrsiPanel.rounds')}
         </span>
       </summary>
 
       <p className="mt-2 text-xs text-app-muted">
-        {ru
-          ? 'Одно орудие стреляет на разных зарядах с задержками — все снаряды падают на цель одновременно.'
-          : 'One gun fires on different charges with delays so that all rounds land at the same time.'}
+        {t('mrsiPanel.one-gun-fires-on-different')}
       </p>
 
       <NumberField
         id="mrsi-gap"
         icon="reload"
         className="mt-3"
-        label={ru ? 'Перезарядка между выстрелами, с' : 'Reload between rounds, s'}
+        label={t('mrsiPanel.reload-between-rounds-s')}
         value={gap}
         onChange={setGap}
       />
@@ -133,11 +129,11 @@ export function MrsiPanel({ options, showMode, language }: Props) {
             >
               <span>
                 {index === 0
-                  ? ru ? 'сразу' : 'now'
+                  ? t('mrsiPanel.now')
                   : `+${shot.fireAt.toFixed(1)} ${unitS}`}
               </span>
               <span>
-                {ru ? 'заряд' : 'charge'} {shot.charge}
+                {t('mrsiPanel.charge')} {shot.charge}
                 {showMode && ` ${shot.mode}`} · {Math.round(shot.elevation)}{' '}
                 {unitMil}
               </span>
@@ -154,12 +150,8 @@ export function MrsiPanel({ options, showMode, language }: Props) {
         >
           <FieldIcon name="fire" />
           {startedAt === null
-            ? ru
-              ? 'Старт MRSI'
-              : 'Start MRSI'
-            : ru
-              ? 'Заново'
-              : 'Restart'}
+            ? t('mrsiPanel.start-mrsi')
+            : t('mrsiPanel.restart')}
         </button>
         {startedAt !== null && (
           <button
@@ -167,20 +159,18 @@ export function MrsiPanel({ options, showMode, language }: Props) {
             onClick={() => setStartedAt(null)}
             className="btn"
           >
-            {ru ? 'Стоп' : 'Stop'}
+            {t('fireTimer.stop')}
           </button>
         )}
 
         <p className="mono-num text-[12px] text-app-text">
           {elapsed === null
-            ? `${ru ? 'Удар через' : 'Impact after'} ${impactAt.toFixed(1)} ${unitS} ${ru ? 'после первого выстрела' : 'from the first round'}`
+            ? `${t('mrsiPanel.impact-after')} ${impactAt.toFixed(1)} ${unitS} ${t('mrsiPanel.from-the-first-round')}`
             : nextIndex >= 0
-              ? `${ru ? 'Выстрел' : 'Round'} ${nextIndex + 1} ${ru ? 'через' : 'in'} ${(plan[nextIndex].fireAt - elapsed).toFixed(1)} ${unitS}`
+              ? `${t('mrsiPanel.round')} ${nextIndex + 1} ${t('mrsiPanel.in')} ${(plan[nextIndex].fireAt - elapsed).toFixed(1)} ${unitS}`
               : impactAt - elapsed > 0
-                ? `${ru ? 'Удар через' : 'Impact in'} ${(impactAt - elapsed).toFixed(1)} ${unitS}`
-                : ru
-                  ? 'Разрыв!'
-                  : 'Impact!'}
+                ? `${t('mrsiPanel.impact-in')} ${(impactAt - elapsed).toFixed(1)} ${unitS}`
+                : t('mrsiPanel.impact')}
         </p>
       </div>
     </details>

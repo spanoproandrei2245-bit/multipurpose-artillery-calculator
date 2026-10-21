@@ -1,5 +1,5 @@
 import type { ArtilleryCategory } from '../types/gameModel'
-import type { Language } from '../types/settings'
+import { t } from '../i18n'
 import { categoryLabels, categoryMarks } from '../data/categories'
 
 
@@ -53,13 +53,12 @@ interface Props {
   category: ArtilleryCategory
   // xs — на кнопке выбора, sm — в списке, md — в карточках
   size?: 'xs' | 'sm' | 'md'
-  language: Language
 }
 
-export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
+export function ArtilleryIcon({ category, size = 'sm', }: Props) {
   return (
     <span
-      title={categoryLabels[category][language]}
+      title={t(categoryLabels[category])}
       className={[
         'relative inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
         size === 'xs' ? 'h-7 w-7' : size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',

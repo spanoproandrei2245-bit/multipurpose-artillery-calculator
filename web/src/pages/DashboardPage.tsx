@@ -116,7 +116,7 @@ export function DashboardPage({
   const journalActions: JournalActions = {
     exportAll: () => downloadJournal(journal.entries),
     importFile: (file) =>
-      importJournalFile(file, journal.importEntries, language === 'ru'),
+      importJournalFile(file, journal.importEntries),
     rename: journal.rename,
     remove: journal.remove,
   }
@@ -125,7 +125,6 @@ export function DashboardPage({
     <ModelSelector
       value={selectedModel}
       onChange={handleModelChange}
-      language={language}
     />
   )
 
@@ -141,7 +140,6 @@ export function DashboardPage({
             entries={journal.entries}
             activeId={activeEntry?.id ?? null}
             onLoad={handleLoad}
-            language={language}
           />
         }
         language={language}

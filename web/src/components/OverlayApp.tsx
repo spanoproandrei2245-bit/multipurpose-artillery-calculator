@@ -1,3 +1,4 @@
+import { setLanguage as setI18nLanguage, t } from '../i18n'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
 import {
@@ -160,7 +161,8 @@ export function OverlayApp() {
   }, [fireAt])
   const totLeft = fireAt === null ? null : (fireAt - now) / 1000
 
-  const ru = (state?.language ?? 'ru') === 'ru'
+  // Оверлей — отдельное окно: язык приходит вместе с состоянием
+  setI18nLanguage(state?.language ?? 'ru')
   const solution = state?.solution ?? null
   const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null
 
@@ -190,10 +192,10 @@ export function OverlayApp() {
   }
 
   const labels: Record<OverlayField, string> = {
-    distance: ru ? 'Дистанция, м' : 'Distance, m',
-    azimuth: `${ru ? 'Азимут' : 'Azimuth'}, ${state?.azimuthUnit ?? ''}`,
-    ownHeight: ru ? 'Высота орудия' : 'Gun height',
-    targetHeight: ru ? 'Высота цели' : 'Target height',
+    distance: t('overlayApp.distance-m'),
+    azimuth: `${t('artilleryCalculator.azimuth')}, ${state?.azimuthUnit ?? ''}`,
+    ownHeight: t('artilleryCalculator.gun-height'),
+    targetHeight: t('artilleryCalculator.target-height'),
   }
 
   return (
@@ -207,28 +209,28 @@ export function OverlayApp() {
           data-tauri-drag-region
           className="min-w-0 flex-1 truncate text-[15px] font-semibold text-app-text"
         >
-          {state ? (state.targetName ?? state.title) : ru ? 'Нет данных' : 'No data'}
+          {state ? (state.targetName ?? state.title) : t('overlayApp.no-data')}
         </p>
         {state?.readOnly ? (
-          <span className="tag tag-info">{ru ? 'от наводчика' : 'from FDC'}</span>
+          <span className="tag tag-info">{t('overlayApp.from-fdc')}</span>
         ) : (
           <button
             type="button"
             onClick={() => setEditing((value) => !value)}
             aria-pressed={editing}
-            title={ru ? 'Ввод (Ctrl+Alt+D)' : 'Input (Ctrl+Alt+D)'}
+            title={t('overlayApp.input-ctrl-alt-d')}
             className={[
               'btn btn-sm min-h-7 px-2.5',
               editing ? 'bg-app-raised-hover text-app-text' : '',
             ].join(' ')}
           >
-            {ru ? 'Ввод' : 'Input'}
+            {t('overlayApp.input')}
           </button>
         )}
         <button
           type="button"
           onClick={() => void hideCurrentWindow()}
-          aria-label={ru ? 'Скрыть оверлей' : 'Hide overlay'}
+          aria-label={t('overlayApp.hide-overlay')}
           className="cursor-pointer rounded-md px-2 text-lg leading-none text-app-muted hover:bg-app-raised hover:text-app-text"
         >
           ×
@@ -245,7 +247,7 @@ export function OverlayApp() {
         >
           <div data-tauri-drag-region>
             <p className="label">
-              {ru ? 'Возвышение' : 'Elevation'} · {ru ? 'мил' : 'mil'}
+              {t('artilleryCalculator.elevation')} · {t('unit.mil')}
             </p>
             <p className="readout mt-1 text-5xl font-semibold">
               {Math.round(solution.elevation)}
@@ -253,7 +255,7 @@ export function OverlayApp() {
           </div>
           <div data-tauri-drag-region>
             <p className="label">
-              {ru ? 'Азимут' : 'Azimuth'}
+              {t('artilleryCalculator.azimuth')}
               {solution.azimuth !== null && ` · ${solution.azimuthUnit}`}
             </p>
             <p
@@ -266,13 +268,13 @@ export function OverlayApp() {
             </p>
           </div>
           <p className="flex items-center gap-2 text-[15px] text-app-text tabular-nums">
-            <span className="label">{ru ? 'Заряд' : 'Charge'}</span>
+            <span className="label">{t('artilleryCalculator.charge')}</span>
             {String(solution.charge).padStart(2, '0')}
             {solution.mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
           </p>
           <p className="flex items-center gap-2 text-[15px] text-app-text tabular-nums">
-            <span className="label">{ru ? 'Полёт' : 'Flight'}</span>
-            {solution.tof.toFixed(1)} {ru ? 'с' : 's'}
+            <span className="label">{t('combatScreen.flight')}</span>
+            {solution.tof.toFixed(1)} {t('unit.s')}
           </p>
         </div>
       ) : (
@@ -284,12 +286,8 @@ export function OverlayApp() {
           ].join(' ')}
         >
           {state?.readOnly
-            ? ru
-              ? 'Ждём установки от наводчика.'
-              : 'Waiting for the fire direction data.'
-            : ru
-              ? 'Введите дистанцию — здесь (Ввод) или в основном окне.'
-              : 'Enter a distance — here (Input) or in the main window.'}
+            ? t('overlayApp.waiting-for-the-fire-direction')
+            : t('overlayApp.enter-a-distance-here-input')}
         </p>
       )}
 
@@ -302,12 +300,8 @@ export function OverlayApp() {
         >
           <span className="text-[13px] font-medium">
             {totLeft <= 0
-              ? ru
-                ? 'Огонь!'
-                : 'Fire!'
-              : ru
-                ? 'Выстрел по времени'
-                : 'Fire on time'}
+              ? t('overlayApp.fire')
+              : t('overlayApp.fire-on-time')}
           </span>
           <span className="text-lg font-semibold tabular-nums">
             T−{Math.max(0, totLeft).toFixed(1)}
@@ -325,16 +319,10 @@ export function OverlayApp() {
           >
             <span className="text-[13px] font-medium">
               {left <= 0
-                ? ru
-                  ? 'Разрыв'
-                  : 'Impact'
+                ? t('fireTimer.impact')
                 : left <= SPLASH_WARNING_S
-                  ? ru
-                    ? 'Сплэш'
-                    : 'Splash'
-                  : ru
-                    ? 'До разрыва'
-                    : 'Impact in'}
+                  ? t('fireTimer.splash')
+                  : t('overlayApp.impact-in')}
             </span>
             <span className="text-lg font-semibold tabular-nums">
               T−{Math.max(0, left).toFixed(1)}
@@ -371,28 +359,28 @@ export function OverlayApp() {
             ))}
           </div>
 
-          <ChargeRow state={state} ru={ru} />
+          <ChargeRow state={state} />
 
-          <SpotReport state={state} ru={ru} />
+          <SpotReport state={state} />
         </div>
       )}
 
       <p data-tauri-drag-region className="mt-2 text-[11.5px] leading-relaxed text-app-faint">
-        Ctrl+Alt+F — {ru ? 'огонь' : 'fire'} · Ctrl+Alt+D —{' '}
-        {ru ? 'ввод' : 'input'} · Ctrl+Alt+O — {ru ? 'скрыть' : 'hide'} ·
-        Ctrl+Alt+M — HIGH/LOW · Ctrl+Alt+N/P — {ru ? 'цели' : 'targets'}
+        Ctrl+Alt+F — {t('combatScreen.fire')} · Ctrl+Alt+D —{' '}
+        {t('overlayApp.input-2')} · Ctrl+Alt+O — {t('overlayApp.hide')} ·
+        Ctrl+Alt+M — HIGH/LOW · Ctrl+Alt+N/P — {t('overlayApp.targets')}
       </p>
     </div>
   )
 }
 
 /** Заряды, которыми можно достать цель, и режим HIGH/LOW. */
-function ChargeRow({ state, ru }: { state: OverlayState; ru: boolean }) {
+function ChargeRow({ state }: { state: OverlayState }) {
   if (state.charges.length === 0 && state.modes.length < 2) return null
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <span className="label mr-1">{ru ? 'Заряд' : 'Charge'}</span>
+      <span className="label mr-1">{t('artilleryCalculator.charge')}</span>
       {state.charges.map((charge) => (
         <button
           key={charge}
@@ -422,7 +410,7 @@ function ChargeRow({ state, ru }: { state: OverlayState; ru: boolean }) {
 }
 
 /** Доклад о разрыве по линии орудие — цель. */
-function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
+function SpotReport({ state }: { state: OverlayState }) {
   const [range, setRange] = useState('')
   const [rangeSide, setRangeSide] = useState<'over' | 'short'>('over')
   const [lateral, setLateral] = useState('')
@@ -452,12 +440,12 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
   }
 
   const { adjust } = state
-  const unitM = ru ? 'м' : 'm'
+  const unitM = t('unit.m')
 
   return (
     <div>
       <p className="label">
-        {ru ? 'Разрыв · по линии орудия' : 'Impact · gun–target line'}
+        {t('overlayApp.impact-gun-target-line')}
       </p>
       <div className="mt-1 grid grid-cols-2 gap-2">
         <SpotInput
@@ -465,8 +453,8 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           onChange={setRange}
           onKeyDown={handleKey}
           sides={[
-            ['over', ru ? 'Перелёт' : 'Over'],
-            ['short', ru ? 'Недолёт' : 'Short'],
+            ['over', t('overlayApp.over')],
+            ['short', t('overlayApp.short')],
           ]}
           side={rangeSide}
           onSide={setRangeSide}
@@ -476,8 +464,8 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           onChange={setLateral}
           onKeyDown={handleKey}
           sides={[
-            ['left', ru ? 'Левее' : 'Left'],
-            ['right', ru ? 'Правее' : 'Right'],
+            ['left', t('overlayApp.left')],
+            ['right', t('overlayApp.right')],
           ]}
           side={lateralSide}
           onSide={setLateralSide}
@@ -490,7 +478,7 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           disabled={!canAdd}
           className="btn btn-primary btn-sm min-h-7 px-2.5"
         >
-          {ru ? 'Учесть' : 'Apply'}
+          {t('overlayApp.apply')}
         </button>
         <button
           type="button"
@@ -498,15 +486,13 @@ function SpotReport({ state, ru }: { state: OverlayState; ru: boolean }) {
           disabled={adjust.count === 0}
           className="btn btn-sm min-h-7 px-2.5"
         >
-          {ru ? 'Отменить' : 'Undo'}
+          {t('overlayApp.undo')}
         </button>
         <p className="min-w-0 flex-1 truncate text-right text-[12.5px] text-app-muted tabular-nums">
           {adjust.count === 0
-            ? ru
-              ? 'без поправок'
-              : 'no corrections'
-            : `${ru ? 'дальн.' : 'range'} ${formatSigned(adjust.range, 0)} · ${
-                ru ? 'напр.' : 'lat.'
+            ? t('overlayApp.no-corrections')
+            : `${t('overlayApp.range')} ${formatSigned(adjust.range, 0)} · ${
+                t('overlayApp.lat')
               } ${formatSigned(adjust.lateral, 0)} ${unitM}`}
         </p>
       </div>

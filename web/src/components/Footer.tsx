@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { Dropdown } from './Dropdown'
 import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type JSX } from 'react'
@@ -134,8 +135,7 @@ function LanguageSelect({
 }
 
 /** Версия, автор и ссылка на проект — во всплывающей подписи за одной иконкой. */
-function AboutButton({ language }: { language: Language }) {
-  const ru = language === 'ru'
+function AboutButton() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -153,8 +153,8 @@ function AboutButton({ language }: { language: Language }) {
       <button
         type="button"
         aria-expanded={open}
-        aria-label={ru ? 'О программе' : 'About'}
-        title={ru ? 'О программе' : 'About'}
+        aria-label={t('footer.about')}
+        title={t('footer.about')}
         onClick={() => setOpen((v) => !v)}
         className="btn btn-ghost px-2 text-app-faint"
       >
@@ -192,19 +192,18 @@ export function Footer({
   theme,
   onToggleTheme,
 }: Props) {
-  const ru = language === 'ru'
   const sync = useSync()
 
   return (
     <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-2 px-4 py-5 sm:px-6">
-      <AboutButton language={language} />
+      <AboutButton />
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <Dropdown
           up
           variant="icon"
           tourId="help"
-          label={ru ? 'Справка' : 'Help'}
+          label={t('footer.help')}
           value=""
           buttonLabel={<FieldIcon name="help" className="h-5 w-5" />}
           onChange={(value) => {
@@ -222,33 +221,31 @@ export function Footer({
           options={[
             {
               value: 'basic',
-              label: ru ? 'Базовое обучение' : 'Basic tutorial',
-              description: ru ? 'Карта, ввод, заряд, огонь' : 'Map, input, charge, fire',
-              group: ru ? 'Обучение' : 'Tutorial',
+              label: t('footer.basic-tutorial'),
+              description: t('footer.map-input-charge-fire'),
+              group: t('footer.tutorial'),
             },
             {
               value: 'advanced',
-              label: ru ? 'Продвинутое обучение' : 'Advanced tutorial',
-              description: ru ? 'Карты, линия, связка, мелочи' : 'Maps, line, link, details',
-              group: ru ? 'Обучение' : 'Tutorial',
+              label: t('footer.advanced-tutorial'),
+              description: t('footer.maps-line-link-details'),
+              group: t('footer.tutorial'),
             },
             {
               value: 'hotkeys',
-              label: ru ? 'Горячие клавиши' : 'Keyboard shortcuts',
+              label: t('footer.keyboard-shortcuts'),
               icon: <FieldIcon name="keyboard" className="h-4 w-4 text-app-muted" />,
-              group: ru ? 'Справка' : 'Help',
+              group: t('footer.help'),
             },
             ...(isDesktop
               ? []
               : [
                   {
                     value: 'desktop',
-                    label: ru ? 'Программа для ПК' : 'Desktop app',
-                    description: ru
-                      ? 'Оверлей поверх игры'
-                      : 'Overlay on top of the game',
+                    label: t('footer.desktop-app'),
+                    description: t('footer.overlay-on-top-of-the'),
                     icon: <FieldIcon name="desktop" className="h-4 w-4 text-app-muted" />,
-                    group: ru ? 'Справка' : 'Help',
+                    group: t('footer.help'),
                   },
                 ]),
           ]}
@@ -265,7 +262,7 @@ export function Footer({
             className={`h-2 w-2 rounded-full ${syncStatusColor(sync.enabled ? sync.status : 'off')}`}
           />
           <FieldIcon name="link" className="h-[18px] w-[18px]" />
-          {ru ? 'Связка' : 'Link'}
+          {t('footer.link')}
           {sync.enabled && sync.code && (
             <span className="text-app-muted">{sync.code}</span>
           )}
@@ -277,12 +274,12 @@ export function Footer({
             const r = event.currentTarget.getBoundingClientRect()
             onToggleTheme({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
           }}
-          aria-label={ru ? 'Сменить тему' : 'Toggle theme'}
+          aria-label={t('footer.toggle-theme')}
           data-tour="theme"
           title={
             theme === 'dark'
-              ? ru ? 'Светлая тема' : 'Light theme'
-              : ru ? 'Тёмная тема' : 'Dark theme'
+              ? t('footer.light-theme')
+              : t('footer.dark-theme')
           }
           className="btn px-2.5"
         >
@@ -300,8 +297,8 @@ export function Footer({
           }
           aria-pressed={view === 'settings'}
           data-tour="settings"
-          aria-label={ru ? 'Настройки' : 'Settings'}
-          title={ru ? 'Настройки' : 'Settings'}
+          aria-label={t('app.settings')}
+          title={t('app.settings')}
           className={[
             'btn px-2.5',
             view === 'settings' ? 'bg-app-raised-hover text-app-text' : '',

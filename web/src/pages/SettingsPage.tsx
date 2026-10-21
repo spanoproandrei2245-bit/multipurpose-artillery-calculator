@@ -1,7 +1,6 @@
+import { t, type MessageKey } from '../i18n'
 import type { ReactNode } from 'react'
 
-import type { Language } from '../types/settings'
-import { translations } from '../i18n/translations'
 import { wakeLockSupported } from '../lib/useWakeLock'
 import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
@@ -12,7 +11,6 @@ import { setFlightOnMap, setFlightStyle, useFlightOnMap, useFlightStyle } from '
 import { setFeature, useFeature } from '../lib/features'
 
 interface SettingsPageProps {
-  language: Language
   gridInput: boolean
   onGridInputChange: (value: boolean) => void
   mapInput: boolean
@@ -50,7 +48,6 @@ function Card({
 }
 
 export function SettingsPage({
-  language,
   gridInput,
   onGridInputChange,
   mapInput,
@@ -62,8 +59,6 @@ export function SettingsPage({
   keepAwake,
   onKeepAwakeChange,
 }: SettingsPageProps) {
-  const t = translations[language].settings
-  const ru = language === 'ru'
   const adjust = useFeature('adjust')
   const weather = useFeature('weather')
   const tot = useFeature('tot')
@@ -77,18 +72,18 @@ export function SettingsPage({
     <section className="space-y-4">
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">
-          <Card index="01" title={t.preferences}>
+          <Card index="01" title={t('settings.preferences')}>
             <div className="mt-1">
-              <FeaturePreview id="keepAwake" language={language}>
+              <FeaturePreview id="keepAwake">
               <Switch
                 checked={keepAwake}
                 onChange={onKeepAwakeChange}
                 disabled={!wakeLockSupported}
-                label={t.keepAwake}
+                label={t('settings.keepAwake')}
                 description={
                   wakeLockSupported
-                    ? t.keepAwakeDescription
-                    : t.keepAwakeUnsupported
+                    ? t('settings.keepAwakeDescription')
+                    : t('settings.keepAwakeUnsupported')
                 }
               />
               </FeaturePreview>
@@ -98,64 +93,58 @@ export function SettingsPage({
               <Switch
                 checked={hints}
                 onChange={(v) => setFeature('hints', v)}
-                label={ru ? 'Подсказки' : 'Hints'}
+                label={t('settingsPage.hints')}
                 description={
-                  ru
-                    ? 'Пояснительные плашки и демонстрации при наведении на функции в настройках.'
-                    : 'Explanatory notes and the demos shown when hovering features in settings.'
+                  t('settingsPage.explanatory-notes-and-the-demos')
                 }
               />
             </div>
 
-            <p className="label mt-5 text-app-faint">{t.autoSave}</p>
+            <p className="label mt-5 text-app-faint">{t('settings.autoSave')}</p>
           </Card>
 
           <Card
             index="02"
-            title={ru ? 'Анимация выстрела' : 'Shot animation'}
+            title={t('settingsPage.shot-animation')}
             description={
-              ru
-                ? 'Полёт снаряда и разрыв после нажатия «Огонь». Вид зависит от орудия и снаряда.'
-                : 'Shell flight and impact after Fire. The look depends on the weapon and shell.'
+              t('settingsPage.shell-flight-and-impact-after')
             }
           >
             <div className="mt-4 space-y-4">
               <Toggle
-                label={ru ? 'Вид анимации' : 'Animation style'}
+                label={t('settingsPage.animation-style')}
                 value={flightStyle}
                 onChange={setFlightStyle}
                 options={[
-                  { value: 'off', label: ru ? 'Выкл' : 'Off' },
-                  { value: 'minimal', label: ru ? 'Минимальная' : 'Minimal' },
-                  { value: 'detailed', label: ru ? 'Подробная' : 'Detailed' },
+                  { value: 'off', label: t('settingsPage.off') },
+                  { value: 'minimal', label: t('settingsPage.minimal') },
+                  { value: 'detailed', label: t('settingsPage.detailed') },
                 ]}
               />
               <Switch
                 checked={flightOnMap}
                 onChange={setFlightOnMap}
                 disabled={flightStyle === 'off'}
-                label={ru ? 'Показывать на карте' : 'Show on the map'}
+                label={t('settingsPage.show-on-the-map')}
                 description={
-                  ru
-                    ? 'Снаряд летит от орудия к цели прямо на карте. Без этого анимация только у таймера.'
-                    : 'The shell flies from the gun to the target on the map. Otherwise only the timer strip animates.'
+                  t('settingsPage.the-shell-flies-from-the')
                 }
               />
             </div>
           </Card>
 
-          <SoundSettings language={language} />
+          <SoundSettings />
         </div>
 
         <div className="space-y-4">
           {isDesktop && (
-            <Card index="03" title={t.desktop} description={t.desktopDescription}>
+            <Card index="03" title={t('settings.desktop')} description={t('settings.desktopDescription')}>
               <button
                 type="button"
                 onClick={() => void toggleOverlay()}
                 className="btn btn-primary mt-4"
               >
-                {t.toggleOverlay}
+                {t('settings.toggleOverlay')}
               </button>
 
               <dl className="mt-4 divide-y divide-app-border overflow-hidden rounded-lg text-sm">
@@ -167,92 +156,80 @@ export function SettingsPage({
                     <dt className="min-w-32">
                       <kbd className="kbd">{keys}</kbd>
                     </dt>
-                    <dd className="text-app-muted">{t.hotkeys[action]}</dd>
+                    <dd className="text-app-muted">{t(`settings.hotkeys.${action}` as MessageKey)}</dd>
                   </div>
                 ))}
               </dl>
 
               <p className="mt-4 rounded-md bg-app-raised px-3 py-2 text-xs text-app-muted">
-                {t.armaDisplayMode}
+                {t('settings.armaDisplayMode')}
               </p>
             </Card>
           )}
 
           <Card
             index="04"
-            title={t.openOnPhone}
-            description={t.openOnPhoneDescription}
+            title={t('settings.openOnPhone')}
+            description={t('settings.openOnPhoneDescription')}
           >
-            <OpenOnPhone language={language} />
+            <OpenOnPhone />
           </Card>
 
           <Card
             index="04"
-            title={ru ? 'Разделы калькулятора' : 'Calculator sections'}
+            title={t('settingsPage.calculator-sections')}
             description={
-              ru
-                ? 'Включайте только то, чем пользуетесь: главный экран останется чистым.'
-                : 'Turn on only what you use to keep the main screen clean.'
+              t('settingsPage.turn-on-only-what-you')
             }
           >
             <div className="mt-4 space-y-4">
-              <FeaturePreview id="adjust" language={language}>
+              <FeaturePreview id="adjust">
               <Switch
                 checked={adjust}
                 onChange={(v) => setFeature('adjust', v)}
-                label={ru ? 'Корректировка огня' : 'Adjust fire'}
+                label={t('adjustFire.adjust-fire')}
                 description={
-                  ru
-                    ? 'Доклады «недолёт / перелёт, левее / правее». По связке стрелок получает уже готовые установки с учётом поправок — включать у него не нужно.'
-                    : 'Short / over, left / right reports. Over the link a gunner gets the corrected settings anyway — no need to enable it there.'
+                  t('settingsPage.short-over-left-right-reports')
                 }
               />
               </FeaturePreview>
-              <FeaturePreview id="weather" language={language}>
+              <FeaturePreview id="weather">
               <Switch
                 checked={weather}
                 onChange={(v) => setFeature('weather', v)}
-                label={ru ? 'Погодные поправки' : 'Weather corrections'}
+                label={t('weatherSection.weather-corrections')}
                 description={
-                  ru
-                    ? 'Ветер, температура, давление. Нужны, только если на сервере включена продвинутая баллистика.'
-                    : 'Wind, temperature, pressure. Only for servers with advanced ballistics.'
+                  t('settingsPage.wind-temperature-pressure-only-for')
                 }
               />
               </FeaturePreview>
-              <FeaturePreview id="tot" language={language}>
+              <FeaturePreview id="tot">
               <Switch
                 checked={tot}
                 onChange={(v) => setFeature('tot', v)}
-                label={ru ? 'Огонь по времени' : 'Time on target'}
+                label={t('totPanel.time-on-target')}
                 description={
-                  ru
-                    ? 'Задать момент разрыва: выстрел — по отсчёту. Время от наводчика приходит стрелку и без этой настройки.'
-                    : 'Set the impact time and fire on the countdown. A time from the FDC reaches a gunner even without this.'
+                  t('settingsPage.set-the-impact-time-and')
                 }
               />
               </FeaturePreview>
-              <FeaturePreview id="table" language={language}>
+              <FeaturePreview id="table">
               <Switch
                 checked={table}
                 onChange={(v) => setFeature('table', v)}
-                label={ru ? 'Таблица стрельбы из игры' : 'In-game range table'}
+                label={t('ballisticTableView.in-game-range-table')}
                 description={
-                  ru
-                    ? 'Таблица возвышений по дальностям, как в игре: для сверки с расчётом.'
-                    : 'The elevation-by-range table as in the game, to cross-check the calculation.'
+                  t('settingsPage.the-elevation-by-range-table')
                 }
               />
               </FeaturePreview>
-              <FeaturePreview id="journal" language={language}>
+              <FeaturePreview id="journal">
               <Switch
                 checked={journal}
                 onChange={(v) => setFeature('journal', v)}
-                label={ru ? 'Журнал целей' : 'Target journal'}
+                label={t('settingsPage.target-journal')}
                 description={
-                  ru
-                    ? 'Сохранение целей, быстрый список на карте и журнал внизу страницы.'
-                    : 'Saving targets, the quick list on the map and the journal below.'
+                  t('settingsPage.saving-targets-the-quick-list')
                 }
               />
               </FeaturePreview>
@@ -261,49 +238,45 @@ export function SettingsPage({
 
           <Card
             index="05"
-            title={t.experimental}
-            description={t.experimentalDescription}
+            title={t('settings.experimental')}
+            description={t('settings.experimentalDescription')}
           >
             <div className="mt-4 space-y-4">
-              <FeaturePreview id="map" language={language}>
+              <FeaturePreview id="map">
               <Switch
                 checked={mapInput}
                 onChange={onMapInputChange}
-                label={t.mapInput}
-                description={t.mapInputDescription}
+                label={t('settings.mapInput')}
+                description={t('settings.mapInputDescription')}
               />
               </FeaturePreview>
-              <FeaturePreview id="markers" language={language}>
+              <FeaturePreview id="markers">
               <Switch
                 checked={showMarkers}
                 onChange={onShowMarkersChange}
-                label={language === 'ru' ? 'Метки на карте' : 'Map markers'}
+                label={t('settingsPage.map-markers')}
                 description={
-                  language === 'ru'
-                    ? 'Панель меток, инструмент «метка» и метки от стрелков по связке.'
-                    : 'The markers panel, the marker tool and markers from gunners over the link.'
+                  t('settingsPage.the-markers-panel-the-marker')
                 }
               />
               </FeaturePreview>
-              <FeaturePreview id="screenMarkers" language={language}>
+              <FeaturePreview id="screenMarkers">
               <Switch
                 checked={showScreenMarkers}
                 onChange={onShowScreenMarkersChange}
-                label={language === 'ru' ? 'Метки с экрана игры' : 'Markers from the game screen'}
+                label={t('screenMarkers.markers-from-the-game-screen')}
                 description={
-                  language === 'ru'
-                    ? 'Распознавание меток со скриншота карты игры. Работает только вместе с метками на карте.'
-                    : 'Recognise markers on a game map screenshot. Needs the map markers above.'
+                  t('settingsPage.recognise-markers-on-a-game')
                 }
                 disabled={!showMarkers}
               />
               </FeaturePreview>
-              <FeaturePreview id="grid" language={language}>
+              <FeaturePreview id="grid">
               <Switch
                 checked={gridInput}
                 onChange={onGridInputChange}
-                label={t.gridInput}
-                description={t.gridInputDescription}
+                label={t('settings.gridInput')}
+                description={t('settings.gridInputDescription')}
               />
               </FeaturePreview>
             </div>

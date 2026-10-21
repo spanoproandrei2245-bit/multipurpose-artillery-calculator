@@ -1,11 +1,12 @@
 import type { ArtilleryCategory } from '../types/gameModel'
+import { t, type MessageKey } from '../i18n'
 import { categoryMarks } from '../data/categories'
 import { shellKind, type ShellKind } from '../lib/shellKind'
 
-const kindNames: Record<ShellKind, { ru: string; en: string }> = {
-  he: { ru: 'Фугасный', en: 'High explosive' },
-  illum: { ru: 'Осветительный', en: 'Illumination' },
-  smoke: { ru: 'Дымовой', en: 'Smoke' },
+const kindNames: Record<ShellKind, MessageKey> = {
+  he: 'shellIcon.high-explosive',
+  illum: 'shellIcon.illumination',
+  smoke: 'shellIcon.smoke',
 }
 
 // Корпус снаряда по центру сетки 24×24; значок вида — в правом верхнем углу.
@@ -66,17 +67,16 @@ function Badge({ kind }: { kind: ShellKind }) {
 interface Props {
   category: ArtilleryCategory
   type: string
-  language: 'ru' | 'en'
   size?: 'xs' | 'sm'
 }
 
 /** Значок снаряда: форма по классу орудия, вид (HE / осветительный / дымовой) — в углу. */
-export function ShellIcon({ category, type, language, size = 'xs' }: Props) {
+export function ShellIcon({ category, type, size = 'xs' }: Props) {
   const kind = shellKind(type)
 
   return (
     <span
-      title={kindNames[kind][language]}
+      title={t(kindNames[kind])}
       className={[
         'relative inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
         size === 'xs' ? 'h-7 w-7' : 'h-9 w-9',

@@ -1,6 +1,6 @@
+import { t } from '../i18n'
 import type { Ammunition } from '../types/artillery'
 import { Dropdown } from './Dropdown'
-import type { Language } from '../types/settings'
 
 import type { ArtilleryCategory } from '../types/gameModel'
 import { ShellIcon } from './ShellIcon'
@@ -11,7 +11,6 @@ interface AmmunitionSelectorProps {
   ammunition: readonly AmmunitionOption[]
   selectedId: string
   onSelect: (id: string) => void
-  language: Language
   // Класс орудия — форма значка снаряда
   category: ArtilleryCategory
 }
@@ -25,15 +24,13 @@ export function AmmunitionSelector({
   ammunition,
   selectedId,
   onSelect,
-  language,
   category,
 }: AmmunitionSelectorProps) {
-  const ru = language === 'ru'
 
   if (ammunition.length === 0) {
     return (
       <span className="text-app-muted">
-        {ru ? 'нет данных' : 'no data'}
+        {t('ammunitionSelector.no-data')}
       </span>
     )
   }
@@ -44,9 +41,9 @@ export function AmmunitionSelector({
 
   return (
     <>
-      <ShellIcon category={category} type={selected.type} language={language} size="sm" />
+      <ShellIcon category={category} type={selected.type} size="sm" />
       <Dropdown
-      label={ru ? 'Снаряд' : 'Shell'}
+      label={t('ammunitionSelector.shell')}
       value={selected.id}
       onChange={onSelect}
       fullWidth
@@ -54,7 +51,7 @@ export function AmmunitionSelector({
       options={ammunition.map((item) => ({
         value: item.id,
         label: formatLabel(item),
-        icon: <ShellIcon category={category} type={item.type} language={language} />,
+        icon: <ShellIcon category={category} type={item.type} />,
       }))}
     />
     </>

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { exportJournal, parseJournalFile, type JournalEntry } from './journal'
 
 /** Скачать журнал целей файлом. */
@@ -18,28 +19,25 @@ export function downloadJournal(entries: readonly JournalEntry[]) {
  */
 export async function importJournalFile(
   file: File,
-  onImport: (entries: JournalEntry[]) => { added: number; skipped: number },
-  ru: boolean
+  onImport: (entries: JournalEntry[]) => { added: number; skipped: number }
 ): Promise<string> {
-  return describeImport(await file.text(), onImport, ru)
+  return describeImport(await file.text(), onImport)
 }
 
 /** То же по тексту файла (отдельно — чтобы проверять без File). */
 export function describeImport(
   text: string,
-  onImport: (entries: JournalEntry[]) => { added: number; skipped: number },
-  ru: boolean
+  onImport: (entries: JournalEntry[]) => { added: number; skipped: number }
 ): string {
   const parsed = parseJournalFile(text)
   if (parsed === null) {
-    return ru
-      ? 'Файл не похож на журнал калькулятора.'
-      : 'This file is not a calculator journal.'
+    return t('journalIO.this-file-is-not-a')
   }
   const { added, skipped } = onImport(parsed.entries)
-  return ru
-    ? `Добавлено: ${added}. Уже были: ${skipped}.${parsed.invalid > 0 ? ` Повреждённых: ${parsed.invalid}.` : ''}`
-    : `Added: ${added}. Already present: ${skipped}.${parsed.invalid > 0 ? ` Damaged: ${parsed.invalid}.` : ''}`
+  return (
+    t('journalIO.added-already-present', added, skipped) +
+    (parsed.invalid > 0 ? ' ' + t('journalIO.damaged', parsed.invalid) : '')
+  )
 }
 
 /** Действия над журналом, которые панель целей на карте вызывает сама. */

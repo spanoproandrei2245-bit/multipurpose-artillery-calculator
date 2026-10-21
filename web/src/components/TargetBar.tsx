@@ -1,16 +1,15 @@
+import { t } from '../i18n'
 import { useRef, useState } from 'react'
 
 import { isModelId, models } from '../data/models'
 import { recentEntries, type JournalEntry } from '../lib/journal'
 import type { JournalActions } from '../lib/journalIO'
-import type { Language } from '../types/settings'
 import { FieldIcon } from './FieldIcon'
 
 interface Props {
   entries: readonly JournalEntry[]
   activeId: string | null
   onLoad: (entry: JournalEntry) => void
-  language: Language
   // Экспорт и импорт целей (когда карты нет, это единственное место)
   actions?: JournalActions
 }
@@ -24,8 +23,7 @@ function shortModel(modelId: string): string {
  * Быстрое переключение между последними сохранёнными целями
  * прямо над калькулятором.
  */
-export function TargetBar({ entries, activeId, onLoad, language, actions }: Props) {
-  const ru = language === 'ru'
+export function TargetBar({ entries, activeId, onLoad, actions }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -36,7 +34,7 @@ export function TargetBar({ entries, activeId, onLoad, language, actions }: Prop
   return (
     <div className="mt-4">
       <p className="label mb-2 flex items-center gap-2">
-        {ru ? 'Сохранённые цели' : 'Saved targets'}
+        {t('targetBar.saved-targets')}
         <span className="kbd">N</span>
         <span className="kbd">P</span>
         {actions && (
@@ -45,8 +43,8 @@ export function TargetBar({ entries, activeId, onLoad, language, actions }: Prop
               type="button"
               className="btn btn-sm px-2"
               disabled={entries.length === 0}
-              aria-label={ru ? 'Экспорт целей' : 'Export targets'}
-              title={ru ? 'Экспорт целей в файл' : 'Export targets to a file'}
+              aria-label={t('mapPicker.export-targets')}
+              title={t('mapPicker.export-targets-to-a-file')}
               onClick={actions.exportAll}
             >
               <FieldIcon name="export" className="h-4 w-4" />
@@ -54,8 +52,8 @@ export function TargetBar({ entries, activeId, onLoad, language, actions }: Prop
             <button
               type="button"
               className="btn btn-sm px-2"
-              aria-label={ru ? 'Импорт целей' : 'Import targets'}
-              title={ru ? 'Импорт целей из файла' : 'Import targets from a file'}
+              aria-label={t('mapPicker.import-targets')}
+              title={t('mapPicker.import-targets-from-a-file')}
               onClick={() => fileRef.current?.click()}
             >
               <FieldIcon name="import" className="h-4 w-4" />
@@ -104,8 +102,8 @@ export function TargetBar({ entries, activeId, onLoad, language, actions }: Prop
               <span className="block text-[12.5px] text-app-muted tabular-nums">
                 {shortModel(entry.modelId)}
                 {entry.mode === 'LOW' && ' LOW'} · {entry.distance}{' '}
-                {ru ? 'м' : 'm'} · {Math.round(entry.elevation)}{' '}
-                {ru ? 'мил' : 'mil'}
+                {t('unit.m')} · {Math.round(entry.elevation)}{' '}
+                {t('unit.mil')}
               </span>
             </button>
           )

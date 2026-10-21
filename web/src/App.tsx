@@ -1,3 +1,4 @@
+import { setLanguage as setI18nLanguage, t } from './i18n'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 
@@ -37,12 +38,11 @@ const parseFlag = (fallback: boolean) => (raw: string | null) =>
 function SubView({
   title,
   onBack,
-  language,
   children,
 }: {
   title: string
   onBack: () => void
-  language: Language
+  
   children: ReactNode
 }) {
   return (
@@ -50,7 +50,7 @@ function SubView({
       <div className="mb-6 flex items-center gap-3">
         <button type="button" onClick={onBack} className="btn btn-ghost -ml-3">
           <span aria-hidden="true">←</span>
-          {language === 'ru' ? 'Назад' : 'Back'}
+          {t('app.back')}
         </button>
         <h1 className="text-2xl font-semibold text-app-text">{title}</h1>
       </div>
@@ -74,6 +74,8 @@ function App() {
     'language',
     (raw) => (raw === 'ru' || raw === 'en' ? raw : defaultLanguage())
   )
+  // Язык для t(): задаётся до отрисовки дочерних компонентов
+  setI18nLanguage(language)
   const [theme, setTheme] = usePersistentState<Theme>('theme', (raw) =>
     raw === 'light' ? 'light' : 'dark'
   )
@@ -122,7 +124,6 @@ function App() {
       ?.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff')
   }, [theme])
 
-  const ru = language === 'ru'
   const back = () => setView('dashboard')
 
   // Смена темы: круг расходится от кнопки; без поддержки браузера — сразу
@@ -179,15 +180,14 @@ function App() {
         <Suspense
           fallback={
             <p className="label py-16 text-center">
-              {ru ? 'Загрузка…' : 'Loading…'}
+              {t('app.loading')}
             </p>
           }
         >
           {view === 'sync' && (
             <SubView
-              title={ru ? 'Связка наводчик ↔ стрелок' : 'FDC ↔ gunner link'}
+              title={t('app.fdc-gunner-link')}
               onBack={back}
-              language={language}
             >
               <SyncPage language={language} />
             </SubView>
@@ -195,12 +195,10 @@ function App() {
 
           {view === 'settings' && (
             <SubView
-              title={ru ? 'Настройки' : 'Settings'}
+              title={t('app.settings')}
               onBack={back}
-              language={language}
             >
               <SettingsPage
-                language={language}
                 gridInput={gridInput}
                 onGridInputChange={setGridInput}
                 mapInput={mapInput}
@@ -217,8 +215,8 @@ function App() {
         </Suspense>
       </main>
 
-      <HotkeysDialog language={language} />
-      {view === 'dashboard' && <Tour language={language} />}
+      <HotkeysDialog />
+      {view === 'dashboard' && <Tour />}
 
       <Footer
         view={view}

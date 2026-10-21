@@ -1,3 +1,4 @@
+import { t, type MessageKey } from '../i18n'
 import { useEffect, useLayoutEffect, useState } from 'react'
 
 import {
@@ -8,13 +9,12 @@ import {
   tourDone,
   usePanel,
 } from '../lib/uiPanels'
-import type { Language } from '../types/settings'
 
 interface Step {
   // Элемент, который подсвечивается; null — шаг по центру экрана
   target: (() => Element | null) | null
-  title: { ru: string; en: string }
-  text: { ru: string; en: string }
+  title: MessageKey
+  text: MessageKey
 }
 
 const byTour = (name: string) => () =>
@@ -24,140 +24,90 @@ const rowOf = (id: string) => () =>
 // Целиком блок строк (дистанция, азимут, высота цели): подсвечиваются все
 const blockOf = (id: string) => () =>
   document.getElementById(id)?.closest('dl') ?? null
-const byLabel = (ru: string, en: string) => () =>
-  document.querySelector(`[aria-label="${ru}"], [aria-label="${en}"]`)
 
 const BASIC: Step[] = [
   {
     target: null,
-    title: { ru: 'Добро пожаловать', en: 'Welcome' },
-    text: {
-      ru: 'Короткий тур покажет, где что находится. Его можно пропустить в любой момент, а потом запустить снова кнопкой «Обучение» внизу.',
-      en: 'A short tour of where things are. Skip it any time and run it again later with the “Tutorial” button at the bottom.',
-    },
+    title: 'tour.welcome',
+    text: 'tour.a-short-tour-of-where',
   },
   {
     target: byTour('map'),
-    title: { ru: 'Карта', en: 'Map' },
-    text: {
-      ru: 'ЛКМ — положение орудия, ПКМ — цель. Карту можно двигать мышью и масштабировать колесом. На телефоне, что ставит касание, выбирают кнопками справа.',
-      en: 'Left-click places the gun, right-click the target. Drag to pan, scroll to zoom. On a phone use the buttons on the right to choose what a tap places.',
-    },
+    title: 'mapPicker.map',
+    text: 'tour.left-click-places-the-gun',
   },
   {
     target: blockOf('calc-distance'),
-    title: { ru: 'Дистанция, азимут, высота цели', en: 'Distance, bearing, target height' },
-    text: {
-      ru: 'Эти три поля заполняются с карты сами. Без карты введите их вручную — установки посчитаются сразу.',
-      en: 'These three fields fill in from the map. Without a map, type them in — the solution updates instantly.',
-    },
+    title: 'tour.distance-bearing-target-height',
+    text: 'tour.these-three-fields-fill-in',
   },
   {
-    target: () => byLabel('Выбор заряда', 'Charge choice')()?.closest('.row') ?? null,
-    title: { ru: 'Заряд', en: 'Charge' },
-    text: {
-      ru: '«Быстрый» выбирает заряд с наименьшим временем полёта, «точный» — с наименьшей ошибкой на 1 мил. «Авто» берёт наименьший подходящий.',
-      en: '“Fast” picks the shortest flight time, “precise” the smallest error per mil. “Auto” takes the lowest charge that fits.',
-    },
+    target: byTour('charge'),
+    title: 'artilleryCalculator.charge',
+    text: 'tour.fast-picks-the-shortest-flight',
   },
   {
     target: rowOf('calc-own-height'),
-    title: { ru: 'Высота орудия', en: 'Gun height' },
-    text: {
-      ru: 'Замок рядом сохраняет высоту между запусками. Закрепление орудия на карте включает его само.',
-      en: 'The lock keeps the height between sessions. Pinning the gun on the map turns it on automatically.',
-    },
+    title: 'artilleryCalculator.gun-height',
+    text: 'tour.the-lock-keeps-the-height',
   },
   {
     target: byTour('fire'),
-    title: { ru: 'Огонь', en: 'Fire' },
-    text: {
-      ru: 'Кнопка (или клавиша F) запускает таймер и анимацию полёта. По связке отсчёт идёт у всех сразу.',
-      en: 'The button (or the F key) starts the timer and the flight animation. Over the link everyone’s countdown starts together.',
-    },
+    title: 'fireTimer.fire',
+    text: 'tour.the-button-or-the-f',
   },
   {
     target: byTour('settings'),
-    title: { ru: 'Настройки', en: 'Settings' },
-    text: {
-      ru: 'Здесь включаются необязательные разделы: корректировка огня, погода, огонь по времени, журнал целей, таблица стрельбы, метки. Наведите на любой — увидите короткую демонстрацию.',
-      en: 'Optional sections live here: fire adjustment, weather, time on target, target journal, range table, markers. Hover any of them for a short demo.',
-    },
+    title: 'settings.title',
+    text: 'tour.optional-sections-live-here-fire',
   },
 ]
 
 const ADVANCED: Step[] = [
   {
     target: null,
-    title: { ru: 'Продвинутое обучение', en: 'Advanced tutorial' },
-    text: {
-      ru: 'Карты, огневая линия, значки орудий, связка и мелочи интерфейса. Тоже можно пропустить.',
-      en: 'Maps, the fire line, weapon icons, the link and interface details. Skippable too.',
-    },
+    title: 'footer.advanced-tutorial',
+    text: 'tour.maps-the-fire-line-weapon',
   },
   {
-    target: byLabel('Карта', 'Map'),
-    title: { ru: 'Выбор карты', en: 'Choosing a map' },
-    text: {
-      ru: 'Звёздочка у карты — в избранное, избранные идут сверху. Справа маленькое превью. Свою карту добавляют пунктом «Добавить свою карту…» внизу списка.',
-      en: 'The star adds a map to favourites, which sit on top. A small preview is on the right. Add your own map with “Add your own map…” at the bottom of the list.',
-    },
+    target: byTour('map-select'),
+    title: 'tour.choosing-a-map',
+    text: 'tour.the-star-adds-a-map',
   },
   {
     target: byTour('tools'),
-    title: { ru: 'Огневая линия', en: 'Fire line' },
-    text: {
-      ru: 'Выберите «линию» и расставьте точки по лесополосе или дороге. Приложение разложит по ней точки прицеливания по радиусу поражения (миномёт 15 м, артиллерия 50 м, реактивная 75–100 м) — стреляйте по ним по очереди.',
-      en: 'Pick “line” and drop points along a tree line or road. The app lays aim points along it by kill radius (mortar 15 m, artillery 50 m, rocket 75–100 m) — fire at them one by one.',
-    },
+    title: 'mapPicker.fire-line',
+    text: 'tour.pick-line-and-drop-points',
   },
   {
     target: byTour('tools'),
-    title: { ru: 'Закрепление орудия', en: 'Pinning the gun' },
-    text: {
-      ru: 'Подержите курсор (или палец) на кнопке «орудие» — слева появится замок. Закреплённое орудие не двигается касаниями карты, а его высота закрепляется сама.',
-      en: 'Hold the cursor (or a finger) on the “gun” button and a lock appears on the left. A pinned gun ignores taps on the map and its height is pinned too.',
-    },
+    title: 'tour.pinning-the-gun',
+    text: 'tour.hold-the-cursor-or-a',
   },
   {
     target: rowOf('calc-own-height'),
-    title: { ru: 'Значки орудий и снарядов', en: 'Weapon and shell icons' },
-    text: {
-      ru: 'Цветная точка в углу значка — класс: зелёная — миномёт, жёлтая — артиллерия, фиолетовая — реактивные системы. Форма снаряда тоже зависит от класса.',
-      en: 'The coloured dot marks the class: green — mortar, yellow — artillery, purple — rocket systems. The shell shape follows the class too.',
-    },
+    title: 'tour.weapon-and-shell-icons',
+    text: 'tour.the-coloured-dot-marks-the',
   },
   {
     target: byTour('settings'),
-    title: { ru: 'Разделы под себя', en: 'Sections your way' },
-    text: {
-      ru: 'В настройках включаются корректировка огня, погода, огонь по времени, журнал целей и таблица. Там же можно выключить подсказки.',
-      en: 'Settings turn on fire adjustment, weather, time on target, the target journal and the range table. You can switch hints off there too.',
-    },
+    title: 'tour.sections-your-way',
+    text: 'tour.settings-turn-on-fire-adjustment',
   },
   {
     target: byTour('link'),
-    title: { ru: 'Связка', en: 'Link' },
-    text: {
-      ru: 'Наводчик и стрелки соединяются по коду комнаты: наводчик отправляет готовые установки (с поправками и временем разрыва), у всех одновременно идёт отсчёт.',
-      en: 'The FDC and gunners connect by room code: the FDC sends ready settings (with corrections and impact time) and everyone’s countdown runs together.',
-    },
+    title: 'footer.link',
+    text: 'tour.the-fdc-and-gunners-connect',
   },
   {
     target: byTour('help'),
-    title: { ru: 'Справка', en: 'Help' },
-    text: {
-      ru: 'Здесь обучение, список горячих клавиш (F — огонь, B — боевой экран, 0–9 — заряд, N / P — цели; список открывает и клавиша «?») и ссылка на программу для ПК.',
-      en: 'Tutorials, the list of shortcuts (F — fire, B — combat screen, 0–9 — charge, N / P — targets; the “?” key opens it too) and the desktop app link.',
-    },
+    title: 'footer.help',
+    text: 'tour.tutorials-the-list-of-shortcuts',
   },
   {
     target: byTour('theme'),
-    title: { ru: 'Тема', en: 'Theme' },
-    text: {
-      ru: 'Светлая или тёмная — одним нажатием.',
-      en: 'Light or dark in one tap.',
-    },
+    title: 'tour.theme',
+    text: 'tour.light-or-dark-in-one',
   },
 ]
 
@@ -177,8 +127,7 @@ const GAP = 12
  * Подсвечивает элементы, любой тур можно пропустить. Подсветка и карточка
  * плавно переезжают от шага к шагу.
  */
-export function Tour({ language }: { language: Language }) {
-  const ru = language === 'ru'
+export function Tour() {
   const basicOpen = usePanel('tour')
   const advancedOpen = usePanel('tourAdvanced')
   const open = basicOpen || advancedOpen
@@ -273,16 +222,14 @@ export function Tour({ language }: { language: Language }) {
       >
         <div className="panel w-full max-w-sm p-5 shadow-2xl">
           <h2 className="text-lg font-semibold text-app-text">
-            {ru ? 'Базовое обучение пройдено' : 'Basic tutorial complete'}
+            {t('tour.basic-tutorial-complete')}
           </h2>
           <p className="mt-1.5 text-[14.5px] leading-relaxed text-app-text-2">
-            {ru
-              ? 'Хотите продвинутое? Оно про карты, огневую линию, значки орудий, связку и мелочи интерфейса.'
-              : 'Want the advanced one? It covers maps, the fire line, weapon icons, the link and interface details.'}
+            {t('tour.want-the-advanced-one-it')}
           </p>
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" className="btn btn-ghost text-app-muted" onClick={() => setOffer(false)}>
-              {ru ? 'Не сейчас' : 'Not now'}
+              {t('tour.not-now')}
             </button>
             <button
               type="button"
@@ -293,7 +240,7 @@ export function Tour({ language }: { language: Language }) {
                 setPanel('tourAdvanced', true)
               }}
             >
-              {ru ? 'Показать' : 'Show me'}
+              {t('tour.show-me')}
             </button>
           </div>
         </div>
@@ -339,7 +286,7 @@ export function Tour({ language }: { language: Language }) {
       className="tour-fade fixed inset-0 z-50"
       role="dialog"
       aria-modal="true"
-      aria-label={ru ? 'Обучение' : 'Tutorial'}
+      aria-label={t('footer.tutorial')}
     >
       <div
         className={`pointer-events-none absolute rounded-lg ${measured ? 'ring-2 ring-accent' : ''} ${move}`}
@@ -358,24 +305,24 @@ export function Tour({ language }: { language: Language }) {
         style={{ width: cardW, top: cardTop, left: cardLeft }}
       >
         {/* Текст меняется с коротким появлением, карточка при этом переезжает */}
-        <div key={`${advancedOpen ? 'a' : 'b'}:${step.title.en}`} className="tour-fade">
+        <div key={`${advancedOpen ? 'a' : 'b'}:${step.title}`} className="tour-fade">
           <p className="label mb-1">
-            {advancedOpen ? (ru ? 'Продвинутое · ' : 'Advanced · ') : ''}
+            {advancedOpen ? (t('tour.advanced')) : ''}
             {index + 1} / {available.length}
           </p>
-          <h2 className="text-lg font-semibold text-app-text">{step.title[language]}</h2>
+          <h2 className="text-lg font-semibold text-app-text">{t(step.title)}</h2>
           <p className="mt-1.5 text-[14.5px] leading-relaxed text-app-text-2">
-            {step.text[language]}
+            {t(step.text)}
           </p>
         </div>
         <div className="mt-4 flex items-center gap-2">
           <button type="button" className="btn btn-ghost text-app-muted" onClick={() => finish(false)}>
-            {ru ? 'Пропустить' : 'Skip'}
+            {t('tour.skip')}
           </button>
           <div className="ml-auto flex gap-2">
             {index > 0 && (
               <button type="button" className="btn" onClick={() => setIndex(index - 1)}>
-                {ru ? 'Назад' : 'Back'}
+                {t('app.back')}
               </button>
             )}
             <button
@@ -383,7 +330,7 @@ export function Tour({ language }: { language: Language }) {
               className="btn btn-primary"
               onClick={() => (last ? finish(true) : setIndex(index + 1))}
             >
-              {last ? (ru ? 'Готово' : 'Done') : ru ? 'Далее' : 'Next'}
+              {last ? (t('tour.done')) : t('tour.next')}
             </button>
           </div>
         </div>
