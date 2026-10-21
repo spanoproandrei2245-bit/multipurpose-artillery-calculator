@@ -27,10 +27,11 @@ function Body({ category }: { category: ArtilleryCategory }) {
     case 'mlrs':
       return (
         <>
-          <path d="M12 2.2c2 1.8 3 4 3 6.8v7.5H9V9c0-2.8 1-5 3-6.8z" />
-          <circle cx="12" cy="9" r="1.3" />
-          <path d="M9 12.6 5.8 18 9 16.5M15 12.6l3.2 5.4-3.2-1.5" />
-          <path d="M10.4 18.6 12 22l1.6-3.4" />
+          <path d="M12 1.8c1.5 1.6 2.3 3.6 2.3 6.2v9.2H9.7V8c0-2.6.8-4.6 2.3-6.2z" />
+          <path d="M9.7 8.4h4.6M9.7 14.2h4.6" />
+          <path d="M9.7 15 7.6 19.4h2.1M14.3 15l2.1 4.4h-2.1" />
+          <path d="M10.7 17.2h2.6l.5 2.6h-3.6z" />
+          <path d="M12 21.4v1.1" />
         </>
       )
     default:

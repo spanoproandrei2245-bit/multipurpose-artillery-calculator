@@ -377,3 +377,35 @@ describe('pickBest', () => {
     expect(pickBest([], 'lowest')).toBeUndefined()
   })
 })
+
+describe('приоритет «лучший»', () => {
+  const r = (charge: number, tof: number, metersPerMil: number): ChargeResult => ({
+    charge,
+    minRange: 0,
+    maxRange: 9999,
+    solution: { elevation: 1000, tof } as ChargeResult['solution'],
+    metersPerMil,
+    nearEdge: false,
+    wideGap: false,
+  })
+
+  it('берёт золотую середину, а не крайность', () => {
+    // быстрый, но неточный / точный, но медленный / сбалансированный
+    const list = [r(1, 10, 40), r(2, 40, 6), r(3, 18, 12)]
+    expect(pickCharge(list, 'fastest')?.charge).toBe(1)
+    expect(pickCharge(list, 'precise')?.charge).toBe(2)
+    expect(pickCharge(list, 'best')?.charge).toBe(3)
+  })
+
+  it('сравнивает траектории между собой', () => {
+    const high = { mode: 'HIGH' as const, results: [r(1, 40, 6)] }
+    const low = { mode: 'LOW' as const, results: [r(1, 18, 12)] }
+    expect(pickBest([high, low], 'best')?.group.mode).toBe('LOW')
+  })
+
+  it('один вариант и отсутствие данных об ошибке не ломают выбор', () => {
+    expect(pickCharge([r(1, 10, 5)], 'best')?.charge).toBe(1)
+    const noMpm: ChargeResult = { ...r(2, 5, 1), metersPerMil: null }
+    expect(pickCharge([r(1, 10, 5), noMpm], 'best')).toBeDefined()
+  })
+})

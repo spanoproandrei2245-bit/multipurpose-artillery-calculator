@@ -38,12 +38,12 @@ function Glyph({ category }: { category: ArtilleryCategory }) {
     case 'mlrs':
       return (
         <>
-          <path d="M3.8 13.6 L13.4 8 L14.6 10.2 L5 15.6 Z" />
-          <path d="M8.5 13 V16.5" />
-          <path d="M2.5 16.5 H21 V14 L19 11.5 H16 V16.5" />
-          <circle cx="6" cy="18.6" r="1.4" />
-          <circle cx="10" cy="18.6" r="1.4" />
-          <circle cx="18" cy="18.6" r="1.4" />
+          <path d="M3 17h18v-3.2l-2.2-2.8H15.5V17" />
+          <path d="M5.2 14.2 15.6 6l2.4 3-10.4 8.2z" />
+          <path d="M9.4 11.6l2.3 2.9M12.2 9.4l2.3 2.9" />
+          <circle cx="6.5" cy="19.2" r="1.5" />
+          <circle cx="11.5" cy="19.2" r="1.5" />
+          <circle cx="17.5" cy="19.2" r="1.5" />
         </>
       )
   }

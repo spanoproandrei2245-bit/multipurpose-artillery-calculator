@@ -527,3 +527,12 @@ html.overlay body {
     animation: none;
   }
 }
+
+/* Анимации интерфейса выключены в настройках */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}

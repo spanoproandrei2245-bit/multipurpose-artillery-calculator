@@ -14,6 +14,9 @@ const REPO_URL =
 // Страница автора на GitHub
 const AUTHOR_URL = 'https://github.com/spanoproandrei2245-bit'
 
+// Профиль автора в Steam (подставьте ссылку — появится кнопка Steam)
+const AUTHOR_STEAM_URL: string | null = null
+
 // Релизы с установщиком программы для ПК
 const RELEASES_URL = `${REPO_URL}/releases`
 
@@ -174,29 +177,56 @@ function AboutButton() {
       </button>
       {open && (
         <div className="tour-fade absolute bottom-full left-0 z-30 mb-2 w-72 rounded-xl bg-app-raised p-2 text-[13.5px] shadow-xl shadow-black/40">
-          <div className="px-2.5 pt-1.5 pb-2">
-            <p className="font-semibold text-app-text">Multipurpose Artillery Calculator</p>
-            <p className="mt-0.5 text-[12.5px] text-app-muted">
-              v{__APP_VERSION__} · {t('footer.made-by')} Heis
-            </p>
+          <p className="px-2.5 pt-1.5 pb-2 font-semibold text-app-text">
+            Multipurpose Artillery Calculator
+          </p>
+
+          {/* Автор: ник и ссылки на его профили справа */}
+          <div className="flex items-center gap-3 rounded-lg px-2.5 py-2">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+              <FieldIcon name="user" className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-app-text">Heis</span>
+              <span className="block truncate text-[12px] text-app-muted">
+                {t('footer.author-on-github')}
+              </span>
+            </span>
+            {AUTHOR_STEAM_URL && (
+              <a
+                href={AUTHOR_STEAM_URL}
+                target="_blank"
+                rel="noreferrer"
+                title={t('footer.author-steam')}
+                aria-label={t('footer.author-steam')}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-raised-hover hover:text-app-text"
+              >
+                <FieldIcon name="steam" className="h-[18px] w-[18px]" />
+              </a>
+            )}
+            <a
+              href={AUTHOR_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={t('footer.author-github')}
+              aria-label={t('footer.author-github')}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-raised-hover hover:text-app-text"
+            >
+              <GithubMark />
+            </a>
           </div>
+
           {[
-            {
-              href: AUTHOR_URL,
-              title: 'Heis',
-              text: t('footer.author-on-github'),
-              icon: <GithubMark />,
-            },
             {
               href: REPO_URL,
               title: t('footer.project-on-github'),
               text: t('footer.source-and-releases'),
-              icon: <FieldIcon name="link" className="h-4 w-4" />,
+              icon: <GithubMark />,
             },
             {
               href: `${REPO_URL}/issues`,
               title: t('footer.report-a-problem'),
-              text: t('footer.issues-on-github'),
+              text: t('footer.report-hint'),
               icon: <FieldIcon name="help" className="h-4 w-4" />,
             },
           ].map((item) => (

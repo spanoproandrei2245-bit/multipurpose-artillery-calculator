@@ -241,3 +241,15 @@ describe('ChargeStrip', () => {
     expect(onPick.mock.calls[0][0]).toBe('LOW')
   })
 })
+
+describe('FlightTrack', () => {
+  it('в покое — короткая полоска без прогресса, в полёте — раскрывается', async () => {
+    const { FlightTrack } = await import('./FlightTrack')
+    const { container, rerender } = render(<FlightTrack shot={null} />)
+    const bar = container.firstElementChild as HTMLElement
+    expect(bar.style.width).toBe('1.25rem')
+    rerender(<FlightTrack shot={{ firedAt: Date.now(), tof: 30 }} />)
+    await waitFor(() => expect(bar.style.width).not.toBe('1.25rem'))
+    expect(bar.querySelectorAll('span').length).toBeGreaterThan(1)
+  })
+})

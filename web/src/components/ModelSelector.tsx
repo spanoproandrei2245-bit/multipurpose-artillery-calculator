@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { categoryLabels } from '../data/categories'
 import { models, type ModelId } from '../data/models'
 import { t } from '../i18n'
+import { useFavorites } from '../lib/favorites'
 import { ArtilleryIcon } from './ArtilleryIcon'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon } from './FieldIcon'
@@ -26,15 +27,45 @@ const MODS = '__mods__'
  */
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const [picking, setPicking] = useState(false)
+  const [favorites, toggleFavorite] = useFavorites('favModels')
   const current = models[value]
 
-  const listed = modelIds.filter((id) => isVanilla(id) || id === value)
+  // В списке: избранные (в том числе модовые), ванильные и выбранное модовое
+  const isFav = (id: ModelId) => favorites.includes(id)
+  const listed = [
+    ...modelIds.filter(isFav),
+    ...modelIds.filter((id) => !isFav(id) && isVanilla(id)),
+    ...modelIds.filter((id) => !isFav(id) && !isVanilla(id) && id === value),
+  ]
   const options: DropdownOption<string>[] = [
     ...listed.map((id) => ({
       value: id as string,
       label: models[id].name,
       description: models[id].mod,
+      group: isFav(id)
+        ? t('picker.favourites')
+        : isVanilla(id)
+          ? t('picker.vanilla')
+          : t('picker.current'),
       icon: <ArtilleryIcon category={models[id].category} />,
+      trailing: (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={isFav(id) ? t('picker.unfavourite') : t('picker.favourite')}
+          title={isFav(id) ? t('picker.unfavourite') : t('picker.favourite')}
+          onClick={(event) => {
+            event.stopPropagation()
+            toggleFavorite(id)
+          }}
+          className={[
+            'inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
+            isFav(id) ? 'text-warn' : 'text-app-faint',
+          ].join(' ')}
+        >
+          <FieldIcon name={isFav(id) ? 'starFilled' : 'star'} className="h-4 w-4" />
+        </button>
+      ),
     })),
     {
       value: MODS,
@@ -68,6 +99,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
           title={t('picker.weapons-title')}
           placeholder={t('picker.search-weapons')}
           selectedId={value}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
           items={modelIds.map((id) => ({
             id,
             title: models[id].name,

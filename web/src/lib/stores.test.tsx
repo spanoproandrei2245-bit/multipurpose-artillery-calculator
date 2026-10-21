@@ -82,3 +82,52 @@ describe('uiPanels', () => {
     expect(tourDone()).toBe(true)
   })
 })
+
+describe('motion', () => {
+  it('по умолчанию включена; выключение отмечается на <html> и запоминается', async () => {
+    const { getMotion, setMotion, useMotion } = await import('./motion')
+    const { result } = renderHook(() => useMotion())
+    expect(result.current).toBe(true)
+    act(() => setMotion(false))
+    expect(result.current).toBe(false)
+    expect(getMotion()).toBe(false)
+    expect(document.documentElement.dataset.motion).toBe('off')
+    expect(localStorage.getItem('uiMotion')).toBe('off')
+    act(() => setMotion(true))
+    expect(document.documentElement.dataset.motion).toBe('on')
+  })
+})
+
+describe('timerSound', () => {
+  it('звук включён по умолчанию и переключается', async () => {
+    const { setTimerSound, useTimerSound } = await import('./timerSound')
+    const { result } = renderHook(() => useTimerSound())
+    expect(result.current).toBe(true)
+    act(() => setTimerSound(false))
+    expect(result.current).toBe(false)
+    expect(localStorage.getItem('timerSound')).toBe('off')
+    act(() => setTimerSound(true))
+  })
+})
+
+describe('favorites', () => {
+  it('добавляет и убирает, помнит между показами', async () => {
+    const { useFavorites } = await import('./favorites')
+    const first = renderHook(() => useFavorites('favTest'))
+    act(() => first.result.current[1]('a'))
+    act(() => first.result.current[1]('b'))
+    expect(first.result.current[0]).toEqual(['a', 'b'])
+    act(() => first.result.current[1]('a'))
+    expect(first.result.current[0]).toEqual(['b'])
+    const again = renderHook(() => useFavorites('favTest'))
+    expect(again.result.current[0]).toEqual(['b'])
+  })
+
+  it('мусор в хранилище не ломает список', async () => {
+    const { useFavorites } = await import('./favorites')
+    localStorage.setItem('favBroken', '{not json')
+    expect(renderHook(() => useFavorites('favBroken')).result.current[0]).toEqual([])
+    localStorage.setItem('favMixed', JSON.stringify(['x', 5, null, 'y']))
+    expect(renderHook(() => useFavorites('favMixed')).result.current[0]).toEqual(['x', 'y'])
+  })
+})

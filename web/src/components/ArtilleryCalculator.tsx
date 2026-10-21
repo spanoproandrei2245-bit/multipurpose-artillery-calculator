@@ -216,10 +216,11 @@ export function ArtilleryCalculator({
 
   const [chargePreference, setChargePreference] =
     useState<ChargePreference>(() =>
+      // Прежнее «меньший» из старых версий читается как «лучший»
       readStored<ChargePreference>(
         'chargePreference',
-        ['lowest', 'fastest', 'precise'],
-        'lowest'
+        ['best', 'fastest', 'precise'],
+        'best'
       )
     )
 
@@ -916,7 +917,7 @@ export function ArtilleryCalculator({
                 }}
                 iconOnly
                 options={[
-                  { value: 'lowest', icon: 'lowCharge', label: t('artilleryCalculator.priority-lowest'), disabled: applicable.length === 0 },
+                  { value: 'best', icon: 'auto', label: t('artilleryCalculator.priority-best'), disabled: applicable.length === 0 },
                   { value: 'fastest', icon: 'fire', label: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
                   { value: 'precise', icon: 'correction', label: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
                 ]}

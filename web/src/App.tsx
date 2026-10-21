@@ -1,6 +1,7 @@
 import { setLanguage as setI18nLanguage, t } from './i18n'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
+import { getMotion } from './lib/motion'
 
 import { Footer, type View } from './components/Footer'
 import { HotkeysDialog } from './components/HotkeysDialog'
@@ -132,7 +133,7 @@ function App() {
     const doc = document as Document & {
       startViewTransition?: (update: () => void) => { ready: Promise<void> }
     }
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduced = !getMotion()
     if (!doc.startViewTransition || reduced) {
       setTheme(next)
       return

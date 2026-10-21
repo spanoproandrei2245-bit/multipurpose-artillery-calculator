@@ -42,7 +42,7 @@ export function ChargeStrip({
           : group.results
         // Траектория, по которой до цели не достать, при скрытии пропадает целиком
         if (visible.length === 0) return null
-        const lowest = pickCharge(group.results, 'lowest')?.charge
+        const best = pickCharge(group.results, 'best')?.charge
         const fastest = pickCharge(group.results, 'fastest')?.charge
         const precise = pickCharge(group.results, 'precise')?.charge
         const several = group.results.filter((r) => r.solution !== null).length > 1
@@ -85,9 +85,9 @@ export function ChargeStrip({
                       <b className="text-lg leading-none text-app-text tabular-nums">
                         {result.charge}
                       </b>
-                      {usable && several && result.charge === lowest && (
-                        <span title={t('chargeStrip.lowest-charge')} className="text-app-muted">
-                          <FieldIcon name="lowCharge" className="h-3.5 w-3.5" />
+                      {usable && several && result.charge === best && (
+                        <span title={t('chargeStrip.best-charge')} className="text-accent">
+                          <FieldIcon name="auto" className="h-3.5 w-3.5" />
                         </span>
                       )}
                       {usable && several && result.charge === fastest && (

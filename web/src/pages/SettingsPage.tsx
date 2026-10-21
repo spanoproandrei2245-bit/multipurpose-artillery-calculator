@@ -9,6 +9,7 @@ import { FeaturePreview } from '../components/FeaturePreview'
 import { SectionHeading, Switch, Toggle } from '../components/FormControls'
 import { setFlightOnMap, setFlightStyle, useFlightOnMap, useFlightStyle } from '../lib/animation'
 import { setFeature, useFeature } from '../lib/features'
+import { setMotion, useMotion } from '../lib/motion'
 
 interface SettingsPageProps {
   gridInput: boolean
@@ -67,6 +68,7 @@ export function SettingsPage({
   const hints = useFeature('hints')
   const hideUnfit = useFeature('hideUnfit')
   const flightStyle = useFlightStyle()
+  const motion = useMotion()
   const flightOnMap = useFlightOnMap()
 
   return (
@@ -106,12 +108,19 @@ export function SettingsPage({
 
           <Card
             index="02"
-            title={t('settingsPage.shot-animation')}
+            title={t('settingsPage.animations')}
             description={
               t('settingsPage.shell-flight-and-impact-after')
             }
           >
             <div className="mt-4 space-y-4">
+              <Switch
+                checked={motion}
+                onChange={setMotion}
+                label={t('settingsPage.ui-motion')}
+                description={t('settingsPage.ui-motion-description')}
+              />
+              <p className="label text-app-faint">{t('settingsPage.shot-animation')}</p>
               <Toggle
                 label={t('settingsPage.animation-style')}
                 value={flightStyle}

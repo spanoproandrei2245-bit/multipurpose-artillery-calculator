@@ -51,6 +51,8 @@ import type { JournalActions } from '../lib/journalIO'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
 import { useFlightOnMap } from '../lib/animation'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
+import { FlightTrack } from './FlightTrack'
+import { useFavorites } from '../lib/favorites'
 import { shellKind } from '../lib/shellKind'
 import type { ArtilleryCategory } from '../types/gameModel'
 import { MAPS_BASE } from '../lib/builtinMaps'
@@ -226,25 +228,7 @@ export function MapPicker({
 
   const flightOnMap = useFlightOnMap()
   // Избранные карты: ключи пунктов списка, показываются сверху
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const value = JSON.parse(readStoredText('favMaps')) as unknown
-      return Array.isArray(value)
-        ? value.filter((k): k is string => typeof k === 'string')
-        : []
-    } catch {
-      return []
-    }
-  })
-  function toggleFavorite(key: string) {
-    setFavorites((current) => {
-      const next = current.includes(key)
-        ? current.filter((k) => k !== key)
-        : [...current, key]
-      writeStored('favMaps', JSON.stringify(next))
-      return next
-    })
-  }
+  const [favorites, toggleFavorite] = useFavorites('favMaps')
   // Встроенные карты (спутник + высоты) и тайлы открытой карты
   const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
   const [tiles, setTiles] = useState<MapTiles | null>(null)
@@ -962,7 +946,6 @@ export function MapPicker({
 
 
   // ---- список карт: ванильные — в списке, карты модов — в окне с поиском ----
-  const ADD_MAP = '__suggest__'
   const MOD_MAPS = '__mods__'
   const mapEntries = builtin.map((m) => ({
     key: `builtin:${m.world}`,
@@ -1034,11 +1017,6 @@ export function MapPicker({
       ),
       icon: actionIcon('search'),
       divider: true,
-    },
-    {
-      value: ADD_MAP,
-      label: t('picker.suggest'),
-      icon: actionIcon('plus'),
     }
   )
 
@@ -1292,19 +1270,23 @@ export function MapPicker({
           )}
 
           {/* Снизу по центру: координаты орудия и цели */}
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-1.5 text-[12.5px] whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-gun" />
-              {gun
-                ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
-                : t('mapPicker.no-gun')}
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
+            <span className="flex items-center gap-2">
+              <span className="block h-2 w-2 shrink-0 rounded-full bg-gun" />
+              <span>
+                {gun
+                  ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
+                  : t('mapPicker.no-gun')}
+              </span>
             </span>
-            <span className="text-white/30">|</span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-target" />
-              {target
-                ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
-                : t('mapPicker.no-target')}
+            <FlightTrack shot={flight} />
+            <span className="flex items-center gap-2">
+              <span>
+                {target
+                  ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
+                  : t('mapPicker.no-target')}
+              </span>
+              <span className="block h-2 w-2 shrink-0 rounded-full bg-target" />
             </span>
           </div>
         </div>
@@ -1324,7 +1306,7 @@ export function MapPicker({
             tourId="map-select"
             label={t('mapPicker.map')}
             value={mapKey}
-            onChange={(key) => (key === ADD_MAP ? setSuggesting(true) : key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
+            onChange={(key) => (key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
             alignLeft
             placeholder="—"
             buttonLabel={mapLabel(mapKey)}

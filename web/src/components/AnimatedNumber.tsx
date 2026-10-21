@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+
 interface Props {
   // null — значения нет, показывается «—»
   value: number | null
@@ -11,9 +12,9 @@ interface Props {
   duration?: number
 }
 
-const reduced = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+import { getMotion } from '../lib/motion'
+
+const reduced = () => !getMotion()
 
 /**
  * Число, которое плавно «докручивается» до нового значения и коротко
