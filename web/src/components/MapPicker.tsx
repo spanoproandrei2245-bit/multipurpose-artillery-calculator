@@ -54,6 +54,7 @@ import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
+import { useFlightOnMap } from '../lib/animation'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
 import { shellKind } from '../lib/shellKind'
 import type { ArtilleryCategory } from '../types/gameModel'
@@ -222,6 +223,7 @@ export function MapPicker({
   const ru = language === 'ru'
   const unitM = ru ? 'м' : 'm'
 
+  const flightOnMap = useFlightOnMap()
   const [maps, setMaps] = useState<StoredMapInfo[]>([])
   // Избранные карты: ключи пунктов списка, показываются сверху
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -1204,7 +1206,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
             className="block cursor-crosshair touch-none rounded-lg"
           />
 
-          {flight && gun && target && (
+          {flight && flightOnMap && gun && target && (
             <FlightCanvas
               shot={flight}
               category={category}
@@ -1360,6 +1362,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
 
       {/* ---- Панель под картой ---- */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
+        {(maps.length > 0 || builtin.length > 0) && <MapGlyph big />}
         {(maps.length > 0 || builtin.length > 0) && (
           <Dropdown
             label={ru ? 'Карта' : 'Map'}
@@ -1367,12 +1370,7 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
             onChange={(key) => (key === ADD_MAP ? setAdding(true) : openMap(key))}
             alignLeft
             placeholder="—"
-            buttonLabel={
-              <span className="flex items-center gap-2">
-                <MapGlyph />
-                {mapLabel(mapKey)}
-              </span>
-            }
+            buttonLabel={mapLabel(mapKey)}
             options={mapOptions}
           />
         )}
@@ -1607,22 +1605,13 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
             <ScreenMarkers world={map.world} author={author} language={language} />
           )}
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[13px] text-app-muted">
-              {mapKey.startsWith('builtin:') && (() => {
-                const entry = builtin.find((m) => `builtin:${m.world}` === mapKey)
-                return entry ? `${entry.displayName}${entry.author ? ` · © ${entry.author}` : ''} · ` : ''
-              })()}
-              {ru
-                ? `Высоты по сетке с шагом ${Math.round(map.step * 10) / 10} м.`
-                : `Heights on a ${Math.round(map.step * 10) / 10} m grid.`}
-            </p>
-            {mapKey.startsWith('local:') && (
+          {mapKey.startsWith('local:') && (
+            <div className="mt-3">
               <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
                 {ru ? 'Удалить карту' : 'Delete map'}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -1745,10 +1734,15 @@ function MarkerList({
 }
 
 /** Значок карты слева от названия в списке карт. */
-function MapGlyph() {
+function MapGlyph({ big = false }: { big?: boolean }) {
   return (
-    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
-      <FieldIcon name="map" className="h-4 w-4" />
+    <span
+      className={[
+        'inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
+        big ? 'h-9 w-9' : 'h-7 w-7',
+      ].join(' ')}
+    >
+      <FieldIcon name="map" className={big ? 'h-[18px] w-[18px]' : 'h-4 w-4'} />
     </span>
   )
 }

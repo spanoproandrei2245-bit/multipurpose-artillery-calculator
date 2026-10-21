@@ -43,7 +43,9 @@ export function AmmunitionSelector({
     ammunition.find((item) => item.id === selectedId) ?? ammunition[0]
 
   return (
-    <Dropdown
+    <>
+      <ShellIcon category={category} type={selected.type} language={language} size="sm" />
+      <Dropdown
       label={ru ? 'Снаряд' : 'Shell'}
       value={selected.id}
       onChange={onSelect}
@@ -54,12 +56,7 @@ export function AmmunitionSelector({
         label: formatLabel(item),
         icon: <ShellIcon category={category} type={item.type} language={language} />,
       }))}
-      buttonLabel={
-        <span className="flex items-center gap-2">
-          <ShellIcon category={category} type={selected.type} language={language} />
-          {formatLabel(selected)}
-        </span>
-      }
     />
+    </>
   )
 }

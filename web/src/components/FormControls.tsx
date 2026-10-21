@@ -239,7 +239,9 @@ export function Row({
             <div
               className={[
                 'flex min-w-0 items-center gap-2',
-                control === 'unit' ? 'w-[13.5rem]' : 'w-[15.75rem]',
+                control === 'unit'
+                  ? 'w-[13.5rem] max-w-[calc(60vw-2.25rem)]'
+                  : 'w-[15.75rem] max-w-[60vw]',
               ].join(' ')}
             >
               {children}

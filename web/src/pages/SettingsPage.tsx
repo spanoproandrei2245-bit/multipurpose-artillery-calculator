@@ -7,7 +7,8 @@ import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
 import { FeaturePreview } from '../components/FeaturePreview'
-import { SectionHeading, Switch } from '../components/FormControls'
+import { SectionHeading, Switch, Toggle } from '../components/FormControls'
+import { setFlightOnMap, setFlightStyle, useFlightOnMap, useFlightStyle } from '../lib/animation'
 import { setFeature, useFeature } from '../lib/features'
 
 interface SettingsPageProps {
@@ -69,6 +70,8 @@ export function SettingsPage({
   const journal = useFeature('journal')
   const table = useFeature('table')
   const hints = useFeature('hints')
+  const flightStyle = useFlightStyle()
+  const flightOnMap = useFlightOnMap()
 
   return (
     <section className="space-y-4">
@@ -105,6 +108,40 @@ export function SettingsPage({
             </div>
 
             <p className="label mt-5 text-app-faint">{t.autoSave}</p>
+          </Card>
+
+          <Card
+            index="02"
+            title={ru ? 'Анимация выстрела' : 'Shot animation'}
+            description={
+              ru
+                ? 'Полёт снаряда и разрыв после нажатия «Огонь». Вид зависит от орудия и снаряда.'
+                : 'Shell flight and impact after Fire. The look depends on the weapon and shell.'
+            }
+          >
+            <div className="mt-4 space-y-4">
+              <Toggle
+                label={ru ? 'Вид анимации' : 'Animation style'}
+                value={flightStyle}
+                onChange={setFlightStyle}
+                options={[
+                  { value: 'off', label: ru ? 'Выкл' : 'Off' },
+                  { value: 'minimal', label: ru ? 'Минимальная' : 'Minimal' },
+                  { value: 'detailed', label: ru ? 'Подробная' : 'Detailed' },
+                ]}
+              />
+              <Switch
+                checked={flightOnMap}
+                onChange={setFlightOnMap}
+                disabled={flightStyle === 'off'}
+                label={ru ? 'Показывать на карте' : 'Show on the map'}
+                description={
+                  ru
+                    ? 'Снаряд летит от орудия к цели прямо на карте. Без этого анимация только у таймера.'
+                    : 'The shell flies from the gun to the target on the map. Otherwise only the timer strip animates.'
+                }
+              />
+            </div>
           </Card>
 
           <SoundSettings language={language} />

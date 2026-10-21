@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 
+import { useFlightStyle } from '../lib/animation'
 import { drawFlight, IMPACT_FX_SECONDS } from '../lib/flightFx'
 import type { ShellKind } from '../lib/shellKind'
 import type { ArtilleryCategory } from '../types/gameModel'
@@ -50,10 +51,11 @@ export function FlightCanvas({
   height = SIDE_HEIGHT,
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
+  const style = useFlightStyle()
   // Свежие значения для цикла кадров без его перезапуска
-  const latest = useRef({ category, kind, ends, width, height })
+  const latest = useRef({ category, kind, ends, width, height, style })
   useEffect(() => {
-    latest.current = { category, kind, ends, width, height }
+    latest.current = { category, kind, ends, width, height, style }
   })
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export function FlightCanvas({
 
     function tick() {
       if (!canvas || !ctx || !shot) return
-      const { category, kind, ends, width, height } = latest.current
+      const { category, kind, ends, width, height, style } = latest.current
       const elapsed = (Date.now() - shot.firedAt) / 1000
       const cssW = width ?? canvas.clientWidth
       const cssH = height
@@ -133,6 +135,7 @@ export function FlightCanvas({
           tof: shot.tof,
           arc: geometry.arc,
           scale: geometry.scale,
+          style: style === 'detailed' ? 'detailed' : 'minimal',
         })
       }
 
@@ -149,6 +152,9 @@ export function FlightCanvas({
       clear()
     }
   }, [shot])
+
+  // Анимация выключена в настройках: холст не показываем
+  if (style === 'off') return null
 
   return (
     <canvas

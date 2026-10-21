@@ -162,8 +162,6 @@ const ADVANCED: Step[] = [
 ]
 
 interface Rect {
-  // Для какого шага измерено
-  key: string
   top: number
   left: number
   width: number
@@ -171,10 +169,13 @@ interface Rect {
 }
 
 const PAD = 6
+const CARD_MAX = 352
+const GAP = 12
 
 /**
  * Обучение: базовое при первом запуске, продвинутое — после базового.
- * Подсвечивает элементы, любой тур можно пропустить.
+ * Подсвечивает элементы, любой тур можно пропустить. Подсветка и карточка
+ * плавно переезжают от шага к шагу.
  */
 export function Tour({ language }: { language: Language }) {
   const ru = language === 'ru'
@@ -184,9 +185,16 @@ export function Tour({ language }: { language: Language }) {
   const steps = advancedOpen ? ADVANCED : BASIC
 
   const [index, setIndex] = useState(0)
+  // Последняя измеренная подсветка: при смене шага остаётся, пока не придёт новая
   const [measured, setMeasured] = useState<Rect | null>(null)
+  const [cardH, setCardH] = useState(200)
+  const [viewport, setViewport] = useState(() => ({
+    w: typeof window === 'undefined' ? 1200 : window.innerWidth,
+    h: typeof window === 'undefined' ? 800 : window.innerHeight,
+  }))
   // Предложение продвинутого обучения после базового
   const [offer, setOffer] = useState(false)
+  const [cardNode, setCardNode] = useState<HTMLDivElement | null>(null)
 
   // При первом запуске базовое обучение открывается само
   useEffect(() => {
@@ -208,6 +216,7 @@ export function Tour({ language }: { language: Language }) {
     setPanel('tour', false)
     setPanel('tourAdvanced', false)
     setIndex(0)
+    setMeasured(null)
     // Базовое пройдено до конца — предлагаем продвинутое
     if (completed && !advanced && !advancedTourDone()) setOffer(true)
   }
@@ -223,16 +232,27 @@ export function Tour({ language }: { language: Language }) {
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  // Высота карточки — чтобы ставить её над или под подсветкой точными координатами
+  useEffect(() => {
+    if (!cardNode) return
+    const observer = new ResizeObserver(() => setCardH(cardNode.offsetHeight))
+    observer.observe(cardNode)
+    return () => observer.disconnect()
+  }, [cardNode])
+
   // Подсветка: прокрутить к элементу и следить за его положением
   useLayoutEffect(() => {
     if (!open || !step) return
     const element = step.target?.() ?? null
-    if (!element) return
-    const key = `${advancedOpen ? 'a' : 'b'}:${step.title.en}`
-    element.scrollIntoView({ block: 'center', behavior: 'instant' })
+    element?.scrollIntoView({ block: 'center', behavior: 'instant' })
     function measure() {
-      const r = element!.getBoundingClientRect()
-      setMeasured({ key, top: r.top, left: r.left, width: r.width, height: r.height })
+      setViewport({ w: window.innerWidth, h: window.innerHeight })
+      if (!element) {
+        setMeasured(null)
+        return
+      }
+      const r = element.getBoundingClientRect()
+      setMeasured({ top: r.top, left: r.left, width: r.width, height: r.height })
     }
     const frame = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
@@ -242,11 +262,15 @@ export function Tour({ language }: { language: Language }) {
       window.removeEventListener('resize', measure)
       window.removeEventListener('scroll', measure, true)
     }
-  }, [open, step, advancedOpen])
+  }, [open, step])
 
   if (offer && !open) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+      <div
+        className="tour-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="panel w-full max-w-sm p-5 shadow-2xl">
           <h2 className="text-lg font-semibold text-app-text">
             {ru ? 'Базовое обучение пройдено' : 'Basic tutorial complete'}
@@ -279,54 +303,71 @@ export function Tour({ language }: { language: Language }) {
 
   if (!open || !step) return null
 
-  const rect =
-    measured && measured.key === `${advancedOpen ? 'a' : 'b'}:${step.title.en}`
-      ? measured
-      : null
   const last = index >= available.length - 1
-  const viewportH = window.innerHeight
-  const cardW = Math.min(352, window.innerWidth - 32)
-  const cardBelow = rect ? rect.top + rect.height + 12 + 200 < viewportH : true
+  const cardW = Math.min(CARD_MAX, viewport.w - 32)
+
+  // Подсветка: без элемента — схлопнутая точка в центре (затемнение остаётся)
+  const spot = measured ?? {
+    top: viewport.h / 2,
+    left: viewport.w / 2,
+    width: 0,
+    height: 0,
+  }
+  const pad = measured ? PAD : 0
+
+  // Карточка: под подсветкой, если влезает, иначе над; без элемента — по центру
+  let cardTop: number
+  let cardLeft: number
+  if (measured) {
+    const below = measured.top + measured.height + PAD + GAP
+    cardTop =
+      below + cardH + 12 <= viewport.h
+        ? below
+        : measured.top - PAD - GAP - cardH
+    cardTop = Math.min(Math.max(12, cardTop), viewport.h - cardH - 12)
+    cardLeft = Math.min(Math.max(16, measured.left), viewport.w - cardW - 16)
+  } else {
+    cardTop = (viewport.h - cardH) / 2
+    cardLeft = (viewport.w - cardW) / 2
+  }
+
+  const move =
+    'transition-[top,left,width,height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none'
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={ru ? 'Обучение' : 'Tutorial'}>
-      {rect ? (
-        <div
-          className="pointer-events-none absolute rounded-lg ring-2 ring-accent transition-all"
-          style={{
-            top: rect.top - PAD,
-            left: rect.left - PAD,
-            width: rect.width + PAD * 2,
-            height: rect.height + PAD * 2,
-            boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)',
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-black/60" />
-      )}
+    <div
+      className="tour-fade fixed inset-0 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label={ru ? 'Обучение' : 'Tutorial'}
+    >
+      <div
+        className={`pointer-events-none absolute rounded-lg ${measured ? 'ring-2 ring-accent' : ''} ${move}`}
+        style={{
+          top: spot.top - pad,
+          left: spot.left - pad,
+          width: spot.width + pad * 2,
+          height: spot.height + pad * 2,
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)',
+        }}
+      />
 
       <div
-        className="panel absolute p-4 shadow-2xl"
-        style={{
-          width: cardW,
-          ...(rect
-            ? {
-                left: Math.min(Math.max(16, rect.left), window.innerWidth - cardW - 16),
-                ...(cardBelow
-                  ? { top: rect.top + rect.height + PAD + 12 }
-                  : { bottom: viewportH - rect.top + PAD + 12 }),
-              }
-            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }),
-        }}
+        ref={setCardNode}
+        className={`panel absolute p-4 shadow-2xl ${move}`}
+        style={{ width: cardW, top: cardTop, left: cardLeft }}
       >
-        <p className="label mb-1">
-          {advancedOpen ? (ru ? 'Продвинутое · ' : 'Advanced · ') : ''}
-          {index + 1} / {available.length}
-        </p>
-        <h2 className="text-lg font-semibold text-app-text">{step.title[language]}</h2>
-        <p className="mt-1.5 text-[14.5px] leading-relaxed text-app-text-2">
-          {step.text[language]}
-        </p>
+        {/* Текст меняется с коротким появлением, карточка при этом переезжает */}
+        <div key={`${advancedOpen ? 'a' : 'b'}:${step.title.en}`} className="tour-fade">
+          <p className="label mb-1">
+            {advancedOpen ? (ru ? 'Продвинутое · ' : 'Advanced · ') : ''}
+            {index + 1} / {available.length}
+          </p>
+          <h2 className="text-lg font-semibold text-app-text">{step.title[language]}</h2>
+          <p className="mt-1.5 text-[14.5px] leading-relaxed text-app-text-2">
+            {step.text[language]}
+          </p>
+        </div>
         <div className="mt-4 flex items-center gap-2">
           <button type="button" className="btn btn-ghost text-app-muted" onClick={() => finish(false)}>
             {ru ? 'Пропустить' : 'Skip'}

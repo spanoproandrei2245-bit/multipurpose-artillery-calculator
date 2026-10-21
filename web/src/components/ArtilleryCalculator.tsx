@@ -837,7 +837,7 @@ export function ArtilleryCalculator({
               {/* «Быстрый» — заряд с наименьшим временем полёта,
                   «точный» — с наименьшим «1 мил ≈ X м». Оба
                   пересчитываются при смене дистанции. */}
-              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg min-w-0 flex-1 [&>button]:flex-1 [&>button]:justify-center">
+              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg min-w-0 flex-1 overflow-hidden [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]">
                 {(['fastest', 'precise'] as const).map((preference) => (
                   <button
                     key={preference}
@@ -860,9 +860,10 @@ export function ArtilleryCalculator({
               </div>
               <Dropdown
                 fullWidth
-                className="w-[7.5rem] shrink-0"
+                className="w-[5.75rem] shrink-0"
                 label={ru ? 'Заряд' : 'Charge'}
                 disabled={applicable.length === 0}
+                buttonLabel={chargeValue === 'auto' ? (ru ? 'Авто' : 'Auto') : '№ ' + chargeValue}
                 value={chargeValue}
                 onChange={(value) => {
                   if (value === 'auto') setChargePreference('lowest')
@@ -872,12 +873,10 @@ export function ArtilleryCalculator({
                 options={[
                   {
                     value: 'auto',
-                    label:
-                      (ru ? 'Авто' : 'Auto') +
-                      (activeResult && chargeValue === 'auto'
-                        ? ` · ${activeResult.charge}`
-                        : ''),
-                    description: ru ? 'наименьший подходящий' : 'lowest that fits',
+                    label: ru ? 'Авто' : 'Auto',
+                    description:
+                      (ru ? 'наименьший подходящий' : 'lowest that fits') +
+                      (activeResult ? ` · ${activeResult.charge}` : ''),
                   },
                   ...applicable.map((result) => ({
                     value: String(result.charge),
@@ -978,6 +977,15 @@ export function ArtilleryCalculator({
             <Row icon="weapon" control="full" label={ru ? 'Орудие' : 'Weapon'}>
               {modelSelector}
             </Row>
+            <Row icon="shell" control="full" label={ru ? 'Снаряд' : 'Shell'}>
+              <AmmunitionSelector
+                ammunition={ammunition}
+                selectedId={ammoId}
+                onSelect={handleAmmoChange}
+                language={language}
+                category={category}
+              />
+            </Row>
             <Row icon="gunHeight" control="unit" unit={unitM} label={ru ? 'Высота орудия' : 'Gun height'} htmlFor="calc-own-height">
               <button
                 type="button"
@@ -1008,15 +1016,6 @@ export function ArtilleryCalculator({
                 onChange={edited(setOwnHeight)}
                 readOnly={heightLocked}
                 block
-              />
-            </Row>
-            <Row icon="shell" control="full" label={ru ? 'Снаряд' : 'Shell'}>
-              <AmmunitionSelector
-                ammunition={ammunition}
-                selectedId={ammoId}
-                onSelect={handleAmmoChange}
-                language={language}
-                category={category}
               />
             </Row>
           </dl>

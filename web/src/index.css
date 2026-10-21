@@ -468,3 +468,23 @@ html.overlay body {
 .theme-icon {
   animation: theme-icon-spin 0.45s ease-out;
 }
+
+/* Плавное появление окон обучения */
+@keyframes tour-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tour-fade {
+  animation: tour-fade 0.35s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-fade {
+    animation: none;
+  }
+}
