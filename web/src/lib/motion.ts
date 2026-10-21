@@ -5,18 +5,28 @@ import { useSyncExternalStore } from 'react'
  *   numbers  — «прокрутка» чисел расчёта и их короткая вспышка;
  *   switches — скользящая «таблетка» у переключателей;
  *   appear   — появление окон, плашек и карточек;
- *   smooth   — плавные переходы: наведение, смена выбора, раскрытие.
+ *   smooth   — плавные переходы: наведение, смена выбора, раскрытие;
+ *   fire     — отдача при нажатии «Огонь» и вспышка у орудия;
+ *   impact   — подсветка и «прыжок» таймера, когда снаряд прилетел.
  * Переезд обучения и круг при смене темы встроены и всегда включены.
  * По умолчанию всё включено, если в системе не выбрано «уменьшить движение».
  * Выбор отмечается на <html> (data-m-<вид>), по нему CSS гасит анимации.
  */
-export type MotionKind = 'numbers' | 'switches' | 'appear' | 'smooth'
+export type MotionKind =
+  | 'numbers'
+  | 'switches'
+  | 'appear'
+  | 'smooth'
+  | 'fire'
+  | 'impact'
 
 export const MOTION_KINDS: readonly MotionKind[] = [
   'numbers',
   'switches',
   'appear',
   'smooth',
+  'fire',
+  'impact',
 ]
 
 const listeners = new Set<() => void>()

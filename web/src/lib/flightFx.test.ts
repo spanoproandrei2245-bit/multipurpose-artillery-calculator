@@ -74,6 +74,22 @@ describe('drawFlight', () => {
     expect(after.calls).toEqual([])
   })
 
+  it('вспышка у орудия рисуется в первые доли секунды и только по флагу', () => {
+    for (const style of ['minimal', 'detailed'] as const) {
+      const flash = fakeContext()
+      drawFlight(flash.ctx, params({ style, elapsed: 0.1, muzzle: true }))
+      const plain = fakeContext()
+      drawFlight(plain.ctx, params({ style, elapsed: 0.1 }))
+      expect(flash.calls.length).toBeGreaterThan(plain.calls.length)
+      // позже 0.35 с вспышки уже нет
+      const late = fakeContext()
+      const lateOff = fakeContext()
+      drawFlight(late.ctx, params({ style, elapsed: 1, muzzle: true }))
+      drawFlight(lateOff.ctx, params({ style, elapsed: 1 }))
+      expect(late.calls.length).toBe(lateOff.calls.length)
+    }
+  })
+
   it('нулевое время полёта не ломает расчёт', () => {
     const { ctx, calls } = fakeContext()
     drawFlight(ctx, params({ tof: 0 }))

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { useFlightStyle } from '../lib/animation'
+import { getMotion } from '../lib/motion'
 import { drawFlight, IMPACT_FX_SECONDS } from '../lib/flightFx'
 import type { ShellKind } from '../lib/shellKind'
 import type { ArtilleryCategory } from '../types/gameModel'
@@ -166,6 +167,7 @@ export function FlightCanvas({
             arc: geometry.arc,
             scale: geometry.scale,
             style: style === 'detailed' ? 'detailed' : 'minimal',
+            muzzle: getMotion('fire'),
           })
         }
       }

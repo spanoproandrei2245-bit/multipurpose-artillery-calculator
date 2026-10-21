@@ -88,7 +88,7 @@ describe('motion', () => {
     const { getMotion, setMotion, useMotion, MOTION_KINDS } = await import('./motion')
     const numbers = renderHook(() => useMotion('numbers'))
     const switches = renderHook(() => useMotion('switches'))
-    expect(MOTION_KINDS).toHaveLength(4)
+    expect(MOTION_KINDS).toHaveLength(6)
     expect(numbers.result.current).toBe(true)
     act(() => setMotion('numbers', false))
     expect(numbers.result.current).toBe(false)

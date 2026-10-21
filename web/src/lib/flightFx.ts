@@ -26,6 +26,8 @@ export interface FlightParams {
   arc: number
   // Масштаб эффектов (1 — полоска у таймера)
   scale?: number
+  // Вспышка у орудия в момент выстрела
+  muzzle?: boolean
   // minimal — тонкие линии и кольца (по умолчанию), detailed — огненный шар, искры, парашют
   style?: 'minimal' | 'detailed'
 }
@@ -385,10 +387,28 @@ function drawSmokeD(ctx: CanvasRenderingContext2D, p: FlightParams, e: number, s
 
 /** Один кадр анимации полёта и разрыва. */
 
+/** Вспышка у орудия: кольцо (минимальный вид) или тёплое пятно (подробный). */
+function drawMuzzle(ctx: CanvasRenderingContext2D, p: FlightParams, s: number) {
+  const k = clamp01(p.elapsed / 0.35)
+  if (k >= 1) return
+  if (p.style === 'detailed') {
+    const g = ctx.createRadialGradient(p.ax, p.ay, 0, p.ax, p.ay, 14 * s)
+    g.addColorStop(0, `rgba(255,226,140,${1 - k})`)
+    g.addColorStop(1, 'rgba(255,160,40,0)')
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.arc(p.ax, p.ay, 14 * s, 0, Math.PI * 2)
+    ctx.fill()
+    return
+  }
+  ring(ctx, p.ax, p.ay, (3 + k * 12) * s, (1 - k) * 0.9, 1.6 * s, INK)
+}
+
 /** Один кадр анимации полёта и разрыва. */
 export function drawFlight(ctx: CanvasRenderingContext2D, p: FlightParams) {
   const s = p.scale ?? 1
   if (p.elapsed < 0 || p.tof <= 0) return
+  if (p.muzzle) drawMuzzle(ctx, p, s)
   const t = p.elapsed / p.tof
   const detailed = p.style === 'detailed'
   if (t < 1) {

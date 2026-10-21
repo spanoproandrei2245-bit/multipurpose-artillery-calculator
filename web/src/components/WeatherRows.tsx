@@ -53,7 +53,7 @@ export function WeatherRows({ inputs: w, onEdit }: Props) {
       {w.windMode === 'vector' ? (
         <>
           <Row
-            icon="wind"
+            icon="speed"
             control="unit"
             unit={mps}
             label={t('weatherSection.wind-speed-label')}
@@ -85,7 +85,7 @@ export function WeatherRows({ inputs: w, onEdit }: Props) {
       ) : (
         <>
           <Row
-            icon="wind"
+            icon="along"
             control="unit"
             unit={mps}
             label={t('weatherSection.along-label')}
@@ -109,7 +109,7 @@ export function WeatherRows({ inputs: w, onEdit }: Props) {
             />
           </Row>
           <Row
-            icon="wind"
+            icon="across"
             control="unit"
             unit={mps}
             label={t('weatherSection.cross-label')}
@@ -191,20 +191,6 @@ export function WeatherRows({ inputs: w, onEdit }: Props) {
             {w.temperatureValue === null &&
               t('weatherSection.at-c', STANDARD_TEMPERATURE)}
           </p>
-        )}
-        {w.entered && (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                w.reset()
-                onEdit()
-              }}
-              className="btn btn-sm btn-ghost btn-danger"
-            >
-              {t('weatherSection.reset-weather')}
-            </button>
-          </div>
         )}
       </div>
     </>

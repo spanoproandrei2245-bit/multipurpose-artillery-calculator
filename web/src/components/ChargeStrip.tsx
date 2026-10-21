@@ -49,7 +49,13 @@ export function ChargeStrip({
         return (
           <div key={group.mode}>
             {groups.length > 1 && (
-              <p className="label mb-1.5">{group.label}</p>
+              <p className="label mb-1.5 flex items-center gap-1.5">
+                <FieldIcon
+                  name={group.mode === 'HIGH' ? 'trajectoryHigh' : 'trajectoryLow'}
+                  className="h-4 w-4"
+                />
+                {group.label}
+              </p>
             )}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
               {visible.map((result) => {

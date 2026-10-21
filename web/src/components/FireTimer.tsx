@@ -69,6 +69,18 @@ export function FireTimer({
   const sound = useTimerSound()
   const volley = useFeature('volley')
   const nextId = useRef(1)
+  // Короткие отметки для анимаций: отдача кнопки и «волна» при попадании
+  const [kicking, setKicking] = useState(false)
+  const [pulsing, setPulsing] = useState(false)
+  const kickTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(kickTimer.current)
+      clearTimeout(pulseTimer.current)
+    },
+    []
+  )
   // Какие сигналы у какого снаряда уже прозвучали
   const signaled = useRef(new Map<number, { splash: boolean; impact: boolean }>())
 
@@ -99,6 +111,9 @@ export function FireTimer({
         if (!flags.impact && left <= 0) {
           flags.impact = true
           if (sound) playSound('impact')
+          setPulsing(true)
+          clearTimeout(pulseTimer.current)
+          pulseTimer.current = setTimeout(() => setPulsing(false), 900)
         }
         signaled.current.set(shot.id, flags)
         if (left * 1000 < -IMPACT_HOLD_MS) {
@@ -134,6 +149,9 @@ export function FireTimer({
     signaled.current = append ? signaled.current : new Map()
     setNow(firedAt)
     setShots((list) => (append ? [...list, shot] : [shot]))
+    setKicking(true)
+    clearTimeout(kickTimer.current)
+    kickTimer.current = setTimeout(() => setKicking(false), 450)
     // Короткий щелчок подтверждает нажатие и разблокирует звук
     // в браузере (AudioContext запускается только после жеста).
     if (sound) playSound('fire')
@@ -165,14 +183,19 @@ export function FireTimer({
   const showStatus = !bar || active
 
   return (
-    <div className={bar ? '' : 'mt-4 rounded-lg bg-app-surface p-3'}>
+    <div
+      className={[
+        bar ? 'rounded-lg' : 'mt-4 rounded-lg bg-app-surface p-3',
+        pulsing ? 'impact-pulse' : '',
+      ].join(' ')}
+    >
       <div className="flex gap-2">
         <button
           type="button"
           data-tour="fire"
           disabled={disabled}
           onClick={fire}
-          className="btn btn-primary btn-lg flex-1"
+          className={`btn btn-primary btn-lg flex-1 ${kicking ? 'fire-kick' : ''}`}
         >
           <FieldIcon name="fire" className="h-5 w-5" />
           {active ? t('fireTimer.fire-again') : t('fireTimer.fire')}
@@ -233,11 +256,13 @@ export function FireTimer({
                 alert ? 'text-danger' : 'text-app-text',
               ].join(' ')}
             >
-              {left === null
-                ? tof.toFixed(1)
-                : phase === 'impact'
-                  ? '0.0'
-                  : left.toFixed(1)}
+              <span className={pulsing && phase === 'impact' ? 'impact-jump' : ''}>
+                {left === null
+                  ? tof.toFixed(1)
+                  : phase === 'impact'
+                    ? '0.0'
+                    : left.toFixed(1)}
+              </span>
               <span className="ml-1 text-[13px] font-normal text-app-muted">
                 {t('unit.s')}
               </span>

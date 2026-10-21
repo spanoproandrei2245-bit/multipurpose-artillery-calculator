@@ -193,7 +193,6 @@ export function ScreenMarkers({ world, author, language }: Props) {
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
     // load читает только setState и язык
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ru])
 
   // ---- перенос на карту ----

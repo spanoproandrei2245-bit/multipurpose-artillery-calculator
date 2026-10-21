@@ -73,6 +73,8 @@ export function SettingsPage({
   const motionSwitches = useMotion('switches')
   const motionAppear = useMotion('appear')
   const motionSmooth = useMotion('smooth')
+  const motionFire = useMotion('fire')
+  const motionImpact = useMotion('impact')
   const flightOnMap = useFlightOnMap()
 
   return (
@@ -124,6 +126,8 @@ export function SettingsPage({
                   ['switches', motionSwitches, 'settingsPage.motion-switches', 'settingsPage.motion-switches-description'],
                   ['appear', motionAppear, 'settingsPage.motion-appear', 'settingsPage.motion-appear-description'],
                   ['smooth', motionSmooth, 'settingsPage.motion-smooth', 'settingsPage.motion-smooth-description'],
+                  ['fire', motionFire, 'settingsPage.motion-fire', 'settingsPage.motion-fire-description'],
+                  ['impact', motionImpact, 'settingsPage.motion-impact', 'settingsPage.motion-impact-description'],
                 ] as [MotionKind, boolean, MessageKey, MessageKey][]
               ).map(([kind, on, label, description]) => (
                 <Switch

@@ -549,3 +549,53 @@ html.overlay body {
 .tour-fade-always {
   animation: tour-fade 0.35s ease-out;
 }
+
+/* Нажатие «Огонь»: короткая отдача кнопки и расходящееся кольцо */
+@keyframes fire-kick {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(67 147 228 / 0.65);
+  }
+  25% {
+    transform: scale(0.965);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 16px rgb(67 147 228 / 0);
+  }
+}
+.fire-kick {
+  animation: fire-kick 0.45s ease-out;
+}
+
+/* Снаряд прилетел: красная волна вокруг таймера и «прыжок» отсчёта */
+@keyframes impact-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(228 116 116 / 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgb(228 116 116 / 0);
+  }
+}
+@keyframes impact-jump {
+  0% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.impact-pulse {
+  animation: impact-pulse 0.9s ease-out;
+}
+.impact-jump {
+  display: inline-block;
+  animation: impact-jump 0.5s ease-out;
+}
+:root[data-m-fire="off"] .fire-kick {
+  animation: none !important;
+}
+:root[data-m-impact="off"] .impact-pulse,
+:root[data-m-impact="off"] .impact-jump {
+  animation: none !important;
+}

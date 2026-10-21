@@ -65,6 +65,7 @@ import type { Language } from '../types/settings'
 import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
 import { AnimatedNumber } from './AnimatedNumber'
+import { ConfirmClear } from './ConfirmClear'
 import { ChargeStrip } from './ChargeStrip'
 import { FieldIcon } from './FieldIcon'
 import { BallisticTableView } from './BallisticTableView'
@@ -417,16 +418,7 @@ export function ArtilleryCalculator({
     }
   }
 
-  // «Очистить поля» срабатывает со второго нажатия, чтобы не стереть случайно
-  const [confirmClear, setConfirmClear] = useState(false)
-  useEffect(() => {
-    if (!confirmClear) return
-    const timer = window.setTimeout(() => setConfirmClear(false), 3000)
-    return () => window.clearTimeout(timer)
-  }, [confirmClear])
-
   function resetForm() {
-    setConfirmClear(false)
     setMapTarget(null)
     setDistance('')
     setOwnHeight('')
@@ -917,8 +909,8 @@ export function ArtilleryCalculator({
                 }}
                 options={[
                   { value: 'best', icon: 'balance', label: t('artilleryCalculator.best'), title: t('artilleryCalculator.priority-best'), disabled: applicable.length === 0 },
-                  { value: 'fastest', icon: 'fire', label: t('artilleryCalculator.fast'), title: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
-                  { value: 'precise', icon: 'correction', label: t('artilleryCalculator.precise-short'), title: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
+                  { value: 'fastest', label: t('artilleryCalculator.fast'), title: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
+                  { value: 'precise', label: t('artilleryCalculator.precise-short'), title: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
                 ]}
               />
             </Row>
@@ -932,13 +924,12 @@ export function ArtilleryCalculator({
                   options={[
                     {
                       value: 'auto' as const,
-                      icon: 'trajectoryAuto' as const,
+                      icon: 'autoCycle' as const,
                       label: t('artilleryCalculator.auto'),
                       title: t('artilleryCalculator.trajectory-auto'),
                     },
                     ...profileModes.map((item) => ({
                       value: item,
-                      icon: item === 'HIGH' ? ('trajectoryHigh' as const) : ('trajectoryLow' as const),
                       label:
                         item === 'HIGH'
                           ? t('artilleryCalculator.high')
@@ -973,22 +964,10 @@ export function ArtilleryCalculator({
             </div>
           )}
 
-          <div className="my-3 flex items-center gap-3">
-            <div className="h-px flex-1 bg-app-border" />
-            <button
-              type="button"
-              onClick={() => (confirmClear ? resetForm() : setConfirmClear(true))}
-              className={[
-                'btn btn-sm',
-                confirmClear ? 'btn-danger' : 'btn-ghost text-app-muted',
-              ].join(' ')}
-            >
-              <FieldIcon name="trash" className="h-4 w-4" />
-              {confirmClear
-                ? t('artilleryCalculator.tap-again-to-clear')
-                : t('artilleryCalculator.clear-inputs')}
-            </button>
-          </div>
+          <ConfirmClear
+            label={t('artilleryCalculator.clear-inputs')}
+            onConfirm={resetForm}
+          />
 
           <dl>
             <Row icon="distance" control="unit" unit={unitM} label={t('artilleryCalculator.distance')} htmlFor="calc-distance">
@@ -1079,10 +1058,22 @@ export function ArtilleryCalculator({
                 block
               />
             </Row>
-            {showWeather && hasWeather && (
-              <WeatherRows inputs={weatherInputs} onEdit={markEdited} />
-            )}
           </dl>
+          {showWeather && hasWeather && (
+            <>
+              <ConfirmClear
+                label={t('weatherSection.clear-weather')}
+                disabled={!weatherInputs.entered}
+                onConfirm={() => {
+                  weatherInputs.reset()
+                  markEdited()
+                }}
+              />
+              <dl>
+                <WeatherRows inputs={weatherInputs} onEdit={markEdited} />
+              </dl>
+            </>
+          )}
           {showWeather && !hasWeather && profile && (
             <p className="mt-2 text-[13px] text-app-muted">
               {t('artilleryCalculator.weather-corrections-are-unavailable-the')}
