@@ -56,7 +56,8 @@ describe('встроенные карты в public/maps', () => {
       }
       expect(existsSync(join(dir, 'tiles', String(d.tiles.levels))), 'лишний уровень').toBe(false)
 
-      // Тайл 0/0_0 — превью карты в списке
+      // Превью карты для списков
+      expect(existsSync(join(dir, 'preview.webp'))).toBe(true)
       expect(existsSync(join(dir, 'tiles', '0', `0_0.${d.tiles.ext}`))).toBe(true)
 
       // Размер сетки тайлов покрывает карту целиком

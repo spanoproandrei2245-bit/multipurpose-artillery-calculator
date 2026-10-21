@@ -46,6 +46,7 @@ import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { MapRequests } from './MapRequests'
+import { PickerDialog } from './PickerDialog'
 import type { JournalActions } from '../lib/journalIO'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
 import { useFlightOnMap } from '../lib/animation'
@@ -252,6 +253,8 @@ export function MapPicker({
   const [map, setMap] = useState<Heightmap | null>(null)
   // Окно «Предложить карту»
   const [suggesting, setSuggesting] = useState(false)
+  // Окно выбора карты мода (с поиском)
+  const [pickingMod, setPickingMod] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const [gun, setGun] = useState<MapPoint | null>(null)
@@ -958,87 +961,86 @@ export function MapPicker({
   const buttonClass = 'btn btn-sm'
 
 
-  // ---- список карт: избранные сверху, потом по происхождению ----
-  const ADD_MAP = '__add__'
-  const mapEntries: {
-    key: string
-    name: string
-    author: string
-    group: string
-    preview: string | null
-  }[] = [
-    ...[...builtin]
-      .sort(
-        (x, y) =>
-          Number(mapKind(y) === 'official') - Number(mapKind(x) === 'official')
-      )
-      .map((m) => ({
-        key: `builtin:${m.world}`,
-        name: ru && m.nameRu ? m.nameRu : m.displayName,
-        author: m.author,
-        group:
-          mapKind(m) === 'official'
-            ? t('mapPicker.official')
-            : t('mapPicker.community'),
-        preview: `${MAPS_BASE}${m.world}/tiles/0/0_0.webp`,
-      })),
-  ]
+  // ---- список карт: ванильные — в списке, карты модов — в окне с поиском ----
+  const ADD_MAP = '__suggest__'
+  const MOD_MAPS = '__mods__'
+  const mapEntries = builtin.map((m) => ({
+    key: `builtin:${m.world}`,
+    name: ru && m.nameRu ? m.nameRu : m.displayName,
+    author: m.author,
+    official: mapKind(m) === 'official',
+    preview: `${MAPS_BASE}${m.world}/preview.webp`,
+  }))
   function mapLabel(key: string): string {
     return mapEntries.find((e) => e.key === key)?.name ?? '—'
   }
-  const favoriteGroup = t('mapPicker.favourites')
-  const mapOptions: DropdownOption<string>[] = [
-    ...mapEntries
-      .filter((e) => favorites.includes(e.key))
-      .map((e) => ({ ...e, group: favoriteGroup })),
-    ...mapEntries.filter((e) => !favorites.includes(e.key)),
+  const isFavorite = (key: string) => favorites.includes(key)
+  const listed = mapEntries.filter(
+    (e) => isFavorite(e.key) || e.official || e.key === mapKey
+  )
+  const sortedList = [
+    ...listed.filter((e) => isFavorite(e.key)),
+    ...listed.filter((e) => !isFavorite(e.key) && e.official),
+    // Выбранная карта мода, которой нет в избранном, тоже видна в списке
+    ...listed.filter((e) => !isFavorite(e.key) && !e.official),
   ]
-    .map((e) => ({
-      value: e.key,
-      label: e.name,
-      description: e.author ? (
-        <span className="text-[11.5px] opacity-60">{e.author}</span>
-      ) : undefined,
-      group: e.group,
-      icon: <MapGlyph />,
-      trailing: (
-        <span className="flex shrink-0 items-center gap-1.5">
-          {e.preview && (
-            <img
-              src={e.preview}
-              alt=""
-              loading="lazy"
-              className="h-9 w-9 rounded object-cover"
-            />
-          )}
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label={
-              favorites.includes(e.key)
-                ? t('mapPicker.remove-from-favourites')
-                : t('mapPicker.add-to-favourites')
-            }
-            title={
-              favorites.includes(e.key)
-                ? t('mapPicker.remove-from-favourites')
-                : t('mapPicker.add-to-favourites')
-            }
-            onClick={(event) => {
-              event.stopPropagation()
-              toggleFavorite(e.key)
-            }}
-            className={[
-              'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
-              favorites.includes(e.key) ? 'text-warn' : 'text-app-faint',
-            ].join(' ')}
-          >
-            <FieldIcon name={favorites.includes(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
-          </button>
+  const mapOptions: DropdownOption<string>[] = sortedList.map((e) => ({
+    value: e.key,
+    label: e.name,
+    description: e.author ? (
+      <span className="text-[11.5px] opacity-60">{e.author}</span>
+    ) : undefined,
+    group: isFavorite(e.key)
+      ? t('mapPicker.favourites')
+      : e.official
+        ? t('picker.vanilla')
+        : t('picker.current'),
+    icon: <MapGlyph />,
+    trailing: (
+      <span className="flex shrink-0 items-center gap-1.5">
+        <img src={e.preview} alt="" loading="lazy" className="h-9 w-9 rounded object-cover" />
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={isFavorite(e.key) ? t('picker.unfavourite') : t('picker.favourite')}
+          title={isFavorite(e.key) ? t('picker.unfavourite') : t('picker.favourite')}
+          onClick={(event) => {
+            event.stopPropagation()
+            toggleFavorite(e.key)
+          }}
+          className={[
+            'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
+            isFavorite(e.key) ? 'text-warn' : 'text-app-faint',
+          ].join(' ')}
+        >
+          <FieldIcon name={isFavorite(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
+        </button>
+      </span>
+    ),
+  }))
+  const actionIcon = (name: FieldIconName) => (
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+      <FieldIcon name={name} className="h-4 w-4" />
+    </span>
+  )
+  mapOptions.push(
+    {
+      value: MOD_MAPS,
+      label: t('picker.mod-maps'),
+      description: (
+        <span className="text-[11.5px] opacity-60">
+          {mapEntries.filter((e) => !e.official).length}
         </span>
       ),
-    }))
-mapOptions.push({    value: ADD_MAP,    label: t('mapPicker.suggest-a-map'),    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
+      icon: actionIcon('search'),
+      divider: true,
+    },
+    {
+      value: ADD_MAP,
+      label: t('picker.suggest'),
+      icon: actionIcon('plus'),
+    }
+  )
 
   return (
     <div>
@@ -1322,7 +1324,7 @@ mapOptions.push({    value: ADD_MAP,    label: t('mapPicker.suggest-a-map'),    
             tourId="map-select"
             label={t('mapPicker.map')}
             value={mapKey}
-            onChange={(key) => (key === ADD_MAP ? setSuggesting(true) : openMap(key))}
+            onChange={(key) => (key === ADD_MAP ? setSuggesting(true) : key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
             alignLeft
             placeholder="—"
             buttonLabel={mapLabel(mapKey)}
@@ -1538,6 +1540,42 @@ mapOptions.push({    value: ADD_MAP,    label: t('mapPicker.suggest-a-map'),    
             <ScreenMarkers world={map.world} author={author} language={language} />
           )}
         </>
+      )}
+      {pickingMod && (
+        <PickerDialog
+          title={t('picker.maps-title')}
+          placeholder={t('picker.search-maps')}
+          selectedId={mapKey}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          items={mapEntries
+            .filter((e) => !e.official)
+            .map((e) => ({
+              id: e.key,
+              title: e.name,
+              subtitle: e.author,
+              thumb: e.preview,
+              group: t('picker.mods'),
+            }))}
+          onPick={(key) => {
+            setPickingMod(false)
+            openMap(key)
+          }}
+          onClose={() => setPickingMod(false)}
+          footer={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setPickingMod(false)
+                setSuggesting(true)
+              }}
+            >
+              <FieldIcon name="plus" className="h-[18px] w-[18px]" />
+              {t('picker.suggest')}
+            </button>
+          }
+        />
       )}
       {suggesting && (
         <MapRequests onClose={() => setSuggesting(false)} />

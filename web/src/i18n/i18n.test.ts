@@ -28,7 +28,7 @@ describe('словари', () => {
   it('в английских текстах нет кириллицы, в русских она есть (кроме обозначений)', () => {
     const inEn = keys.filter((k) => cyrillic.test(en[k as keyof typeof ru]))
     expect(inEn).toEqual([])
-    const ALLOWED_SAME = new Set(['unit.hpa'])
+    const ALLOWED_SAME = new Set(['unit.hpa', 'picker.vanilla'])
     const notTranslated = keys.filter(
       (k) =>
         !ALLOWED_SAME.has(k) &&
@@ -98,5 +98,31 @@ describe('тексты не зашиты в код', () => {
       visit(sf)
     }
     expect(offenders).toEqual([])
+  })
+})
+
+describe('словарь без мусора', () => {
+  const root = fileURLToPath(new URL('..', import.meta.url))
+
+  function sources(dir: string, out: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name)
+      if (statSync(p).isDirectory()) {
+        if (name !== 'i18n') sources(p, out)
+      } else if (/\.(ts|tsx)$/.test(name) && !/\.test\./.test(name)) out.push(readFileSync(p, 'utf8'))
+    }
+    return out
+  }
+
+  it('каждый ключ используется в коде', () => {
+    const code = sources(root).join('\n')
+    const unused = Object.keys(ru).filter(
+      (k) =>
+        // горячие клавиши собираются из имени действия
+        !k.startsWith('settings.hotkeys.') &&
+        !code.includes(`'${k}'`) &&
+        !code.includes(`"${k}"`)
+    )
+    expect(unused).toEqual([])
   })
 })

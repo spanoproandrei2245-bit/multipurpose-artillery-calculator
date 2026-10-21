@@ -1,12 +1,21 @@
 /**
- * Заявки на новые карты. У приложения нет своего сервера, поэтому заявки
- * живут в Issues репозитория: «предложить» открывает готовую заявку,
- * «голос» — это 👍 на её странице, а список и счётчик берутся из
- * публичного API GitHub.
+ * Заявки на новые карты и голоса за них — без сервера и без GitHub.
+ *
+ * Данные лежат на тех же публичных MQTT-брокерах, что и «Связка», как
+ * удерживаемые (retained) сообщения:
+ *   artcalc-maps/v1/req/<номер мода>/info        — {"name": "…"}
+ *   artcalc-maps/v1/req/<номер мода>/v/<device>  — "1" (голос этого устройства)
+ * Читающему брокер отдаёт всё, что накопилось, поэтому список видно сразу,
+ * а голоса считаются по числу разных устройств. Пишем и читаем на всех
+ * брокерах сразу: если один недоступен или забыл данные, остальные помнят.
+ *
+ * Честно о границах: это публичные брокеры без учётных записей — голос
+ * одного устройства один, но накрутить его, зная устройство-идентификатор
+ * в коде, может любой; хозяин приложения видит список и решает сам.
  */
 
-export const REPO = 'spanoproandrei2245-bit/multipurpose-artillery-calculator'
-export const REQUEST_PREFIX = '[Map request]'
+export const TOPIC_ROOT = 'artcalc-maps/v1/req'
+export const MAX_NAME = 60
 
 export interface WorkshopLink {
   id: string
@@ -36,99 +45,180 @@ export function parseWorkshopLink(input: string): WorkshopLink | null {
   return null
 }
 
-/** Ссылка на готовую форму заявки (пользователь сам нажимает «Submit»). */
-export function buildIssueUrl(link: WorkshopLink, name: string): string {
-  const trimmed = name.trim()
-  const label = trimmed || `workshop ${link.id}`
-  const lines = [`Workshop: ${link.url}`]
-  if (trimmed) lines.push(`Name: ${trimmed}`)
-  lines.push('', 'Please add this map to the built-in maps.')
-  const params = new URLSearchParams({
-    title: `${REQUEST_PREFIX} ${label}`,
-    body: lines.join('\n'),
-  })
-  return `https://github.com/${REPO}/issues/new?${params.toString()}`
+export function infoTopic(workshopId: string): string {
+  return `${TOPIC_ROOT}/${workshopId}/info`
+}
+
+export function voteTopic(workshopId: string, device: string): string {
+  return `${TOPIC_ROOT}/${workshopId}/v/${device}`
+}
+
+export type ParsedTopic =
+  | { kind: 'info'; workshopId: string }
+  | { kind: 'vote'; workshopId: string; device: string }
+
+/** Разбор темы сообщения; null — не наша или с подозрительным содержимым. */
+export function parseTopic(topic: string): ParsedTopic | null {
+  if (!topic.startsWith(`${TOPIC_ROOT}/`)) return null
+  const rest = topic.slice(TOPIC_ROOT.length + 1).split('/')
+  if (!/^\d{6,12}$/.test(rest[0] ?? '')) return null
+  if (rest.length === 2 && rest[1] === 'info') {
+    return { kind: 'info', workshopId: rest[0] }
+  }
+  if (rest.length === 3 && rest[1] === 'v' && /^[0-9a-f]{8,32}$/.test(rest[2])) {
+    return { kind: 'vote', workshopId: rest[0], device: rest[2] }
+  }
+  return null
 }
 
 export interface MapRequest {
-  id: number
-  // Название из заголовка заявки без префикса
+  workshopId: string
   name: string
-  // Страница заявки на GitHub: там голосуют 👍
-  issueUrl: string
-  // Номер мода из тела заявки, если нашёлся
-  workshopId: string | null
-  // Заявитель сам «за» — плюс 👍 других
   votes: number
+  // Голосовало ли это устройство
+  mine: boolean
 }
 
-interface SearchItem {
-  id?: unknown
-  title?: unknown
-  html_url?: unknown
-  body?: unknown
-  reactions?: { '+1'?: unknown }
-  pull_request?: unknown
-}
+/** Сводка по сообщениям брокеров: заявки и голоса (одно устройство — один голос). */
+export class Tally {
+  private info = new Map<string, string>()
+  private votes = new Map<string, Set<string>>()
 
-/** Разбор ответа поиска GitHub в список заявок, по убыванию голосов. */
-export function parseRequests(json: unknown): MapRequest[] {
-  if (typeof json !== 'object' || json === null) return []
-  const items = (json as { items?: unknown }).items
-  if (!Array.isArray(items)) return []
-  const result: MapRequest[] = []
-  for (const raw of items as SearchItem[]) {
-    if (typeof raw !== 'object' || raw === null) continue
-    if (
-      typeof raw.id !== 'number' ||
-      typeof raw.title !== 'string' ||
-      typeof raw.html_url !== 'string' ||
-      raw.pull_request !== undefined ||
-      !raw.title.startsWith(REQUEST_PREFIX)
-    ) {
-      continue
+  /** Сообщение брокера; пустое тело у retained-темы — отзыв (голоса или заявки). */
+  apply(topic: string, payload: string) {
+    const parsed = parseTopic(topic)
+    if (!parsed) return
+    if (parsed.kind === 'info') {
+      if (payload === '') {
+        this.info.delete(parsed.workshopId)
+        return
+      }
+      try {
+        const data = JSON.parse(payload) as { name?: unknown }
+        const name = typeof data.name === 'string' ? data.name.trim().slice(0, MAX_NAME) : ''
+        // Без названия заявка всё равно показывается — по номеру мода
+        this.info.set(parsed.workshopId, name || `Workshop ${parsed.workshopId}`)
+      } catch {
+        // Мусор в теме — пропускаем
+      }
+      return
     }
-    const body = typeof raw.body === 'string' ? raw.body : ''
-    const workshop = body.match(/filedetails\/?\?id=(\d{6,12})/i)
-    const plus = raw.reactions?.['+1']
-    result.push({
-      id: raw.id,
-      name: raw.title.slice(REQUEST_PREFIX.length).trim() || '—',
-      issueUrl: raw.html_url,
-      workshopId: workshop ? workshop[1] : null,
-      votes: 1 + (typeof plus === 'number' && plus > 0 ? plus : 0),
+    const set = this.votes.get(parsed.workshopId) ?? new Set<string>()
+    if (payload === '1') set.add(parsed.device)
+    else set.delete(parsed.device)
+    this.votes.set(parsed.workshopId, set)
+  }
+
+  /** Список заявок по убыванию голосов (при равенстве — по названию). */
+  snapshot(device: string): MapRequest[] {
+    return [...this.info.entries()]
+      .map(([workshopId, name]) => {
+        const set = this.votes.get(workshopId)
+        return {
+          workshopId,
+          name,
+          votes: set?.size ?? 0,
+          mine: set?.has(device) ?? false,
+        }
+      })
+      .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+  }
+}
+
+export type RequestsStatus = 'connecting' | 'ready' | 'offline'
+
+export interface RequestsSession {
+  /** Проголосовать за заявку (или снять голос). */
+  vote: (workshopId: string, on: boolean) => void
+  /** Новая заявка с первым голосом. */
+  suggest: (link: WorkshopLink, name: string) => void
+  close: () => void
+}
+
+/**
+ * Открыть сессию: подключиться ко всем брокерам, собирать заявки и голоса.
+ * onUpdate вызывается при каждом изменении, onStatus — при смене состояния.
+ */
+export async function openRequests(
+  servers: readonly string[],
+  device: string,
+  onUpdate: (requests: MapRequest[]) => void,
+  onStatus: (status: RequestsStatus) => void
+): Promise<RequestsSession> {
+  const mqtt = await import('mqtt')
+  // Сборка mqtt — CommonJS: в разработке Vite отдаёт её только как default
+  const connect = mqtt.connect ?? mqtt.default.connect
+
+  const tally = new Tally()
+  const clients: ReturnType<typeof connect>[] = []
+  let online = 0
+  let closed = false
+  let settle: ReturnType<typeof setTimeout> | undefined
+
+  const emit = () => {
+    if (!closed) onUpdate(tally.snapshot(device))
+  }
+
+  onStatus('connecting')
+  const timeout = setTimeout(() => {
+    if (online === 0 && !closed) onStatus('offline')
+  }, 9000)
+
+  for (const [index, url] of servers.entries()) {
+    const client = connect(url, {
+      clientId: `artcalc_req_${device}_${index}`,
+      reconnectPeriod: 4000,
+      connectTimeout: 8000,
+      clean: true,
+    })
+    clients.push(client)
+    client.on('connect', () => {
+      online += 1
+      client.subscribe(`${TOPIC_ROOT}/#`, { qos: 1 })
+      // Брокер присылает накопленное пачкой — показываем, когда пачка улеглась
+      clearTimeout(settle)
+      settle = setTimeout(() => {
+        if (!closed) onStatus('ready')
+        emit()
+      }, 1200)
+    })
+    client.on('close', () => {
+      online = Math.max(0, online - 1)
+      if (online === 0 && !closed) onStatus('connecting')
+    })
+    client.on('error', () => {})
+    client.on('message', (topic, payload) => {
+      if (payload.length > 400) return
+      tally.apply(topic, payload.toString())
+      emit()
     })
   }
-  return result.sort((a, b) => b.votes - a.votes)
-}
 
-const CACHE_KEY = 'mapRequestsCache'
-const CACHE_MS = 5 * 60_000
-
-/** Открытые заявки; ответ на 5 минут запоминается (у API лимит запросов). */
-export async function fetchRequests(force = false): Promise<MapRequest[]> {
-  if (!force) {
-    try {
-      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? 'null') as {
-        at: number
-        items: MapRequest[]
-      } | null
-      if (cached && Date.now() - cached.at < CACHE_MS) return cached.items
-    } catch {
-      // Кэша нет — идём в сеть
+  function publishAll(topic: string, payload: string) {
+    // Свои изменения сразу видны и локально, не дожидаясь брокера
+    tally.apply(topic, payload)
+    emit()
+    for (const client of clients) {
+      if (client.connected) client.publish(topic, payload, { qos: 1, retain: true })
     }
   }
-  const q = `repo:${REPO} is:issue is:open in:title "${REQUEST_PREFIX}"`
-  const response = await fetch(
-    `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&per_page=50`,
-    { headers: { Accept: 'application/vnd.github+json' } }
-  )
-  if (!response.ok) throw new Error(`GitHub ${response.status}`)
-  const items = parseRequests(await response.json())
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), items }))
-  } catch {
-    // Не страшно
+
+  return {
+    vote(workshopId, on) {
+      publishAll(voteTopic(workshopId, device), on ? '1' : '')
+    },
+    suggest(link, name) {
+      publishAll(
+        infoTopic(link.id),
+        JSON.stringify({ name: name.trim().slice(0, MAX_NAME) })
+      )
+      publishAll(voteTopic(link.id, device), '1')
+    },
+    close() {
+      closed = true
+      clearTimeout(timeout)
+      clearTimeout(settle)
+      for (const client of clients) client.end(true)
+    },
   }
-  return items
 }

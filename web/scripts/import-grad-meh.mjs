@@ -19,6 +19,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import sharp from 'sharp'
+import { makePreview } from './make-map-previews.mjs'
 
 const TILE = 512
 // Детализация верхнего уровня — не мельче этого, м на пиксель
@@ -183,6 +184,8 @@ async function importMap(source) {
     tiles,
   }
   writeFileSync(new URL('map.json', outDir), JSON.stringify(map, null, 2) + '\n')
+  // Превью для списков карт
+  await makePreview(world)
   // Официальные карты — от Bohemia Interactive, остальные — от сообщества
   const kind = /bohemia/i.test(map.author) ? 'official' : 'community'
   return { world, displayName: map.displayName, author: map.author, kind, worldSize }

@@ -308,6 +308,12 @@ const paths = {
       <path d="M12 11v5M12 8h.01" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4.5 4.5" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths
