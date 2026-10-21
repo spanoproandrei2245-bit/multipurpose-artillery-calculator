@@ -9,7 +9,7 @@ import { mapKind, parseMapDescription } from './builtinMaps'
 const ROOT = fileURLToPath(new URL('../../public/maps/', import.meta.url))
 
 const index = JSON.parse(readFileSync(join(ROOT, 'index.json'), 'utf8')) as {
-  maps: { world: string; displayName: string; author: string; kind?: string; worldSize: number }[]
+  maps: { world: string; displayName: string; author: string; kind?: 'official' | 'community'; worldSize: number }[]
 }
 
 describe('mapKind', () => {
