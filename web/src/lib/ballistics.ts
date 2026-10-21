@@ -107,7 +107,7 @@ export interface ChargeResult {
 }
 
 /** Как выбирать заряд по умолчанию. */
-export type ChargePreference = 'lowest' | 'fastest' | 'precise'
+export type ChargePreference = 'best' | 'lowest' | 'fastest' | 'precise'
 
 // Поправка на высоту больше этого значения (мил) считается линейной
 // оценкой с пониженной точностью.
@@ -453,12 +453,37 @@ export function isWideGap(
 }
 
 /**
+ * Сбалансированная оценка вариантов (меньше — лучше): время полёта и ошибка
+ * дальности на 1 мил, каждое в долях от лучшего среди вариантов. Так
+ * «лучший» — не самый быстрый и не самый точный, а золотая середина.
+ */
+export function balancedScores(
+  items: readonly { tof: number; metersPerMil: number | null }[]
+): number[] {
+  const minTof = Math.min(...items.map((i) => i.tof))
+  const mpms = items.flatMap((i) =>
+    i.metersPerMil !== null && i.metersPerMil > 0 ? [i.metersPerMil] : []
+  )
+  const minMpm = mpms.length > 0 ? Math.min(...mpms) : null
+  return items.map(
+    (i) =>
+      (minTof > 0 ? i.tof / minTof : 1) +
+      (minMpm !== null && i.metersPerMil !== null && i.metersPerMil > 0
+        ? i.metersPerMil / minMpm
+        : minMpm !== null
+          ? 10
+          : 1)
+  )
+}
+
+/**
  * Заряд по умолчанию среди подходящих:
+ *   best    — золотая середина по времени полёта и точности;
  *   lowest  — наименьший номер;
  *   fastest — кратчайшее время полёта;
  *   precise — наименьшая ошибка дальности на 1 мил.
- * При равенстве — меньший заряд. Для fastest и precise заряды у края
- * таблицы не выбираются, если есть другие.
+ * При равенстве — меньший заряд. Заряды у края таблицы не выбираются,
+ * если есть другие: «точность» там мнимая, поправки ненадёжны.
  */
 export function pickCharge(
   results: readonly ChargeResult[],
@@ -467,10 +492,19 @@ export function pickCharge(
   const usable = results.filter((r) => r.solution !== null)
   if (preference === 'lowest' || usable.length < 2) return usable[0]
 
-  // Заряды у края таблицы — только если других нет: «точность» там
-  // мнимая, поправки ненадёжны.
   const safe = usable.filter((r) => !r.nearEdge)
   const pool = safe.length > 0 ? safe : usable
+
+  if (preference === 'best') {
+    const scores = balancedScores(
+      pool.map((r) => ({ tof: r.solution!.tof, metersPerMil: r.metersPerMil }))
+    )
+    let bestIndex = 0
+    for (let i = 1; i < pool.length; i += 1) {
+      if (scores[i] < scores[bestIndex]) bestIndex = i
+    }
+    return pool[bestIndex]
+  }
 
   const score = (r: ChargeResult) =>
     preference === 'fastest'
@@ -479,6 +513,7 @@ export function pickCharge(
 
   return pool.reduce((best, r) => (score(r) < score(best) ? r : best))
 }
+
 
 export function isLargeCorrection(solution: FiringSolution): boolean {
   return Math.abs(solution.elevationCorrection) > LARGE_CORRECTION_MIL
@@ -532,4 +567,48 @@ export function overallRange(results: readonly ChargeResult[]) {
     min: Math.min(...results.map((r) => r.minRange)),
     max: Math.max(...results.map((r) => r.maxRange)),
   }
+}
+
+/**
+ * Лучший способ выстрела среди всех траекторий: для каждой траектории берётся
+ * лучший заряд по приоритету, потом они сравниваются между собой.
+ * lowest — меньший номер заряда (при равенстве — первая траектория),
+ * fastest — меньшее время полёта, precise — меньшая ошибка на 1 мил.
+ * Заряды у края таблицы проигрывают любым другим.
+ */
+export function pickBest<G extends { results: readonly ChargeResult[] }>(
+  groups: readonly G[],
+  preference: ChargePreference
+): { group: G; result: ChargeResult } | undefined {
+  const candidates = groups.flatMap((group) => {
+    const result = pickCharge(group.results, preference)
+    return result ? [{ group, result }] : []
+  })
+  if (candidates.length === 0) return undefined
+
+  const safe = candidates.filter((c) => !c.result.nearEdge)
+  const pool = safe.length > 0 ? safe : candidates
+
+  if (preference === 'best') {
+    const scores = balancedScores(
+      pool.map((c) => ({
+        tof: c.result.solution!.tof,
+        metersPerMil: c.result.metersPerMil,
+      }))
+    )
+    let bestIndex = 0
+    for (let i = 1; i < pool.length; i += 1) {
+      if (scores[i] < scores[bestIndex]) bestIndex = i
+    }
+    return pool[bestIndex]
+  }
+
+  const score = (c: (typeof pool)[number]) =>
+    preference === 'lowest'
+      ? c.result.charge
+      : preference === 'fastest'
+        ? c.result.solution!.tof
+        : (c.result.metersPerMil ?? Number.POSITIVE_INFINITY)
+
+  return pool.reduce((best, c) => (score(c) < score(best) ? c : best))
 }

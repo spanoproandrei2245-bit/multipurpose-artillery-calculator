@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useSyncExternalStore } from 'react'
 
 /**
@@ -94,15 +95,13 @@ export function parseMarker(value: unknown): MapMarker | null {
 }
 
 /** «2 мин», «1 ч 5 мин» — сколько метке. */
-export function formatAge(ms: number, ru: boolean): string {
+export function formatAge(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000)
-  if (minutes < 1) return ru ? 'только что' : 'just now'
-  if (minutes < 60) return ru ? `${minutes} мин` : `${minutes} min`
+  if (minutes < 1) return t('markers.just-now')
+  if (minutes < 60) return t('markers.min', minutes)
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return ru
-    ? `${hours} ч${rest ? ` ${rest} мин` : ''}`
-    : `${hours} h${rest ? ` ${rest} min` : ''}`
+  return rest ? t('markers.h-min', hours, rest) : t('markers.h', hours)
 }
 
 /** Насколько метка «свежая»: 1 — новая, к 30 минутам бледнеет до 0.35. */

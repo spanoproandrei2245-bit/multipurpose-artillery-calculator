@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { isInvalid } from '../lib/input'
+import { FieldIcon, type FieldIconName } from './FieldIcon'
 
 export const inputClass = 'field field-lg'
 
@@ -19,6 +20,8 @@ interface FieldProps {
   // Текстовое поле без проверки числа (например, координаты)
   inputMode?: 'decimal' | 'numeric'
   validate?: boolean
+  // Значок-подсказка перед подписью
+  icon?: FieldIconName
 }
 
 export function NumberField({
@@ -33,6 +36,7 @@ export function NumberField({
   inputMode = 'decimal',
   onEnter,
   validate = true,
+  icon,
 }: FieldProps) {
   const invalid = validate && isInvalid(value)
 
@@ -40,8 +44,9 @@ export function NumberField({
     <div className={className}>
       {/* Фиксированная высота строки подписи: поля в соседних
           колонках выравниваются, даже если у одного есть переключатель. */}
-      <div className="mb-1.5 flex min-h-7 items-center justify-between gap-2">
-        <label htmlFor={id} className="label">
+      <div className="mb-1.5 flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <label htmlFor={id} className="label flex min-w-0 items-center gap-1.5">
+          {icon && <FieldIcon name={icon} />}
           {label}
         </label>
         {aside}
@@ -73,9 +78,21 @@ export function NumberField({
 
 interface ToggleProps<T extends string> {
   value: T
-  options: readonly { value: T; label: string; disabled?: boolean }[]
+  options: readonly {
+    value: T
+    label: string
+    disabled?: boolean
+    icon?: FieldIconName
+    // Подсказка при наведении (по умолчанию её нет)
+    title?: string
+  }[]
   onChange: (value: T) => void
   label: string
+  className?: string
+  // Только значки: подпись остаётся в подсказке и для экранного диктора
+  iconOnly?: boolean
+  // Кнопки одной ширины (сетка): не зависит от длины подписей на разных языках
+  equal?: boolean
 }
 
 export function Toggle<T extends string>({
@@ -83,18 +100,63 @@ export function Toggle<T extends string>({
   options,
   onChange,
   label,
+  className = '',
+  iconOnly = false,
+  equal = false,
 }: ToggleProps<T>) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Подвижная «таблетка» под выбранной кнопкой: переключение скользит
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const measure = () => {
+      const el = root.querySelector<HTMLElement>('button[aria-pressed="true"]')
+      setPill(el ? { x: el.offsetLeft, w: el.offsetWidth } : null)
+    }
+    const frame = requestAnimationFrame(measure)
+    // Ширины кнопок меняются, когда догружается шрифт или меняется язык
+    const observer = new ResizeObserver(measure)
+    observer.observe(root)
+    root.querySelectorAll('button').forEach((b) => observer.observe(b))
+    void document.fonts?.ready.then(measure)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [value, options.length])
+
   return (
-    <div role="group" aria-label={label} className="seg">
+    <div
+      ref={ref}
+      role="group"
+      aria-label={label}
+      data-pill={pill ? '' : undefined}
+      className={`seg ${equal ? '!grid grid-flow-col auto-cols-fr' : ''} ${className}`}
+    >
+      {pill && (
+        <span
+          aria-hidden="true"
+          className="seg-pill"
+          style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
+        />
+      )}
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           disabled={option.disabled}
+          title={iconOnly ? option.label : option.title}
+          aria-label={iconOnly ? option.label : undefined}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
+          className={equal ? 'min-w-0 justify-center' : undefined}
         >
-          {option.label}
+          {option.icon && (
+            <FieldIcon name={option.icon} className={iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} />
+          )}
+          {!iconOnly && <span className={equal ? 'truncate' : undefined}>{option.label}</span>}
         </button>
       ))}
     </div>
@@ -198,18 +260,52 @@ export function Switch({
 export function Row({
   label,
   htmlFor,
+  icon,
+  control,
+  unit,
+  tourId,
   children,
 }: {
   label: ReactNode
   htmlFor?: string
+  icon?: FieldIconName
+  // Единая ширина контролов справа: full — на всю ширину, unit — поле
+  // с единицей справа (единицы выровнены в одну колонку)
+  control?: 'full' | 'unit'
+  unit?: string
+  // Для обучения: подсвечиваемая строка
+  tourId?: string
   children: ReactNode
 }) {
   return (
-    <div className="row">
-      <dt className="min-w-0">
-        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+    <div className="row" data-tour={tourId}>
+      <dt className="flex min-w-0 items-center gap-2">
+        {icon && <FieldIcon name={icon} className="h-[18px] w-[18px] text-app-muted" />}
+        <span className="min-w-0">
+          {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+        </span>
       </dt>
-      <dd className="flex min-w-0 items-center justify-end gap-2">{children}</dd>
+      <dd className="flex min-w-0 items-center justify-end gap-2">
+        {control ? (
+          <>
+            <div
+              className={[
+                'flex min-w-0 items-center gap-2',
+                control === 'unit'
+                  ? 'w-[13.5rem] max-w-[calc(60vw-2.25rem)]'
+                  : 'w-[15.75rem] max-w-[60vw]',
+              ].join(' ')}
+            >
+              {children}
+            </div>
+            {control === 'unit' && (
+              <span className="w-7 text-left text-app-muted">{unit}</span>
+            )}
+          </>
+        ) : (
+          children
+        )}
+      </dd>
     </div>
   )
 }
@@ -222,6 +318,8 @@ export function InlineNumber({
   unit,
   placeholder = '0',
   label,
+  readOnly = false,
+  block = false,
 }: {
   id: string
   value: string
@@ -230,6 +328,9 @@ export function InlineNumber({
   placeholder?: string
   // Подпись для экранного диктора, если строка без <label>
   label?: string
+  // Поле тянется на всю ширину контейнера (в строке с единой шириной)
+  block?: boolean
+  readOnly?: boolean
 }) {
   return (
     <>
@@ -243,7 +344,8 @@ export function InlineNumber({
         placeholder={placeholder}
         aria-label={label}
         aria-invalid={isInvalid(value)}
-        className="field field-inline"
+        readOnly={readOnly}
+        className={`field ${block ? 'h-9 min-w-0 flex-1 text-right' : 'field-inline'} ${readOnly ? 'opacity-60' : ''}`}
       />
       {unit && <span className="w-7 text-left text-app-muted">{unit}</span>}
     </>

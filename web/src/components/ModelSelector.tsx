@@ -1,199 +1,139 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useState } from 'react'
 
+import { categoryLabels } from '../data/categories'
 import { models, type ModelId } from '../data/models'
-import { translations } from '../i18n/translations'
-import type { Language } from '../types/settings'
+import { t } from '../i18n'
+import { useFavorites } from '../lib/favorites'
 import { ArtilleryIcon } from './ArtilleryIcon'
+import { Dropdown, type DropdownOption } from './Dropdown'
+import { FieldIcon } from './FieldIcon'
+import { MapRequests } from './MapRequests'
+import { PickerDialog } from './PickerDialog'
 
 interface ModelSelectorProps {
   value: ModelId
   onChange: (value: ModelId) => void
-  language: Language
 }
 
 const modelIds = Object.keys(models) as ModelId[]
 
+/** Орудия из ванили (Arma 3) — в списке; остальные — в окне с поиском. */
+const isVanilla = (id: ModelId) => models[id].mod.startsWith('Arma 3')
+
+const MODS = '__mods__'
+
 /**
- * Выпадающий список моделей с иконками.
- * Обычный <select> не умеет показывать картинки, поэтому список
- * свой: кнопка + listbox, управление стрелками, Enter, Escape.
+ * Выбор орудия: значок класса отдельно от списка. В списке — ванильные
+ * орудия (и выбранное модовое), модовые ищутся в окне «Модовые орудия».
  */
-export function ModelSelector({
-  value,
-  onChange,
-  language,
-}: ModelSelectorProps) {
-  const t = translations[language].modelSelector
-  const id = useId()
-  const listId = `${id}-list`
-
-  const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(() => modelIds.indexOf(value))
-
-  const rootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const listRef = useRef<HTMLUListElement>(null)
-
-  // Закрытие по клику вне списка
-  useEffect(() => {
-    if (!open) return
-
-    function handlePointer(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', handlePointer)
-    return () => document.removeEventListener('pointerdown', handlePointer)
-  }, [open])
-
-  // Фокус на список при открытии
-  useEffect(() => {
-    if (open) listRef.current?.focus()
-  }, [open])
-
-  function openList() {
-    setActive(modelIds.indexOf(value))
-    setOpen(true)
-  }
-
-  function choose(index: number) {
-    onChange(modelIds[index])
-    setOpen(false)
-    buttonRef.current?.focus()
-  }
-
-  function handleListKey(event: React.KeyboardEvent) {
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault()
-        setActive((i) => Math.min(i + 1, modelIds.length - 1))
-        break
-      case 'ArrowUp':
-        event.preventDefault()
-        setActive((i) => Math.max(i - 1, 0))
-        break
-      case 'Home':
-        event.preventDefault()
-        setActive(0)
-        break
-      case 'End':
-        event.preventDefault()
-        setActive(modelIds.length - 1)
-        break
-      case 'Enter':
-      case ' ':
-        event.preventDefault()
-        choose(active)
-        break
-      case 'Escape':
-        event.preventDefault()
-        setOpen(false)
-        buttonRef.current?.focus()
-        break
-      case 'Tab':
-        setOpen(false)
-        break
-    }
-  }
-
+export function ModelSelector({ value, onChange }: ModelSelectorProps) {
+  const [picking, setPicking] = useState(false)
+  // Окно «Предложить орудие»
+  const [suggesting, setSuggesting] = useState(false)
+  const [favorites, toggleFavorite] = useFavorites('favModels')
   const current = models[value]
 
-  return (
-    <div ref={rootRef} className="relative">
-      <button
-        ref={buttonRef}
-        id={`${id}-button`}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-label={t.label}
-        onClick={() => (open ? setOpen(false) : openList())}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault()
-            openList()
-          }
-        }}
-        className="field flex w-auto max-w-[15rem] cursor-pointer items-center gap-2 pr-2 text-left"
-      >
-        <span className="min-w-0 truncate">{current.name}</span>
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className="h-4 w-4 shrink-0 text-app-muted"
-        >
-          <path
-            d="m7 15 5 5 5-5M7 9l5-5 5 5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      {open && (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
+  // В списке: избранные (в том числе модовые), ванильные и выбранное модовое
+  const isFav = (id: ModelId) => favorites.includes(id)
+  const listed = [
+    ...modelIds.filter(isFav),
+    ...modelIds.filter((id) => !isFav(id) && isVanilla(id)),
+    ...modelIds.filter((id) => !isFav(id) && !isVanilla(id) && id === value),
+  ]
+  const options: DropdownOption<string>[] = [
+    ...listed.map((id) => ({
+      value: id as string,
+      label: models[id].name,
+      description: models[id].mod,
+      group: isFav(id)
+        ? t('picker.favourites')
+        : isVanilla(id)
+          ? t('picker.vanilla')
+          : t('picker.current'),
+      icon: <ArtilleryIcon category={models[id].category} />,
+      trailing: (
+        <button
+          type="button"
           tabIndex={-1}
-          aria-label={t.label}
-          aria-activedescendant={`${id}-opt-${active}`}
-          onKeyDown={handleListKey}
-          className="absolute right-0 z-30 mt-1 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none"
+          aria-label={isFav(id) ? t('picker.unfavourite') : t('picker.favourite')}
+          title={isFav(id) ? t('picker.unfavourite') : t('picker.favourite')}
+          onClick={(event) => {
+            event.stopPropagation()
+            toggleFavorite(id)
+          }}
+          className={[
+            'inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
+            isFav(id) ? 'text-warn' : 'text-app-faint',
+          ].join(' ')}
         >
-          {modelIds.map((modelId, index) => {
-            const model = models[modelId]
-            const selected = modelId === value
+          <FieldIcon name={isFav(id) ? 'starFilled' : 'star'} className="h-4 w-4" />
+        </button>
+      ),
+    })),
+    {
+      value: MODS,
+      label: t('picker.mod-weapons'),
+      description: String(modelIds.filter((id) => !isVanilla(id)).length),
+      icon: (
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+          <FieldIcon name="search" className="h-[18px] w-[18px]" />
+        </span>
+      ),
+      divider: true,
+    },
+  ]
 
-            return (
-              <li
-                key={modelId}
-                id={`${id}-opt-${index}`}
-                role="option"
-                aria-selected={selected}
-                onPointerEnter={() => setActive(index)}
-                onClick={() => choose(index)}
-                className={[
-                  'flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-left',
-                  index === active ? 'bg-app-raised-hover' : '',
-                ].join(' ')}
-              >
-                <ArtilleryIcon category={model.category} language={language} />
-
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={[
-                      'block truncate',
-                      selected ? 'font-semibold text-app-text' : 'text-app-text-2',
-                    ].join(' ')}
-                  >
-                    {model.name}
-                  </span>
-                  <span className="block truncate text-[12.5px] text-app-muted">
-                    {model.mod}
-                  </span>
-                </span>
-
-                {selected && (
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-accent">
-                    <path
-                      d="m5 12 5 5L20 7"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <ArtilleryIcon category={current.category} />
+      <Dropdown
+        fullWidth
+        className="min-w-0 flex-1"
+        label={t('modelSelector.label')}
+        value={value as string}
+        options={options}
+        onChange={(next) => {
+          if (next === MODS) setPicking(true)
+          else onChange(next as ModelId)
+        }}
+      />
+      {picking && (
+        <PickerDialog
+          title={t('picker.weapons-title')}
+          placeholder={t('picker.search-weapons')}
+          selectedId={value}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          items={modelIds.map((id) => ({
+            id,
+            title: models[id].name,
+            subtitle: `${models[id].mod} · ${t(categoryLabels[models[id].category])}`,
+            group: isVanilla(id) ? t('picker.vanilla') : models[id].mod,
+            keywords: models[id].notes,
+            icon: <ArtilleryIcon category={models[id].category} size="md" />,
+          }))}
+          onPick={(id) => {
+            setPicking(false)
+            onChange(id as ModelId)
+          }}
+          onClose={() => setPicking(false)}
+          footer={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setPicking(false)
+                setSuggesting(true)
+              }}
+            >
+              <FieldIcon name="plus" className="h-[18px] w-[18px]" />
+              {t('picker.suggest-weapon')}
+            </button>
+          }
+        />
+      )}
+      {suggesting && (
+        <MapRequests kind="weapon" onClose={() => setSuggesting(false)} />
       )}
     </div>
   )

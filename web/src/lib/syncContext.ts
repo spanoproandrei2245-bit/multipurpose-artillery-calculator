@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { createContext, useContext } from 'react'
 
 import type { SyncRole, SyncServerId, SyncSolution } from './sync'
@@ -75,18 +76,18 @@ export function useSync(): SyncApi {
   return useContext(SyncContext)
 }
 
-export function syncStatusText(status: SyncStatus, ru: boolean): string {
+export function syncStatusText(status: SyncStatus): string {
   switch (status) {
     case 'off':
-      return ru ? 'выключена' : 'off'
+      return t('syncContext.off')
     case 'connecting':
-      return ru ? 'подключение…' : 'connecting…'
+      return t('syncContext.connecting')
     case 'online':
-      return ru ? 'на связи' : 'online'
+      return t('syncContext.online')
     case 'offline':
-      return ru ? 'нет сети' : 'offline'
+      return t('syncContext.offline')
     case 'error':
-      return ru ? 'ошибка связи' : 'connection error'
+      return t('syncContext.connection-error')
   }
 }
 

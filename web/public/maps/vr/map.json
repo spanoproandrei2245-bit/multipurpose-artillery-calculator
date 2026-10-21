@@ -1,0 +1,21 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "vr",
+  "displayName": "Virtual Reality",
+  "author": "Bohemia Interactive",
+  "worldSize": 8192,
+  "background": "#4d545e",
+  "heights": {
+    "file": "heights.bin",
+    "step": 20,
+    "size": 410,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 4,
+    "metersPerTile": 1024,
+    "ext": "webp"
+  }
+}

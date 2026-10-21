@@ -1,18 +1,31 @@
+import { t, type MessageKey } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import exportScript from '../data/export-heightmap.sqf?raw'
 import {
   bearing,
   heightAt,
   isInside,
   mapExtent,
-  parseHeightmap,
   toGridReference,
   type Heightmap,
   type MapPoint,
 } from '../lib/heightmap'
+import {
+  aimPoints,
+  DEFAULT_LINE_WEAPON,
+  LINE_WEAPONS,
+  polylineLength,
+  type LineWeapon,
+} from '../lib/fireLine'
 import { parseGrid } from '../lib/grid'
 import { readStoredText, writeStored } from '../lib/input'
+import {
+  distanceToStroke,
+  readStrokes,
+  simplify,
+  writeStrokes,
+  type DrawStroke,
+} from '../lib/mapDraw'
 import {
   addMarker,
   formatAge,
@@ -26,17 +39,11 @@ import {
 } from '../lib/markers'
 import { useSync } from '../lib/syncContext'
 import type { MapTarget } from '../lib/journal'
-import {
-  deleteHeightmap,
-  listHeightmaps,
-  loadHeightmap,
-  saveHeightmap,
-  type StoredMapInfo,
-} from '../lib/mapStore'
 import { renderRelief, type ReliefPalette } from '../lib/relief'
 import {
   listBuiltinMaps,
   loadBuiltinMap,
+  mapKind,
   tileLevel,
   visibleTiles,
   type BuiltinMapEntry,
@@ -44,7 +51,18 @@ import {
 } from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
-import { Toggle } from './FormControls'
+import { Dropdown, type DropdownOption } from './Dropdown'
+import { MapRequests } from './MapRequests'
+import { PickerDialog } from './PickerDialog'
+import type { JournalActions } from '../lib/journalIO'
+import { FieldIcon, type FieldIconName } from './FieldIcon'
+import { useFlightOnMap } from '../lib/animation'
+import { FlightCanvas, type FlightShot } from './FlightCanvas'
+import { FlightTrack } from './FlightTrack'
+import { useFavorites } from '../lib/favorites'
+import { shellKind } from '../lib/shellKind'
+import type { ArtilleryCategory } from '../types/gameModel'
+import { MAPS_BASE } from '../lib/builtinMaps'
 import { ScreenMarkers } from './ScreenMarkers'
 
 export interface MapSelection {
@@ -65,6 +83,14 @@ export interface JournalMapTarget {
   active: boolean
 }
 
+/** Сохранённая цель в быстром списке на карте. */
+export interface QuickTarget {
+  id: string
+  name: string
+  detail: string
+  active: boolean
+}
+
 interface Props {
   language: Language
   onApply: (selection: MapSelection) => void
@@ -73,6 +99,22 @@ interface Props {
   onPickJournalTarget?: (id: string) => void
   // Точка текущей цели (например, загруженной из журнала)
   currentTarget?: MapTarget | null
+  // Быстрый выбор сохранённых целей: список слева на карте
+  quickTargets?: readonly QuickTarget[]
+  // Журнал целей: экспорт, импорт, переименование, удаление; без него панели нет
+  targetActions?: JournalActions
+  // Радиус досягаемости орудия, м: показывается кольцами вокруг орудия
+  reach?: { min: number; max: number } | null
+  // Снаряд в полёте: анимация от орудия к цели
+  flight?: readonly FlightShot[]
+  category?: ArtilleryCategory
+  shellType?: string
+  // Орудие закреплено на карте (true) или освобождено (false); высота —
+  // высота орудия в точке, м, если известна
+  onGunLockChange?: (locked: boolean, height: number | null) => void
+  // Метки на карте и распознавание меток с экрана игры — из настроек
+  showMarkers?: boolean
+  showScreenMarkers?: boolean
 }
 
 interface View {
@@ -83,24 +125,26 @@ interface View {
   scale: number
 }
 
-type Placing = 'gun' | 'target' | 'marker'
+type Placing = 'gun' | 'target' | 'marker' | 'line' | 'pen' | 'draw-line' | 'eraser'
+
+const isDrawTool = (p: Placing) => p === 'pen' || p === 'draw-line' || p === 'eraser'
 
 // Клик ближе — попадание в метку, пиксели
 const MARKER_HIT_PX = 14
 
-const COLOR_NAMES: Record<MarkerColor, { ru: string; en: string }> = {
-  red: { ru: 'красная', en: 'red' },
-  orange: { ru: 'оранжевая', en: 'orange' },
-  yellow: { ru: 'жёлтая', en: 'yellow' },
-  green: { ru: 'зелёная', en: 'green' },
-  blue: { ru: 'синяя', en: 'blue' },
-  purple: { ru: 'фиолетовая', en: 'purple' },
-  black: { ru: 'чёрная', en: 'black' },
+const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
+  red: 'mapPicker.red',
+  orange: 'mapPicker.orange',
+  yellow: 'mapPicker.yellow',
+  green: 'mapPicker.green',
+  blue: 'mapPicker.blue',
+  purple: 'mapPicker.purple',
+  black: 'mapPicker.black',
 }
 
-function markerTitle(marker: MapMarker, ru: boolean): string {
-  const color = ru ? COLOR_NAMES[marker.color].ru : COLOR_NAMES[marker.color].en
-  return marker.label || `${ru ? 'Метка' : 'Marker'} (${color})`
+function markerTitle(marker: MapMarker): string {
+  const color = t(COLOR_NAMES[marker.color])
+  return marker.label || `${t('mapPicker.marker')} (${color})`
 }
 
 const MAX_SCALE = 4
@@ -121,6 +165,26 @@ function readGun(world: string): MapPoint | null {
     // Нет сохранённой позиции
   }
   return null
+}
+
+function readLine(world: string): MapPoint[] {
+  try {
+    const value = JSON.parse(readStoredText(`mapLine:${world}`)) as unknown
+    if (Array.isArray(value)) {
+      return value
+        .filter(
+          (p): p is MapPoint =>
+            typeof p === 'object' &&
+            p !== null &&
+            typeof (p as MapPoint).x === 'number' &&
+            typeof (p as MapPoint).y === 'number'
+        )
+        .slice(0, 50)
+    }
+  } catch {
+    // Нет сохранённой линии
+  }
+  return []
 }
 
 function createReliefCanvas(
@@ -158,23 +222,62 @@ export function MapPicker({
   journalTargets = [],
   onPickJournalTarget,
   currentTarget = null,
+  showMarkers = false,
+  showScreenMarkers = false,
+  quickTargets = [],
+  targetActions,
+  reach = null,
+  flight = [],
+  category = 'mortar',
+  shellType = 'HE',
+  onGunLockChange,
 }: Props) {
   const ru = language === 'ru'
-  const unitM = ru ? 'м' : 'm'
+  const unitM = t('unit.m')
 
-  const [maps, setMaps] = useState<StoredMapInfo[]>([])
+  const flightOnMap = useFlightOnMap()
+  // Избранные карты: ключи пунктов списка, показываются сверху
+  const [favorites, toggleFavorite] = useFavorites('favMaps')
   // Встроенные карты (спутник + высоты) и тайлы открытой карты
   const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
   const [tiles, setTiles] = useState<MapTiles | null>(null)
   // Какой пункт списка открыт: «builtin:stratis» или «local:altis»
   const [mapKey, setMapKey] = useState('')
   const [map, setMap] = useState<Heightmap | null>(null)
-  const [adding, setAdding] = useState(false)
+  // Окно «Предложить карту»
+  const [suggesting, setSuggesting] = useState(false)
+  // Окно выбора карты мода (с поиском)
+  const [pickingMod, setPickingMod] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const [gun, setGun] = useState<MapPoint | null>(null)
   const [target, setTarget] = useState<MapPoint | null>(null)
   const [placing, setPlacing] = useState<Placing>('gun')
+
+  // Орудие закреплено на карте: касания его не двигают
+  const [gunLocked, setGunLocked] = useState(false)
+  // Список целей слева: на узком экране свёрнут
+  const importRef = useRef<HTMLInputElement>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [targetsOpen, setTargetsOpen] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 768
+  )
+
+  // Линия огня: ломаная из точек, оружие (радиус поражения) и номер
+  // точки прицеливания, по которой стреляют сейчас
+  const [linePoints, setLinePoints] = useState<MapPoint[]>([])
+  const [lineWeaponId, setLineWeaponId] = useState<LineWeapon['id']>(() =>
+    LINE_WEAPONS.find((w) => w.id === readStoredText('lineWeapon'))?.id ??
+    DEFAULT_LINE_WEAPON
+  )
+  const lineWeapon =
+    LINE_WEAPONS.find((w) => w.id === lineWeaponId) ?? LINE_WEAPONS[0]
+  const [lineIndex, setLineIndex] = useState<number | null>(null)
+  const lineAim = useMemo(
+    () => aimPoints(linePoints, lineWeapon.radius),
+    [linePoints, lineWeapon.radius]
+  )
 
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [view, setView] = useState<View | null>(null)
@@ -182,7 +285,6 @@ export function MapPicker({
   // Холст в состоянии: эффекты перезапускаются, когда он появляется
   // или пересоздаётся (после выбора карты, «Добавить карту»)
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
   const dragRef = useRef<{
     x: number
     y: number
@@ -201,21 +303,17 @@ export function MapPicker({
   const author =
     sync.callsign.trim() ||
     (sync.role === 'gunner'
-      ? ru
-        ? 'стрелок'
-        : 'gunner'
-      : ru
-        ? 'наводчик'
-        : 'FDC')
+      ? t('mapPicker.gunner')
+      : t('mapPicker.fdc'))
   const allMarkers = useMarkers()
   const markers = useMemo(
     () =>
-      map
+      map && showMarkers
         ? allMarkers
             .filter((m) => m.world === map.world || m.world === '')
             .sort((a, b) => b.createdAt - a.createdAt)
         : [],
-    [allMarkers, map]
+    [allMarkers, map, showMarkers]
   )
   // Новая метка: где поставлена и что вписать
   const [draft, setDraft] = useState<{
@@ -224,6 +322,25 @@ export function MapPicker({
     color: MarkerColor
   } | null>(null)
   const [gridDraft, setGridDraft] = useState('')
+  const [markersOpen, setMarkersOpen] = useState(false)
+
+  // ---- рисунок на карте ----
+  const [strokes, setStrokes] = useState<DrawStroke[]>([])
+  const [liveStroke, setLiveStroke] = useState<DrawStroke | null>(null)
+  const [drawColor, setDrawColor] = useState<MarkerColor>('red')
+  const [clearArmed, setClearArmed] = useState(false)
+  const drawSeq = useRef(0)
+  const drawRef = useRef<{ stroke: DrawStroke; erasing: boolean } | null>(null)
+  useEffect(() => {
+    if (!clearArmed) return
+    const timer = window.setTimeout(() => setClearArmed(false), 3000)
+    return () => window.clearTimeout(timer)
+  }, [clearArmed])
+
+  function commitStrokes(next: DrawStroke[]) {
+    setStrokes(next)
+    if (map) writeStrokes(map.world, next)
+  }
   const [markerColor, setMarkerColor] = useState<MarkerColor>('red')
 
   // Часы для «сколько метке»
@@ -257,23 +374,24 @@ export function MapPicker({
 
   // ---- загрузка списка и последней карты ----
   function openMap(key: string) {
-    const [source, world] = key.includes(':') ? key.split(':', 2) : ['local', key]
-    const load =
-      source === 'builtin'
-        ? loadBuiltinMap(world).then((result) =>
-            result ? { heightmap: result.heightmap, tiles: result.tiles } : null
-          )
-        : loadHeightmap(world).then((heightmap) =>
-            heightmap ? { heightmap, tiles: null } : null
-          )
+    // Старые версии хранили «local:…» и просто имя мира: берём только имя
+    const world = key.includes(':') ? key.split(':', 2)[1] : key
+    const load = loadBuiltinMap(world).then((result) =>
+      result ? { heightmap: result.heightmap, tiles: result.tiles } : null
+    )
     load
       .then((loaded) => {
         if (!loaded) return
-        writeStored('mapWorld', key)
-        setMapKey(key)
+        writeStored('mapWorld', `builtin:${world}`)
+        setMapKey(`builtin:${world}`)
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
         setGun(readGun(world))
+        setGunLocked(readStoredText(`mapGunLocked:${world}`) === 'on')
+        setLinePoints(readLine(world))
+        setLineIndex(null)
+        setStrokes(readStrokes(world))
+        setLiveStroke(null)
         setTarget(
           currentTarget?.world === world
             ? { x: currentTarget.x, y: currentTarget.y }
@@ -281,112 +399,26 @@ export function MapPicker({
         )
         setPlacing('gun')
         setView(null)
-        setAdding(false)
       })
       .catch(() =>
-        setNotice(ru ? 'Не удалось открыть карту.' : 'Could not open the map.')
+        setNotice(t('mapPicker.could-not-open-the-map'))
       )
   }
 
   useEffect(() => {
-    void Promise.all([
-      // IndexedDB недоступна — свои карты не сохраняются, встроенные есть
-      listHeightmaps().catch(() => [] as StoredMapInfo[]),
-      listBuiltinMaps(),
-    ]).then(([local, embedded]) => {
-      setMaps(local)
+    void listBuiltinMaps().then((embedded) => {
       setBuiltin(embedded)
-      const keys = [
-        ...embedded.map((m) => `builtin:${m.world}`),
-        ...local.map((m) => `local:${m.world}`),
-      ]
+      const keys = embedded.map((m) => `builtin:${m.world}`)
       const last = readStoredText('mapWorld')
-      // Старые версии хранили просто имя мира
       const key =
         keys.find((k) => k === last) ??
-        keys.find((k) => k === `local:${last}`) ??
+        keys.find((k) => k === `builtin:${last}`) ??
         keys[0]
       if (key) openMap(key)
     })
     // Только при первом показе
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  async function importText(text: string) {
-    const parsed = parseHeightmap(text)
-    if (!parsed) {
-      setNotice(
-        ru
-          ? 'Это не высоты из игры. Запустите скрипт ещё раз и вставьте результат.'
-          : 'These are not heights from the game. Run the script again and paste the result.'
-      )
-      return
-    }
-    try {
-      await saveHeightmap(parsed)
-      setMaps(await listHeightmaps())
-    } catch {
-      // Сохранить не удалось — карта работает до перезагрузки
-    }
-    writeStored('mapWorld', `local:${parsed.world}`)
-    setMapKey(`local:${parsed.world}`)
-    setMap(parsed)
-    setTiles(null)
-    setGun(readGun(parsed.world))
-    setTarget(null)
-    setPlacing('gun')
-    setView(null)
-    setAdding(false)
-    setNotice(
-      ru
-        ? `Карта ${parsed.world} загружена: ${parsed.size}×${parsed.size} точек, шаг ${parsed.step} м.`
-        : `Map ${parsed.world} loaded: ${parsed.size}×${parsed.size} points, step ${parsed.step} m.`
-    )
-  }
-
-  async function pasteFromClipboard() {
-    try {
-      await importText(await navigator.clipboard.readText())
-    } catch {
-      setNotice(
-        ru
-          ? 'Браузер не дал прочитать буфер. Вставьте высоты в поле ниже (Ctrl+V).'
-          : 'The browser blocked the clipboard. Paste the heights into the field below (Ctrl+V).'
-      )
-    }
-  }
-
-  async function copyScript() {
-    try {
-      await navigator.clipboard.writeText(exportScript)
-      setNotice(ru ? 'Скрипт скопирован.' : 'Script copied.')
-    } catch {
-      setNotice(
-        ru
-          ? 'Не удалось скопировать — скрипт есть в файле web/src/data/export-heightmap.sqf.'
-          : 'Copy failed — the script is in web/src/data/export-heightmap.sqf.'
-      )
-    }
-  }
-
-  async function removeMap() {
-    if (!map || !mapKey.startsWith('local:')) return
-    const message = ru
-      ? `Удалить высоты карты ${map.world}?`
-      : `Delete the heights of ${map.world}?`
-    if (!window.confirm(message)) return
-    try {
-      await deleteHeightmap(map.world)
-      setMaps(await listHeightmaps())
-    } catch {
-      // Не удалось удалить — список не меняется
-    }
-    setMap(null)
-    setMapKey('')
-    setTiles(null)
-    setGun(null)
-    setTarget(null)
-  }
 
   // ---- размер холста ----
   // Ширина контейнера: сразу при появлении и при каждом изменении
@@ -528,6 +560,26 @@ export function MapPicker({
       ctx.fillText(String(Math.floor(y / 100)).padStart(3, '0'), 3, sy - 3)
     }
 
+    // Рисунок: штрихи под метками и целями
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 3
+    for (const stroke of liveStroke ? [...strokes, liveStroke] : strokes) {
+      if (stroke.points.length === 0) continue
+      ctx.strokeStyle = MARKER_RGB[stroke.color]
+      ctx.beginPath()
+      stroke.points.forEach((point, i) => {
+        const p = toScreen(point)
+        if (i === 0) ctx.moveTo(p.x, p.y)
+        else ctx.lineTo(p.x, p.y)
+      })
+      if (stroke.points.length === 1) {
+        const p = toScreen(stroke.points[0])
+        ctx.lineTo(p.x + 0.01, p.y)
+      }
+      ctx.stroke()
+    }
+
     // Метки: значок цвета метки, подпись и возраст; старые бледнее
     ctx.font = `12px ${sans}`
     for (const marker of markers) {
@@ -546,7 +598,7 @@ export function MapPicker({
       ctx.fill()
       ctx.stroke()
 
-      const text = `${markerTitle(marker, ru)} · ${formatAge(now - marker.createdAt, ru)}`
+      const text = `${markerTitle(marker)} · ${formatAge(now - marker.createdAt)}`
       const width = ctx.measureText(text).width
       ctx.fillStyle = ink.plate
       ctx.fillRect(p.x + 11, p.y - 9, width + 8, 18)
@@ -595,6 +647,89 @@ export function MapPicker({
       ctx.setLineDash([])
     }
 
+    // Линия огня по цели (лесополоса): полоса поражения, ось и точки
+    if (linePoints.length > 0) {
+      const pts = linePoints.map(toScreen)
+      const lineColor = '#ffb020'
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      if (pts.length > 1) {
+        // Полоса шириной в зону поражения
+        ctx.strokeStyle = 'rgba(255,176,32,0.22)'
+        ctx.lineWidth = Math.max(4, lineWeapon.radius * 2 * scale)
+        ctx.beginPath()
+        pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+        ctx.stroke()
+        ctx.strokeStyle = lineColor
+        ctx.lineWidth = 2
+        ctx.setLineDash([7, 5])
+        ctx.beginPath()
+        pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      ctx.lineCap = 'butt'
+      ctx.lineJoin = 'miter'
+      for (const p of pts) {
+        ctx.fillStyle = lineColor
+        ctx.strokeStyle = ink.outline
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      }
+      ctx.font = 'bold 11px ' + sans
+      ctx.textAlign = 'center'
+      lineAim.forEach((point, i) => {
+        const p = toScreen(point)
+        const current = i === lineIndex
+        ctx.strokeStyle = current ? '#ffffff' : lineColor
+        ctx.lineWidth = current ? 2.5 : 1.5
+        ctx.fillStyle = current ? 'rgba(255,176,32,0.9)' : 'rgba(0,0,0,0.65)'
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 9, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        ctx.fillStyle = current ? '#000000' : '#ffffff'
+        ctx.fillText(String(i + 1), p.x, p.y + 4)
+      })
+      ctx.textAlign = 'start'
+    }
+
+    // Досягаемость орудия: дальний край — сплошное кольцо, ближний — пунктир
+    if (gun && reach && reach.max > 0) {
+      const c = toScreen(gun)
+      ctx.lineWidth = 1.5
+      ctx.strokeStyle = 'rgba(255,176,32,0.9)'
+      ctx.beginPath()
+      ctx.arc(c.x, c.y, reach.max * scale, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(255,176,32,0.06)'
+      ctx.fill()
+      if (reach.min > 0) {
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = 'rgba(255,176,32,0.6)'
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, reach.min * scale, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      // Подпись на верхней точке дальнего кольца
+      const label = `${t('mapPicker.max')} ${Math.round(reach.max)} ${unitM}`
+      ctx.font = '11px ' + sans
+      const w = ctx.measureText(label).width
+      const ly = c.y - reach.max * scale
+      if (ly > 14 && ly < size.height - 6) {
+        ctx.fillStyle = ink.plate
+        ctx.fillRect(c.x - w / 2 - 4, ly - 8, w + 8, 16)
+        ctx.fillStyle = 'rgba(255,196,80,1)'
+        ctx.textAlign = 'center'
+        ctx.fillText(label, c.x, ly + 4)
+        ctx.textAlign = 'start'
+      }
+    }
+
     // Линия огня
     if (gun && target) {
       const a = toScreen(gun)
@@ -633,13 +768,37 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
+  const pointsRef = useRef<{ gun: MapPoint | null; target: MapPoint | null }>({
+    gun: null,
+    target: null,
+  })
   useEffect(() => {
     viewRef.current = activeView
+    pointsRef.current = { gun, target }
   })
+
+  // Где рисовать полёт: от орудия к цели в координатах холста
+  const flightEnds = useCallback(() => {
+    const v = viewRef.current
+    const { gun: g, target: t } = pointsRef.current
+    if (!v || !g || !t) return null
+    const ax = (g.x - v.x0) * v.scale
+    const ay = (v.y0 - g.y) * v.scale
+    const bx = (t.x - v.x0) * v.scale
+    const by = (v.y0 - t.y) * v.scale
+    return {
+      ax,
+      ay,
+      bx,
+      by,
+      arc: Math.min(90, Math.hypot(bx - ax, by - ay) * 0.3),
+      scale: 1.5,
+    }
+  }, [])
 
   function zoomAt(factor: number, sx: number, sy: number) {
     const current = viewRef.current
@@ -677,6 +836,21 @@ export function MapPicker({
   function onPointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     if (!activeView) return
     event.currentTarget.setPointerCapture(event.pointerId)
+    // Режим рисования: ЛКМ или касание рисуют, остальные кнопки двигают карту
+    if (isDrawTool(placing) && (event.pointerType !== 'mouse' || event.button === 0)) {
+      const point = pointOf(event, activeView)
+      if (placing === 'eraser') {
+        drawRef.current = { stroke: { id: '', color: drawColor, points: [] }, erasing: true }
+        eraseAt(point, activeView.scale)
+      } else {
+        drawRef.current = {
+          stroke: { id: String(++drawSeq.current), color: drawColor, points: [point] },
+          erasing: false,
+        }
+        setLiveStroke(drawRef.current.stroke)
+      }
+      return
+    }
     dragRef.current = {
       x: event.clientX,
       y: event.clientY,
@@ -685,7 +859,49 @@ export function MapPicker({
     }
   }
 
+  /** Точка мира под курсором. */
+  function pointOf(event: React.PointerEvent<HTMLCanvasElement>, v: View): MapPoint {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return {
+      x: v.x0 + (event.clientX - rect.left) / v.scale,
+      y: v.y0 - (event.clientY - rect.top) / v.scale,
+    }
+  }
+
+  /** Ластик: стереть штрихи ближе 10 пикселей к точке. */
+  function eraseAt(point: MapPoint, scale: number) {
+    const reachM = 10 / scale
+    const next = strokesRef.current.filter((s) => distanceToStroke(s, point) > reachM)
+    if (next.length !== strokesRef.current.length) commitStrokes(next)
+  }
+  const strokesRef = useRef(strokes)
+  useEffect(() => {
+    strokesRef.current = strokes
+  })
+
   function onPointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
+    const drawing = drawRef.current
+    if (drawing && activeView) {
+      const point = pointOf(event, activeView)
+      if (drawing.erasing) {
+        eraseAt(point, activeView.scale)
+        return
+      }
+      const pts = drawing.stroke.points
+      const next =
+        placing === 'draw-line'
+          ? [pts[0], point]
+          : Math.hypot(point.x - pts[pts.length - 1].x, point.y - pts[pts.length - 1].y) *
+                activeView.scale >=
+              2
+            ? [...pts, point]
+            : pts
+      if (next !== pts) {
+        drawing.stroke = { ...drawing.stroke, points: next }
+        setLiveStroke(drawing.stroke)
+      }
+      return
+    }
     const drag = dragRef.current
     if (!drag) return
     const dx = event.clientX - drag.x
@@ -715,8 +931,47 @@ export function MapPicker({
     })
   }
 
+  function changeLine(points: MapPoint[]) {
+    setLinePoints(points)
+    setLineIndex(null)
+    if (map) writeStored(`mapLine:${map.world}`, JSON.stringify(points))
+  }
+
+  /** Точка линии огня — целью расчёта. */
+  function aimAt(index: number) {
+    const point = lineAim[index]
+    if (!point) return
+    setLineIndex(index)
+    placeTarget(point)
+  }
+
+  // Замок орудия выезжает после «удержания» курсора на кнопке орудия
+  const [lockShown, setLockShown] = useState(false)
+  const lockTimer = useRef<number | null>(null)
+  function cancelLockTimer() {
+    if (lockTimer.current !== null) window.clearTimeout(lockTimer.current)
+    lockTimer.current = null
+  }
+  function startLockHold(ms: number) {
+    cancelLockTimer()
+    lockTimer.current = window.setTimeout(() => setLockShown(true), ms)
+  }
+  function endLockHold() {
+    cancelLockTimer()
+    setLockShown(false)
+  }
+
+  function toggleGunLock() {
+    if (!map || !gun) return
+    const locked = !gunLocked
+    setGunLocked(locked)
+    writeStored(`mapGunLocked:${map.world}`, locked ? 'on' : 'off')
+    if (locked) setPlacing('target')
+    onGunLockChange?.(locked, heightAt(map, gun))
+  }
+
   function placeGun(point: MapPoint) {
-    if (!map) return
+    if (!map || gunLocked) return
     setGun(point)
     writeStored(`mapGun:${map.world}`, JSON.stringify(point))
     applyPoints(point, target)
@@ -727,7 +982,20 @@ export function MapPicker({
     applyPoints(gun, point)
   }
 
+  function finishDrawing() {
+    const drawing = drawRef.current
+    drawRef.current = null
+    setLiveStroke(null)
+    if (!drawing || drawing.erasing || !activeView) return
+    const points = simplify(drawing.stroke.points, 1.5 / activeView.scale)
+    commitStrokes([...strokesRef.current, { ...drawing.stroke, points }])
+  }
+
   function onPointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
+    if (drawRef.current) {
+      finishDrawing()
+      return
+    }
     const drag = dragRef.current
     dragRef.current = null
     if (!drag || drag.moved || !map) return
@@ -742,15 +1010,23 @@ export function MapPicker({
     if (!isInside(map, point)) return
 
     const mouse = event.pointerType === 'mouse'
-    const action: Placing =
+    let action: Placing =
       mouse && event.button === 2
         ? 'target'
         : mouse && placing === 'target'
           ? 'gun'
           : placing
 
+    // Орудие закреплено — касание ставит цель
+    if (gunLocked && action === 'gun') action = 'target'
+
     if (action === 'marker') {
       setDraft({ point, label: '', color: markerColor })
+      return
+    }
+
+    if (action === 'line') {
+      changeLine([...linePoints, point])
       return
     }
 
@@ -788,72 +1064,92 @@ export function MapPicker({
 
   const buttonClass = 'btn btn-sm'
 
-  const showLoader = adding || !map
+
+  // ---- список карт: ванильные — в списке, карты модов — в окне с поиском ----
+  const MOD_MAPS = '__mods__'
+  const mapEntries = builtin.map((m) => ({
+    key: `builtin:${m.world}`,
+    name: m.names?.[language] ?? m.displayName,
+    author: m.author,
+    official: mapKind(m) === 'official',
+    preview: `${MAPS_BASE}${m.world}/preview.webp`,
+  }))
+  function mapLabel(key: string): string {
+    return mapEntries.find((e) => e.key === key)?.name ?? '—'
+  }
+  const isFavorite = (key: string) => favorites.includes(key)
+  const listed = mapEntries.filter(
+    (e) => isFavorite(e.key) || e.official || e.key === mapKey
+  )
+  const sortedList = [
+    ...listed.filter((e) => isFavorite(e.key)),
+    ...listed.filter((e) => !isFavorite(e.key) && e.official),
+    // Выбранная карта мода, которой нет в избранном, тоже видна в списке
+    ...listed.filter((e) => !isFavorite(e.key) && !e.official),
+  ]
+  const mapOptions: DropdownOption<string>[] = sortedList.map((e) => ({
+    value: e.key,
+    label: e.name,
+    description: e.author ? (
+      <span className="text-[11.5px] opacity-60">{e.author}</span>
+    ) : undefined,
+    group: isFavorite(e.key)
+      ? t('mapPicker.favourites')
+      : e.official
+        ? t('picker.vanilla')
+        : t('picker.current'),
+    icon: <MapGlyph />,
+    trailing: (
+      <span className="flex shrink-0 items-center gap-1.5">
+        <img src={e.preview} alt="" loading="lazy" className="h-9 w-9 rounded object-cover" />
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={isFavorite(e.key) ? t('picker.unfavourite') : t('picker.favourite')}
+          title={isFavorite(e.key) ? t('picker.unfavourite') : t('picker.favourite')}
+          onClick={(event) => {
+            event.stopPropagation()
+            toggleFavorite(e.key)
+          }}
+          className={[
+            'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-app-raised-hover',
+            isFavorite(e.key) ? 'text-warn' : 'text-app-faint',
+          ].join(' ')}
+        >
+          <FieldIcon name={isFavorite(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
+        </button>
+      </span>
+    ),
+  }))
+  const actionIcon = (name: FieldIconName) => (
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+      <FieldIcon name={name} className="h-4 w-4" />
+    </span>
+  )
+  mapOptions.push(
+    {
+      value: MOD_MAPS,
+      label: t('picker.mod-maps'),
+      description: (
+        <span className="text-[11.5px] opacity-60">
+          {mapEntries.filter((e) => !e.official).length}
+        </span>
+      ),
+      icon: actionIcon('search'),
+      divider: true,
+    }
+  )
 
   return (
     <div>
-      {showLoader && (
-        <div className="flex aspect-square flex-col justify-center gap-4 rounded-lg bg-app-surface p-6 text-[15px] text-app-text-2 sm:p-10">
-          <p className="text-lg font-semibold text-app-text">
-            {ru ? 'Добавьте карту' : 'Add a map'}
-          </p>
-          <ol className="list-decimal space-y-3 pl-5">
-            <li>
-              <button type="button" className={buttonClass} onClick={() => void copyScript()}>
-                {ru ? 'Скопировать скрипт для игры' : 'Copy the game script'}
-              </button>
-            </li>
-            <li>
-              {ru
-                ? 'В Arma 3: редактор Eden на нужной карте → Play → Esc → Debug Console → вставить скрипт → LOCAL EXEC. Высоты скопируются в буфер обмена.'
-                : 'In Arma 3: Eden editor on the map → Play → Esc → Debug Console → paste the script → LOCAL EXEC. The heights are copied to the clipboard.'}
-            </li>
-            <li className="space-x-2">
-              <button type="button" className={buttonClass} onClick={() => void pasteFromClipboard()}>
-                {ru ? 'Вставить высоты' : 'Paste heights'}
-              </button>
-              <span className="text-app-muted">{ru ? 'или' : 'or'}</span>
-              <button type="button" className={buttonClass} onClick={() => fileRef.current?.click()}>
-                {ru ? 'Загрузить файл' : 'Load a file'}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".json,.txt,application/json,text/plain"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void file.text().then(importText)
-                  event.target.value = ''
-                }}
-              />
-            </li>
-          </ol>
-          <textarea
-            rows={2}
-            aria-label={ru ? 'Вставьте высоты сюда' : 'Paste the heights here'}
-            placeholder={ru ? '…или вставьте высоты сюда (Ctrl+V)' : '…or paste the heights here (Ctrl+V)'}
-            onPaste={(event) => {
-              event.preventDefault()
-              void importText(event.clipboardData.getData('text'))
-            }}
-            className="field text-sm"
-          />
-          <p className="text-[13px] text-app-muted">
-            {ru
-              ? 'Карта рисуется из высот: чужие изображения карт не нужны. Высоты хранятся только на этом устройстве.'
-              : 'The map is drawn from the heights, no map images needed. Heights stay on this device.'}
-          </p>
-          {map && (
-            <button type="button" className="btn self-start" onClick={() => setAdding(false)}>
-              {ru ? 'Назад к карте' : 'Back to the map'}
-            </button>
-          )}
+      {!map && (
+        <div className="flex aspect-square items-center justify-center rounded-lg bg-app-surface">
+          <p className="label">{t('artilleryCalculator.loading-the-map')}</p>
         </div>
       )}
 
-      {map && !adding && (
-        <div ref={containerRef} className="w-full">
+      {map && (
+        <div ref={containerRef} data-tour="map" className="relative w-full rounded-lg ring-1 ring-app-line-strong">
           <canvas
             ref={setCanvas}
             width={Math.round(size.width * ratio)}
@@ -861,98 +1157,382 @@ export function MapPicker({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            onPointerCancel={() => (dragRef.current = null)}
+            onPointerCancel={() => {
+              dragRef.current = null
+              drawRef.current = null
+              setLiveStroke(null)
+            }}
             onContextMenu={(event) => event.preventDefault()}
             style={{ width: size.width, height: size.height }}
             className="block cursor-crosshair touch-none rounded-lg"
           />
-        </div>
-      )}
 
-      {notice && (
-        <p className="mt-3 rounded-md bg-app-raised px-3 py-2 text-[13.5px] text-app-text-2" role="status">
-          {notice}
-        </p>
-      )}
-
-      {/* ---- Панель под картой ---- */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {(maps.length > 0 || builtin.length > 0) && (
-          <select
-            aria-label={ru ? 'Карта' : 'Map'}
-            value={mapKey}
-            onChange={(event) => openMap(event.target.value)}
-            className="field w-auto"
-          >
-            {!map && <option value="">—</option>}
-            {builtin.map((m) => (
-              <option key={`builtin:${m.world}`} value={`builtin:${m.world}`}>
-                {m.displayName}
-              </option>
-            ))}
-            {maps.map((m) => (
-              <option key={`local:${m.world}`} value={`local:${m.world}`}>
-                {m.world} · {ru ? 'свои высоты' : 'own heights'}
-              </option>
-            ))}
-          </select>
-        )}
-        {(maps.length > 0 || builtin.length > 0) && !adding && (
-          <button type="button" className="btn" onClick={() => setAdding(true)}>
-            {ru ? '+ Карта' : '+ Map'}
-          </button>
-        )}
-        {map && !adding && (
-          <>
-            <Toggle
-              label={ru ? 'Что ставит касание' : 'Tap places'}
-              value={placing}
-              onChange={setPlacing}
-              options={[
-                { value: 'gun', label: ru ? 'орудие' : 'gun' },
-                { value: 'target', label: ru ? 'цель' : 'target' },
-                { value: 'marker', label: ru ? 'метка' : 'marker' },
-              ]}
+          {flight.length > 0 && flightOnMap && gun && target && (
+            <FlightCanvas
+              shots={flight}
+              category={category}
+              kind={shellKind(shellType)}
+              ends={flightEnds}
+              width={size.width}
+              height={size.height}
+              className="pointer-events-none absolute top-0 left-0"
             />
-            <div className="ml-auto flex gap-1">
-              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}>−</button>
-              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}>+</button>
-              <button type="button" className="btn" onClick={() => setView(null)}>
-                {ru ? 'Вся' : 'Fit'}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+          )}
 
-      {map && !adding && (
-        <>
-          <p className="mt-2 text-[13px] text-app-muted tabular-nums">
-            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-gun" />
-            {gun
-              ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
-              : ru
-                ? 'орудие не задано'
-                : 'no gun'}
-            <span className="mx-3 text-app-faint">|</span>
-            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-target" />
-            {target
-              ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
-              : ru
-                ? 'цель не задана'
-                : 'no target'}
-          </p>
+          {/* Справа: что ставит касание, ниже — рисование */}
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-2">
+          <div
+            role="toolbar"
+            data-tour="tools"
+            aria-label={t('mapPicker.tap-places')}
+            aria-orientation="vertical"
+            className="flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
+          >
+            {(
+              [
+                { id: 'gun', icon: 'gun', label: 'mapPicker.gun', },
+                { id: 'target', icon: 'target', label: 'artilleryCalculator.target', },
+                ...(showMarkers
+                  ? [{ id: 'marker', icon: 'marker', label: 'mapPicker.marker', }]
+                  : []),
+                { id: 'line', icon: 'line', label: 'mapPicker.fire-line', },
+              ] as { id: Placing; icon: FieldIconName; label: MessageKey }[]
+            ).map((tool) => {
+              const active = placing === tool.id
+              const locked = tool.id === 'gun' && gunLocked
+              const button = (
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  aria-disabled={locked}
+                  title={t(tool.label)}
+                  aria-label={t(tool.label)}
+                  onClick={() => !locked && setPlacing(tool.id)}
+                  className={[
+                    'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
+                    locked ? 'opacity-40' : '',
+                    active
+                      ? 'bg-accent-solid text-white'
+                      : 'text-white/80 hover:bg-white/15',
+                  ].join(' ')}
+                >
+                  <FieldIcon name={tool.icon} className="h-5 w-5" />
+                </button>
+              )
+              if (tool.id !== 'gun') return <span key={tool.id}>{button}</span>
+
+              // Орудие: если подержать курсор (или палец) на кнопке, слева
+              // выезжает замок. Закреплённое орудие показывает замок всегда.
+              return (
+                <div
+                  key={tool.id}
+                  className="relative"
+                  onPointerEnter={(event) => {
+                    if (event.pointerType === 'mouse') startLockHold(450)
+                  }}
+                  onPointerLeave={(event) => {
+                    if (event.pointerType === 'mouse') endLockHold()
+                  }}
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== 'mouse') startLockHold(500)
+                  }}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'mouse') cancelLockTimer()
+                  }}
+                  onPointerCancel={cancelLockTimer}
+                  onContextMenu={(event) => event.preventDefault()}
+                >
+                  {(lockShown || gunLocked) && (
+                    <div className="absolute top-0 right-full pr-1.5">
+                      <button
+                        type="button"
+                        aria-pressed={gunLocked}
+                        disabled={!gun}
+                        title={
+                          gunLocked
+                            ? t('mapPicker.gun-locked-tap-to-unlock')
+                            : t('mapPicker.lock-the-gun-and-its')
+                        }
+                        aria-label={t('mapPicker.lock-the-gun')}
+                        onClick={toggleGunLock}
+                        className={[
+                          'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                          gunLocked
+                            ? 'bg-warn/90 text-black'
+                            : 'bg-black/70 text-white/90 hover:bg-black/85',
+                        ].join(' ')}
+                      >
+                        <FieldIcon name={gunLocked ? 'lock' : 'unlock'} className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                  {button}
+                </div>
+              )
+            })}
+          </div>
+
+          <div
+            role="toolbar"
+            aria-label={t('mapPicker.draw-tools')}
+            aria-orientation="vertical"
+            className="flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
+          >
+            {(
+              [
+                { id: 'pen', icon: 'pen', label: 'mapPicker.draw-pen' },
+                { id: 'draw-line', icon: 'drawLine', label: 'mapPicker.draw-line' },
+                { id: 'eraser', icon: 'eraser', label: 'mapPicker.draw-eraser' },
+              ] as { id: Placing; icon: FieldIconName; label: MessageKey }[]
+            ).map((tool) => (
+              <button
+                key={tool.id}
+                type="button"
+                aria-pressed={placing === tool.id}
+                title={t(tool.label)}
+                aria-label={t(tool.label)}
+                onClick={() => setPlacing(placing === tool.id ? 'target' : tool.id)}
+                className={[
+                  'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
+                  placing === tool.id
+                    ? 'bg-accent-solid text-white'
+                    : 'text-white/80 hover:bg-white/15',
+                ].join(' ')}
+              >
+                <FieldIcon name={tool.icon} className="h-5 w-5" />
+              </button>
+            ))}
+            <button
+              type="button"
+              title={t('mapPicker.draw-colour')}
+              aria-label={t('mapPicker.draw-colour')}
+              onClick={() =>
+                setDrawColor(
+                  MARKER_COLORS[(MARKER_COLORS.indexOf(drawColor) + 1) % MARKER_COLORS.length]
+                )
+              }
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md hover:bg-white/15"
+            >
+              <span
+                className="h-5 w-5 rounded-full ring-2 ring-white/70"
+                style={{ backgroundColor: MARKER_RGB[drawColor] }}
+              />
+            </button>
+            <button
+              type="button"
+              disabled={strokes.length === 0}
+              title={t('mapPicker.draw-undo')}
+              aria-label={t('mapPicker.draw-undo')}
+              onClick={() => commitStrokes(strokes.slice(0, -1))}
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-white/80 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <FieldIcon name="undo" className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={strokes.length === 0}
+              title={t('mapPicker.draw-clear')}
+              aria-label={t('mapPicker.draw-clear')}
+              onClick={() => {
+                if (clearArmed) {
+                  setClearArmed(false)
+                  commitStrokes([])
+                } else setClearArmed(true)
+              }}
+              className={[
+                'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-35',
+                clearArmed ? 'bg-danger text-white' : 'text-white/80 hover:bg-white/15',
+              ].join(' ')}
+            >
+              <FieldIcon name="trash" className="h-5 w-5" />
+            </button>
+          </div>
+          </div>
+
+          {/* Слева: цели журнала — выбор, экспорт и импорт */}
+          <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
+          {targetActions && (
+            <div className="flex flex-col items-start gap-1">
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  aria-expanded={targetsOpen}
+                  onClick={() => setTargetsOpen((v) => !v)}
+                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+                >
+                  <FieldIcon name="list" className="h-5 w-5" />
+                  {t('mapPicker.targets')}
+                  <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
+                    {quickTargets.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={quickTargets.length === 0}
+                  title={t('mapPicker.export-targets-to-a-file')}
+                  aria-label={t('mapPicker.export-targets')}
+                  onClick={targetActions.exportAll}
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FieldIcon name="export" className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  title={t('mapPicker.import-targets-from-a-file')}
+                  aria-label={t('mapPicker.import-targets')}
+                  onClick={() => importRef.current?.click()}
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+                >
+                  <FieldIcon name="import" className="h-[18px] w-[18px]" />
+                </button>
+                <input
+                  ref={importRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) void targetActions.importFile(file).then(setNotice)
+                    event.target.value = ''
+                  }}
+                />
+              </div>
+              {targetsOpen && (
+                <ul className="max-h-[min(22rem,60%)] w-56 max-w-full overflow-y-auto rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm">
+                  {quickTargets.length === 0 && (
+                    <li className="px-2 py-1.5 text-[12.5px] text-white/60">
+                      {t('mapPicker.empty-so-far-work-out')}
+                    </li>
+                  )}
+                  {quickTargets.map((qt) => (
+                    <li key={qt.id} className="group relative">
+                      {renamingId === qt.id ? (
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          maxLength={60}
+                          onChange={(event) => setRenameValue(event.target.value)}
+                          onBlur={() => {
+                            targetActions.rename(qt.id, renameValue)
+                            setRenamingId(null)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') event.currentTarget.blur()
+                            if (event.key === 'Escape') setRenamingId(null)
+                          }}
+                          className="field m-0.5 h-8 w-[calc(100%-0.25rem)] py-0 text-[13px]"
+                        />
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            aria-current={qt.active ? 'true' : undefined}
+                            onClick={() => onPickJournalTarget?.(qt.id)}
+                            className={[
+                              'flex w-full cursor-pointer flex-col rounded-md py-1 pr-14 pl-2 text-left transition-colors',
+                              qt.active
+                                ? 'bg-accent-solid text-white'
+                                : 'text-white/90 hover:bg-white/15',
+                            ].join(' ')}
+                          >
+                            <span className="truncate text-[13px] font-medium">{qt.name}</span>
+                            <span className="truncate text-[11.5px] tabular-nums opacity-70">
+                              {qt.detail}
+                            </span>
+                          </button>
+                          <span className="absolute top-1/2 right-1 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                            <button
+                              type="button"
+                              aria-label={t('mapPicker.rename')}
+                              title={t('mapPicker.rename')}
+                              onClick={() => {
+                                setRenamingId(qt.id)
+                                setRenameValue(qt.name)
+                              }}
+                              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
+                            >
+                              <FieldIcon name="edit" className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={t('mapPicker.delete')}
+                              title={t('mapPicker.delete')}
+                              onClick={() => targetActions.remove(qt.id)}
+                              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
+                            >
+                              <FieldIcon name="trash" className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {showMarkers && (
+            <div className="flex flex-col items-start gap-1">
+              <button
+                type="button"
+                aria-expanded={markersOpen}
+                onClick={() => setMarkersOpen((v) => !v)}
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+              >
+                <FieldIcon name="marker" className="h-5 w-5" />
+                {t('mapPicker.markers')}
+                <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
+                  {markers.length}
+                </span>
+              </button>
+              {markersOpen && (
+                <div className="max-h-[min(22rem,60%)] w-64 max-w-full overflow-y-auto rounded-lg bg-black/70 p-2 text-white/90 shadow-lg backdrop-blur-sm">
+                  <MarkerList
+                    markers={markers}
+                    now={now}
+                    onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[12px] text-white/70">
+                      {t('mapPicker.marker-by-grid')}
+                    </span>
+                    <input
+                      value={gridDraft}
+                      onChange={(event) => setGridDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') addByGrid()
+                      }}
+                      placeholder="045 078"
+                      inputMode="numeric"
+                      className="field h-8 w-24 py-0 text-[13px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={addByGrid}
+                      disabled={!parseGrid(gridDraft)}
+                      className={buttonClass}
+                    >
+                      {t('mapPicker.add')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          </div>
 
           {draft && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-app-surface p-2">
-              <span className="text-[13px] text-app-muted tabular-nums">
+            <div className="absolute right-2 bottom-14 left-2 mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-lg bg-black/80 p-2 text-white/90 shadow-lg backdrop-blur-sm">
+              <span className="w-full text-[12px] font-medium text-white/70">{t('mapPicker.new-marker')}</span>
+              <span className="text-[13px] text-white/70 tabular-nums">
                 {toGridReference(draft.point, 8)}
               </span>
               <input
                 autoFocus
                 value={draft.label}
                 maxLength={40}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Label (optional)'}
+                placeholder={t('mapPicker.label-optional')}
                 onChange={(event) =>
                   setDraft({ ...draft, label: event.target.value })
                 }
@@ -965,93 +1545,265 @@ export function MapPicker({
               <ColorPicker
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
-                language={language}
               />
               <button type="button" onClick={saveDraft} className="btn btn-primary">
-                {ru ? 'Поставить' : 'Place'}
+                {t('mapPicker.place')}
               </button>
               <button type="button" onClick={() => setDraft(null)} className="btn">
-                {ru ? 'Отмена' : 'Cancel'}
+                {t('mapPicker.cancel')}
               </button>
             </div>
           )}
 
-          <details className="disclosure panel mt-3 p-4">
-            <summary>
-              {ru ? 'Метки' : 'Markers'}
-              <span className="tag">{markers.length}</span>
-            </summary>
 
-            <MarkerList
-              markers={markers}
-              now={now}
-              language={language}
-              onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
-            />
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="label">
-                {ru ? 'Метка по координате' : 'Marker by grid'}
+          {/* Снизу по центру: координаты орудия и цели */}
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
+            <span className="flex items-center gap-2">
+              <span className="block h-2 w-2 shrink-0 rounded-full bg-gun" />
+              <span>
+                {gun
+                  ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
+                  : t('mapPicker.no-gun')}
               </span>
-              <input
-                value={gridDraft}
-                onChange={(event) => setGridDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') addByGrid()
-                }}
-                placeholder="045 078"
-                inputMode="numeric"
-                className="field w-32"
-              />
-              <button
-                type="button"
-                onClick={addByGrid}
-                disabled={!parseGrid(gridDraft)}
-                className={buttonClass}
-              >
-                {ru ? 'Добавить' : 'Add'}
+            </span>
+            <FlightTrack shots={flight} />
+            <span className="flex items-center gap-2">
+              <span>
+                {target
+                  ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
+                  : t('mapPicker.no-target')}
+              </span>
+              <span className="block h-2 w-2 shrink-0 rounded-full bg-target" />
+            </span>
+          </div>
+        </div>
+      )}
+
+      {notice && (
+        <p className="mt-3 rounded-md bg-app-raised px-3 py-2 text-[13.5px] text-app-text-2" role="status">
+          {notice}
+        </p>
+      )}
+
+      {/* ---- Панель под картой ---- */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {builtin.length > 0 && <MapGlyph big />}
+        {builtin.length > 0 && (
+          <Dropdown
+            tourId="map-select"
+            label={t('mapPicker.map')}
+            value={mapKey}
+            onChange={(key) => (key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
+            alignLeft
+            placeholder="—"
+            buttonLabel={mapLabel(mapKey)}
+            options={mapOptions}
+          />
+        )}
+        {map && (
+          <>
+            <div className="ml-auto flex gap-1">
+              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}><FieldIcon name="minus" /></button>
+              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}><FieldIcon name="plus" /></button>
+              <button type="button" className="btn" onClick={() => setView(null)}>
+                <FieldIcon name="fit" />
+                {t('mapPicker.fit')}
               </button>
             </div>
-          </details>
+          </>
+        )}
+      </div>
 
-          <ScreenMarkers world={map.world} author={author} language={language} />
+      {map && (
+        <>
+          {(placing === 'line' || linePoints.length > 0) && (
+            <div className="mt-3 rounded-lg bg-app-surface p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="label">
+                  {t('mapPicker.line-fire')}
+                </span>
+                <Dropdown
+                  alignLeft
+                  label={t('mapPicker.kill-radius')}
+                  value={lineWeaponId}
+                  onChange={(id) => {
+                    setLineWeaponId(id)
+                    setLineIndex(null)
+                    writeStored('lineWeapon', id)
+                  }}
+                  options={LINE_WEAPONS.map((w) => ({
+                    value: w.id,
+                    label: `${lineWeaponName(w.id)} · ±${w.radius} ${unitM}`,
+                  }))}
+                />
+                <div className="ml-auto flex gap-1">
+                  <button
+                    type="button"
+                    className={buttonClass}
+                    disabled={linePoints.length === 0}
+                    onClick={() => changeLine(linePoints.slice(0, -1))}
+                  >
+                    {t('mapPicker.undo-point')}
+                  </button>
+                  <button
+                    type="button"
+                    className={buttonClass}
+                    disabled={linePoints.length === 0}
+                    onClick={() => changeLine([])}
+                  >
+                    {t('mapPicker.clear')}
+                  </button>
+                </div>
+              </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[13px] text-app-muted">
-              {mapKey.startsWith('builtin:') && (() => {
-                const entry = builtin.find((m) => `builtin:${m.world}` === mapKey)
-                return entry ? `${entry.displayName}${entry.author ? ` · © ${entry.author}` : ''} · ` : ''
-              })()}
-              {ru
-                ? `Высоты по сетке с шагом ${Math.round(map.step * 10) / 10} м.`
-                : `Heights on a ${Math.round(map.step * 10) / 10} m grid.`}
-            </p>
-            {mapKey.startsWith('local:') && (
-              <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
-                {ru ? 'Удалить карту' : 'Delete map'}
-              </button>
-            )}
-          </div>
+              {linePoints.length === 0 ? (
+                <p className="mt-2 text-[13px] text-app-muted">
+                  {t('mapPicker.tap-points-along-a-tree')}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-[13px] text-app-muted tabular-nums">
+                    {t('mapPicker.length')}{' '}
+                    {Math.round(polylineLength(linePoints))} {unitM} ·{' '}
+                    {t('mapPicker.aim-points')} {lineAim.length}{' '}
+                    · {t('mapPicker.spacing')} ≤ {lineWeapon.radius * 2} {unitM}
+                  </p>
+                  <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+                    {lineAim.map((point, i) => {
+                      const line = gun ? bearing(gun, point) : null
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          disabled={!gun}
+                          onClick={() => aimAt(i)}
+                          aria-pressed={lineIndex === i}
+                          title={toGridReference(point, 8)}
+                          className={[
+                            'rounded-md px-2.5 py-1 text-[13px] tabular-nums transition-colors',
+                            lineIndex === i
+                              ? 'bg-accent-soft ring-1 ring-accent'
+                              : 'bg-app-raised hover:bg-app-raised-hover',
+                            gun ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+                          ].join(' ')}
+                        >
+                          <b>{i + 1}</b>
+                          {line && (
+                            <span className="ml-1.5 text-app-muted">
+                              {Math.round(line.distance)} {unitM} ·{' '}
+                              {Math.round(line.azimuthMil)}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {!gun && (
+                    <p className="mt-2 text-[13px] text-app-muted">
+                      {t('mapPicker.place-the-gun-then-one')}
+                    </p>
+                  )}
+                  {gun && lineAim.length > 0 && (
+                    <div className="mt-2 flex gap-1.5">
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={lineIndex === null || lineIndex <= 0}
+                        onClick={() => aimAt((lineIndex ?? 1) - 1)}
+                      >
+                        ← {t('mapPicker.previous')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={lineIndex !== null && lineIndex >= lineAim.length - 1}
+                        onClick={() => aimAt(lineIndex === null ? 0 : lineIndex + 1)}
+                      >
+                        {lineIndex === null
+                          ? t('mapPicker.first-point')
+                          : t('mapPicker.next')}{' '}
+                        →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {showMarkers && showScreenMarkers && (
+            <ScreenMarkers world={map.world} author={author} language={language} />
+          )}
         </>
+      )}
+      {pickingMod && (
+        <PickerDialog
+          title={t('picker.maps-title')}
+          placeholder={t('picker.search-maps')}
+          selectedId={mapKey}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          items={mapEntries
+            .filter((e) => !e.official)
+            .map((e) => ({
+              id: e.key,
+              title: e.name,
+              subtitle: e.author,
+              thumb: e.preview,
+              group: t('picker.mods'),
+            }))}
+          onPick={(key) => {
+            setPickingMod(false)
+            openMap(key)
+          }}
+          onClose={() => setPickingMod(false)}
+          footer={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setPickingMod(false)
+                setSuggesting(true)
+              }}
+            >
+              <FieldIcon name="plus" className="h-[18px] w-[18px]" />
+              {t('picker.suggest')}
+            </button>
+          }
+        />
+      )}
+      {suggesting && (
+        <MapRequests onClose={() => setSuggesting(false)} />
       )}
     </div>
   )
 }
 
+function lineWeaponName(id: LineWeapon["id"]): string {
+  switch (id) {
+    case 'mortar':
+      return t('mapPicker.mortar')
+    case 'artillery':
+      return t('mapPicker.artillery')
+    case 'rocket':
+      return t('mapPicker.rocket')
+    case 'rocket-wide':
+      return t('mapPicker.rocket-wide')
+  }
+}
+
 function ColorPicker({
   value,
   onChange,
-  language,
 }: {
   value: MarkerColor
   onChange: (color: MarkerColor) => void
-  language: Language
+  
 }) {
-  const ru = language === 'ru'
   return (
     <div
       role="radiogroup"
-      aria-label={ru ? 'Цвет' : 'Colour'}
+      aria-label={t('mapPicker.colour')}
       className="flex gap-1"
     >
       {MARKER_COLORS.map((color) => (
@@ -1060,7 +1812,7 @@ function ColorPicker({
           type="button"
           role="radio"
           aria-checked={value === color}
-          aria-label={ru ? COLOR_NAMES[color].ru : COLOR_NAMES[color].en}
+          aria-label={t(COLOR_NAMES[color])}
           onClick={() => onChange(color)}
           style={{ backgroundColor: MARKER_RGB[color] }}
           className={[
@@ -1076,21 +1828,17 @@ function ColorPicker({
 function MarkerList({
   markers,
   now,
-  language,
   onTarget,
 }: {
   markers: MapMarker[]
   now: number
-  language: Language
+  
   onTarget: (marker: MapMarker) => void
 }) {
-  const ru = language === 'ru'
   if (markers.length === 0) {
     return (
       <p className="mt-3 text-xs text-app-muted">
-        {ru
-          ? 'Меток нет. Режим «метка» — клик по карте; в связке метки видят все в комнате.'
-          : 'No markers. "Marker" mode — click the map; in a link everyone in the room sees them.'}
+        {t('mapPicker.no-markers-marker-mode-click')}
       </p>
     )
   }
@@ -1107,29 +1855,29 @@ function MarkerList({
             style={{ backgroundColor: MARKER_RGB[marker.color] }}
           />
           <span className="min-w-0 flex-1 truncate text-app-text">
-            {markerTitle(marker, ru)}
+            {markerTitle(marker)}
             <span className="label ml-2 text-[12.5px]">
               {marker.author}
-              {marker.source === 'screen' && (ru ? ' · с экрана' : ' · from screen')}
+              {marker.source === 'screen' && (t('mapPicker.from-screen'))}
             </span>
           </span>
           <span className="text-xs text-app-muted">
             {toGridReference(marker, 8)}
           </span>
           <span className="mono-num w-24 text-right text-[12.5px] text-app-muted">
-            {formatAge(now - marker.createdAt, ru)}
+            {formatAge(now - marker.createdAt)}
           </span>
           <button
             type="button"
             onClick={() => onTarget(marker)}
             className="btn btn-sm"
           >
-            {ru ? 'Цель' : 'Target'}
+            {t('artilleryCalculator.target')}
           </button>
           <button
             type="button"
             onClick={() => removeMarker(marker.id)}
-            aria-label={ru ? 'Удалить метку' : 'Delete marker'}
+            aria-label={t('mapPicker.delete-marker')}
             className="cursor-pointer px-1.5 text-app-muted hover:text-danger"
           >
             ×
@@ -1137,5 +1885,19 @@ function MarkerList({
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Значок карты слева от названия в списке карт. */
+function MapGlyph({ big = false }: { big?: boolean }) {
+  return (
+    <span
+      className={[
+        'inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
+        big ? 'h-9 w-9' : 'h-7 w-7',
+      ].join(' ')}
+    >
+      <FieldIcon name="map" className={big ? 'h-[18px] w-[18px]' : 'h-4 w-4'} />
+    </span>
   )
 }

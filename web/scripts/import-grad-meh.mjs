@@ -19,6 +19,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import sharp from 'sharp'
+import { makePreview } from './make-map-previews.mjs'
 
 const TILE = 512
 // Детализация верхнего уровня — не мельче этого, м на пиксель
@@ -46,7 +47,9 @@ async function buildTiles(source, outDir, worldSize, background) {
   const n = columns.length
   const sourceMeters = worldSize / n
   // Сколько выходных тайлов на один исходный по стороне
-  const perSource = Math.ceil(sourceMeters / (TILE * TARGET_METERS_PER_PIXEL))
+  // Огромные карты (Беккетов, Алтис) грубее: иначе тайлы весят десятки МБ
+  const mpp = Math.max(TARGET_METERS_PER_PIXEL, worldSize / 6144)
+  const perSource = Math.ceil(sourceMeters / (TILE * mpp))
   const maxCols = n * perSource
   const levels = Math.ceil(Math.log2(maxCols)) + 1
   const top = levels - 1
@@ -181,7 +184,11 @@ async function importMap(source) {
     tiles,
   }
   writeFileSync(new URL('map.json', outDir), JSON.stringify(map, null, 2) + '\n')
-  return { world, displayName: map.displayName, author: map.author, worldSize }
+  // Превью для списков карт
+  await makePreview(world)
+  // Официальные карты — от Bohemia Interactive, остальные — от сообщества
+  const kind = /bohemia/i.test(map.author) ? 'official' : 'community'
+  return { world, displayName: map.displayName, author: map.author, kind, worldSize }
 }
 
 // ---- список карт ----
@@ -200,6 +207,9 @@ const index = existsSync(indexFile)
 
 for (const source of sources) {
   const entry = await importMap(source)
+  // Названия на других языках задаются в index.json руками — не затираем
+  const previous = index.maps.find((m) => m.world === entry.world)
+  if (previous?.names) entry.names = previous.names
   index.maps = [...index.maps.filter((m) => m.world !== entry.world), entry].sort(
     (a, b) => a.displayName.localeCompare(b.displayName)
   )
