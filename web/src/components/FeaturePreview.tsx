@@ -2,7 +2,6 @@ import { t, type MessageKey } from '../i18n'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { useFeature } from '../lib/features'
-import { useMotion } from '../lib/motion'
 
 export type PreviewId =
   | 'map'
@@ -275,7 +274,6 @@ export function FeaturePreview({
   children: ReactNode
 }) {
   const hints = useFeature('hints')
-  const motion = useMotion()
   const [openRaw, setOpen] = useState(false)
   const open = openRaw && hints
   const timer = useRef<number | null>(null)
@@ -313,7 +311,6 @@ export function FeaturePreview({
           role="tooltip"
           className="pointer-events-none absolute top-full left-0 z-40 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-lg bg-app-raised p-3 shadow-xl shadow-black/50"
         >
-          {motion && (
           <svg
             viewBox="0 0 240 140"
             className="block w-full rounded-md bg-app-surface"
@@ -321,7 +318,6 @@ export function FeaturePreview({
           >
             <Demo id={id} />
           </svg>
-          )}
           <p className="mt-2 text-[13px] leading-snug text-app-text-2">
             {t(CAPTIONS[id])}
           </p>

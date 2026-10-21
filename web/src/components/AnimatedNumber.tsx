@@ -14,7 +14,7 @@ interface Props {
 
 import { getMotion } from '../lib/motion'
 
-const reduced = () => !getMotion()
+const reduced = () => !getMotion('numbers')
 
 /**
  * Число, которое плавно «докручивается» до нового значения и коротко

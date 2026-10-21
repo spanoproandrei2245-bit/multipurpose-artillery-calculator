@@ -7,6 +7,7 @@ import { useFavorites } from '../lib/favorites'
 import { ArtilleryIcon } from './ArtilleryIcon'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon } from './FieldIcon'
+import { MapRequests } from './MapRequests'
 import { PickerDialog } from './PickerDialog'
 
 interface ModelSelectorProps {
@@ -27,6 +28,8 @@ const MODS = '__mods__'
  */
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const [picking, setPicking] = useState(false)
+  // Окно «Предложить орудие»
+  const [suggesting, setSuggesting] = useState(false)
   const [favorites, toggleFavorite] = useFavorites('favModels')
   const current = models[value]
 
@@ -114,7 +117,23 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             onChange(id as ModelId)
           }}
           onClose={() => setPicking(false)}
+          footer={
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setPicking(false)
+                setSuggesting(true)
+              }}
+            >
+              <FieldIcon name="plus" className="h-[18px] w-[18px]" />
+              {t('picker.suggest-weapon')}
+            </button>
+          }
         />
+      )}
+      {suggesting && (
+        <MapRequests kind="weapon" onClose={() => setSuggesting(false)} />
       )}
     </div>
   )

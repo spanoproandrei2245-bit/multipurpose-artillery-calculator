@@ -84,17 +84,22 @@ describe('uiPanels', () => {
 })
 
 describe('motion', () => {
-  it('по умолчанию включена; выключение отмечается на <html> и запоминается', async () => {
-    const { getMotion, setMotion, useMotion } = await import('./motion')
-    const { result } = renderHook(() => useMotion())
-    expect(result.current).toBe(true)
-    act(() => setMotion(false))
-    expect(result.current).toBe(false)
-    expect(getMotion()).toBe(false)
-    expect(document.documentElement.dataset.motion).toBe('off')
-    expect(localStorage.getItem('uiMotion')).toBe('off')
-    act(() => setMotion(true))
-    expect(document.documentElement.dataset.motion).toBe('on')
+  it('каждая анимация включается отдельно, выбор отмечается на <html>', async () => {
+    const { getMotion, setMotion, useMotion, MOTION_KINDS } = await import('./motion')
+    const numbers = renderHook(() => useMotion('numbers'))
+    const switches = renderHook(() => useMotion('switches'))
+    expect(MOTION_KINDS).toHaveLength(4)
+    expect(numbers.result.current).toBe(true)
+    act(() => setMotion('numbers', false))
+    expect(numbers.result.current).toBe(false)
+    // остальные не затронуты
+    expect(switches.result.current).toBe(true)
+    expect(getMotion('smooth')).toBe(true)
+    expect(document.documentElement.getAttribute('data-m-numbers')).toBe('off')
+    expect(document.documentElement.getAttribute('data-m-switches')).toBe('on')
+    expect(localStorage.getItem('motion:numbers')).toBe('off')
+    act(() => setMotion('numbers', true))
+    expect(document.documentElement.getAttribute('data-m-numbers')).toBe('on')
   })
 })
 

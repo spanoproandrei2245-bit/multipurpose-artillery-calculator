@@ -23,39 +23,54 @@ export interface FlightEnds {
 }
 
 interface Props {
-  shot: FlightShot | null
+  // Снаряды в полёте: у залпа их несколько, летят одновременно
+  shots: readonly FlightShot[]
   category: ArtilleryCategory
   kind: ShellKind
   className?: string
-  // Холст поверх карты: координаты берутся у карты. Без этого — боковой
-  // вид: орудие слева, цель справа, земля внизу.
+  // Холст поверх карты: координаты берутся у карты. Без этого — линия
+  // таймера: орудие слева, цель справа, дорожка с прогрессом.
   ends?: () => FlightEnds | null
-  // Размер холста, px (для карты); у бокового вида — по ширине блока
+  // Размер холста, px (для карты); у линии таймера — по ширине блока
   width?: number
   height?: number
+  // Покой: линия без снарядов (боевой экран показывает её всегда)
+  idle?: boolean
+  // Красная дорожка: идут последние секунды до разрыва
+  alert?: boolean
 }
 
-const SIDE_HEIGHT = 60
+const TRACK_HEIGHT = 44
+
+// Цвета рядом с картой: орудие синее, цель красная, дорожка серая, ход — акцент
+const GUN = 'rgba(67,147,228,0.95)'
+const TARGET = 'rgba(228,116,116,0.95)'
+const TRACK = 'rgba(160,166,173,0.22)'
+const ACCENT = 'rgba(67,147,228,0.95)'
 
 /**
- * Анимация полёта снаряда: рисуется, пока идёт полёт и показываются
- * последствия разрыва. Вид зависит от орудия и снаряда (flightFx).
+ * Линия таймера и анимация полёта в одном: по дорожке от орудия к цели
+ * едет снаряд (у залпа — несколько), дорожка закрашивается по мере
+ * полёта, у цели — разрыв. Вид зависит от орудия и снаряда (flightFx);
+ * при выключенной анимации остаётся только дорожка с прогрессом.
  */
 export function FlightCanvas({
-  shot,
+  shots,
   category,
   kind,
   className,
   ends,
   width,
-  height = SIDE_HEIGHT,
+  height = TRACK_HEIGHT,
+  idle = false,
+  alert = false,
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const style = useFlightStyle()
   // Свежие значения для цикла кадров без его перезапуска
-  const latest = useRef({ category, kind, ends, width, height, style })
+  const latest = useRef({ category, kind, ends, width, height, style, alert, idle })
   useEffect(() => {
-    latest.current = { category, kind, ends, width, height, style }
+    latest.current = { category, kind, ends, width, height, style, alert, idle }
   })
 
   useEffect(() => {
@@ -72,15 +87,10 @@ export function FlightCanvas({
       ctx.clearRect(0, 0, canvas.width, canvas.height)
     }
 
-    if (!shot) {
-      clear()
-      return
-    }
-
     function tick() {
-      if (!canvas || !ctx || !shot) return
-      const { category, kind, ends, width, height, style } = latest.current
-      const elapsed = (Date.now() - shot.firedAt) / 1000
+      if (!canvas || !ctx) return
+      const { category, kind, ends, width, height, style, alert, idle } = latest.current
+      const now = Date.now()
       const cssW = width ?? canvas.clientWidth
       const cssH = height
       const dpr = window.devicePixelRatio || 1
@@ -95,66 +105,88 @@ export function FlightCanvas({
       if (ends) {
         geometry = ends()
       } else {
-        // Боковой вид: земля, орудие слева, цель справа
-        const ground = cssH - 10
+        // Линия таймера: дорожка у нижнего края, дуга снаряда над ней
+        const ground = cssH - 8
         geometry = {
-          ax: 14,
+          ax: 8,
           ay: ground,
-          bx: cssW - 18,
+          bx: cssW - 10,
           by: ground,
-          arc: cssH * 0.7,
+          arc: cssH * 0.55,
           scale: 1,
         }
-        // Тонкая линия земли, орудие — точка, цель — кольцо
-        ctx.strokeStyle = 'rgba(160,166,173,0.25)'
-        ctx.lineWidth = 1
+        ctx.lineCap = 'round'
+        ctx.strokeStyle = TRACK
+        ctx.lineWidth = 3
         ctx.beginPath()
-        ctx.moveTo(8, ground + 5)
-        ctx.lineTo(cssW - 8, ground + 5)
+        ctx.moveTo(geometry.ax, ground)
+        ctx.lineTo(geometry.bx, ground)
         ctx.stroke()
-        ctx.fillStyle = 'rgba(67,147,228,0.9)'
+
+        // Прогресс — по самому дальнему снаряду
+        const lead = shots.reduce(
+          (best, s) => Math.max(best, Math.min(1, (now - s.firedAt) / 1000 / s.tof)),
+          0
+        )
+        if (lead > 0) {
+          ctx.strokeStyle = alert ? TARGET : ACCENT
+          ctx.lineWidth = 3
+          ctx.beginPath()
+          ctx.moveTo(geometry.ax, ground)
+          ctx.lineTo(geometry.ax + (geometry.bx - geometry.ax) * lead, ground)
+          ctx.stroke()
+        }
+        // Орудие — точка, цель — кольцо, как на карте
+        ctx.fillStyle = GUN
         ctx.beginPath()
-        ctx.arc(geometry.ax, ground + 5, 2.5, 0, Math.PI * 2)
+        ctx.arc(geometry.ax, ground, 3.5, 0, Math.PI * 2)
         ctx.fill()
-        ctx.strokeStyle = 'rgba(228,116,116,0.9)'
-        ctx.lineWidth = 1.2
+        ctx.strokeStyle = TARGET
+        ctx.lineWidth = 1.6
         ctx.beginPath()
-        ctx.arc(geometry.bx, ground + 5, 3.5, 0, Math.PI * 2)
+        ctx.arc(geometry.bx, ground, 4.5, 0, Math.PI * 2)
         ctx.stroke()
       }
 
-      if (geometry) {
-        drawFlight(ctx, {
-          category,
-          kind,
-          ax: geometry.ax,
-          ay: geometry.ay,
-          bx: geometry.bx,
-          by: geometry.by,
-          elapsed,
-          tof: shot.tof,
-          arc: geometry.arc,
-          scale: geometry.scale,
-          style: style === 'detailed' ? 'detailed' : 'minimal',
-        })
+      let alive = false
+      for (const shot of shots) {
+        const elapsed = (now - shot.firedAt) / 1000
+        if (elapsed < shot.tof + IMPACT_FX_SECONDS) alive = true
+        // Анимация выключена: на линии таймера остаётся только прогресс
+        if (geometry && !(style === 'off' && !ends)) {
+          drawFlight(ctx, {
+            category,
+            kind,
+            ax: geometry.ax,
+            ay: geometry.ay,
+            bx: geometry.bx,
+            by: geometry.by,
+            elapsed,
+            tof: shot.tof,
+            arc: geometry.arc,
+            scale: geometry.scale,
+            style: style === 'detailed' ? 'detailed' : 'minimal',
+          })
+        }
       }
 
-      if (elapsed < shot.tof + IMPACT_FX_SECONDS) {
-        frame = requestAnimationFrame(tick)
-      } else {
-        clear()
-      }
+      if (alive || idle) frame = requestAnimationFrame(tick)
+      else clear()
     }
 
+    if (shots.length === 0 && !latest.current.idle) {
+      clear()
+      return
+    }
     frame = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frame)
       clear()
     }
-  }, [shot])
+  }, [shots])
 
-  // Анимация выключена в настройках: холст не показываем
-  if (style === 'off') return null
+  // На карте при выключенной анимации холст не нужен; линия таймера нужна всегда
+  if (style === 'off' && ends) return null
 
   return (
     <canvas

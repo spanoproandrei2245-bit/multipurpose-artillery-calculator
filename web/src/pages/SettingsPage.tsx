@@ -9,7 +9,7 @@ import { FeaturePreview } from '../components/FeaturePreview'
 import { SectionHeading, Switch, Toggle } from '../components/FormControls'
 import { setFlightOnMap, setFlightStyle, useFlightOnMap, useFlightStyle } from '../lib/animation'
 import { setFeature, useFeature } from '../lib/features'
-import { setMotion, useMotion } from '../lib/motion'
+import { setMotion, useMotion, type MotionKind } from '../lib/motion'
 
 interface SettingsPageProps {
   gridInput: boolean
@@ -67,8 +67,12 @@ export function SettingsPage({
   const table = useFeature('table')
   const hints = useFeature('hints')
   const hideUnfit = useFeature('hideUnfit')
+  const volley = useFeature('volley')
   const flightStyle = useFlightStyle()
-  const motion = useMotion()
+  const motionNumbers = useMotion('numbers')
+  const motionSwitches = useMotion('switches')
+  const motionAppear = useMotion('appear')
+  const motionSmooth = useMotion('smooth')
   const flightOnMap = useFlightOnMap()
 
   return (
@@ -114,12 +118,23 @@ export function SettingsPage({
             }
           >
             <div className="mt-4 space-y-4">
-              <Switch
-                checked={motion}
-                onChange={setMotion}
-                label={t('settingsPage.ui-motion')}
-                description={t('settingsPage.ui-motion-description')}
-              />
+              {(
+                [
+                  ['numbers', motionNumbers, 'settingsPage.motion-numbers', 'settingsPage.motion-numbers-description'],
+                  ['switches', motionSwitches, 'settingsPage.motion-switches', 'settingsPage.motion-switches-description'],
+                  ['appear', motionAppear, 'settingsPage.motion-appear', 'settingsPage.motion-appear-description'],
+                  ['smooth', motionSmooth, 'settingsPage.motion-smooth', 'settingsPage.motion-smooth-description'],
+                ] as [MotionKind, boolean, MessageKey, MessageKey][]
+              ).map(([kind, on, label, description]) => (
+                <Switch
+                  key={kind}
+                  checked={on}
+                  onChange={(value) => setMotion(kind, value)}
+                  label={t(label)}
+                  description={t(description)}
+                />
+              ))}
+              <p className="text-[12.5px] text-app-faint">{t('settingsPage.motion-always')}</p>
               <p className="label text-app-faint">{t('settingsPage.shot-animation')}</p>
               <Toggle
                 label={t('settingsPage.animation-style')}
@@ -233,6 +248,12 @@ export function SettingsPage({
                 }
               />
               </FeaturePreview>
+              <Switch
+                checked={volley}
+                onChange={(v) => setFeature('volley', v)}
+                label={t('settingsPage.volley')}
+                description={t('settingsPage.volley-description')}
+              />
               <Switch
                 checked={hideUnfit}
                 onChange={(v) => setFeature('hideUnfit', v)}

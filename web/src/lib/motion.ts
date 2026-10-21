@@ -1,14 +1,28 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Анимации интерфейса: плавные переходы, появление окон, скользящие
- * переключатели, «прокрутка» чисел, круг при смене темы, переезд обучения.
- * По умолчанию включены, если в системе не выбрано «уменьшить движение».
- * Выключение гасит все CSS-анимации разом (data-motion="off" на <html>).
+ * Анимации интерфейса по видам, каждый включается отдельно в настройках:
+ *   numbers  — «прокрутка» чисел расчёта и их короткая вспышка;
+ *   switches — скользящая «таблетка» у переключателей;
+ *   appear   — появление окон, плашек и карточек;
+ *   smooth   — плавные переходы: наведение, смена выбора, раскрытие.
+ * Переезд обучения и круг при смене темы встроены и всегда включены.
+ * По умолчанию всё включено, если в системе не выбрано «уменьшить движение».
+ * Выбор отмечается на <html> (data-m-<вид>), по нему CSS гасит анимации.
  */
-const KEY = 'uiMotion'
+export type MotionKind = 'numbers' | 'switches' | 'appear' | 'smooth'
+
+export const MOTION_KINDS: readonly MotionKind[] = [
+  'numbers',
+  'switches',
+  'appear',
+  'smooth',
+]
+
 const listeners = new Set<() => void>()
-let memory: boolean | undefined
+const memory: Partial<Record<MotionKind, boolean>> = {}
+
+const storageKey = (kind: MotionKind) => `motion:${kind}`
 
 function systemReduced(): boolean {
   return (
@@ -18,9 +32,9 @@ function systemReduced(): boolean {
   )
 }
 
-function read(): boolean {
+function read(kind: MotionKind): boolean {
   try {
-    const value = localStorage.getItem(KEY)
+    const value = localStorage.getItem(storageKey(kind))
     if (value === 'on') return true
     if (value === 'off') return false
   } catch {
@@ -29,20 +43,25 @@ function read(): boolean {
   return !systemReduced()
 }
 
-export function getMotion(): boolean {
-  return memory ?? read()
+export function getMotion(kind: MotionKind): boolean {
+  return memory[kind] ?? read(kind)
 }
 
 /** Отметить выбор на <html>: CSS по нему отключает анимации. */
 export function applyMotion() {
   if (typeof document === 'undefined') return
-  document.documentElement.dataset.motion = getMotion() ? 'on' : 'off'
+  for (const kind of MOTION_KINDS) {
+    document.documentElement.setAttribute(
+      `data-m-${kind}`,
+      getMotion(kind) ? 'on' : 'off'
+    )
+  }
 }
 
-export function setMotion(value: boolean) {
-  memory = value
+export function setMotion(kind: MotionKind, value: boolean) {
+  memory[kind] = value
   try {
-    localStorage.setItem(KEY, value ? 'on' : 'off')
+    localStorage.setItem(storageKey(kind), value ? 'on' : 'off')
   } catch {
     // Настройка живёт до перезагрузки.
   }
@@ -50,13 +69,13 @@ export function setMotion(value: boolean) {
   listeners.forEach((listener) => listener())
 }
 
-export function useMotion(): boolean {
+export function useMotion(kind: MotionKind): boolean {
   return useSyncExternalStore(
     (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    getMotion,
+    () => getMotion(kind),
     () => true
   )
 }

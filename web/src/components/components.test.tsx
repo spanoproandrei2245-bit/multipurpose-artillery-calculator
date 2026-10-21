@@ -245,11 +245,43 @@ describe('ChargeStrip', () => {
 describe('FlightTrack', () => {
   it('в покое — короткая полоска без прогресса, в полёте — раскрывается', async () => {
     const { FlightTrack } = await import('./FlightTrack')
-    const { container, rerender } = render(<FlightTrack shot={null} />)
+    const { container, rerender } = render(<FlightTrack shots={[]} />)
     const bar = container.firstElementChild as HTMLElement
     expect(bar.style.width).toBe('1.25rem')
-    rerender(<FlightTrack shot={{ firedAt: Date.now(), tof: 30 }} />)
+    rerender(<FlightTrack shots={[{ firedAt: Date.now(), tof: 30 }]} />)
     await waitFor(() => expect(bar.style.width).not.toBe('1.25rem'))
     expect(bar.querySelectorAll('span').length).toBeGreaterThan(1)
+  })
+})
+
+describe('FireTimer: залп', () => {
+  it('«+ снаряд» появляется только при включённой опции и только в полёте', async () => {
+    const { FireTimer } = await import('./FireTimer')
+    const { setFeature } = await import('../lib/features')
+    const { setLanguage } = await import('../i18n')
+    setLanguage('ru')
+    setFeature('volley', false)
+    const view = render(<FireTimer tof={20} variant="bar" />)
+    fireEvent.click(screen.getByRole('button', { name: /Огонь/ }))
+    expect(screen.queryByRole('button', { name: /снаряд/ })).toBeNull()
+    view.unmount()
+
+    act(() => setFeature('volley', true))
+    const onShots = vi.fn()
+    render(<FireTimer tof={20} variant="bar" onShotChange={onShots} />)
+    // до выстрела кнопки нет
+    expect(screen.queryByRole('button', { name: /снаряд/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Огонь/ }))
+    const add = await screen.findByRole('button', { name: /снаряд/ })
+    fireEvent.click(add)
+    await waitFor(() => expect(onShots.mock.calls.at(-1)?.[0]).toHaveLength(2))
+    expect(screen.getByText(/×2/)).toBeTruthy()
+    // «Огонь ещё» начинает заново — один снаряд
+    fireEvent.click(screen.getByRole('button', { name: /Огонь ещё/ }))
+    await waitFor(() => expect(onShots.mock.calls.at(-1)?.[0]).toHaveLength(1))
+    // «Стоп» снимает все
+    fireEvent.click(screen.getByRole('button', { name: /Стоп/ }))
+    await waitFor(() => expect(onShots.mock.calls.at(-1)?.[0]).toHaveLength(0))
+    setFeature('volley', false)
   })
 })

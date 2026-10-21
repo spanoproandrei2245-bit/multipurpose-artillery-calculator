@@ -216,7 +216,7 @@ export function Tour() {
   if (offer && !open) {
     return (
       <div
-        className="tour-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+        className="tour-fade-always fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
         role="dialog"
         aria-modal="true"
       >
@@ -279,11 +279,11 @@ export function Tour() {
   }
 
   const move =
-    'transition-[top,left,width,height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none'
+    'keep-motion transition-[top,left,width,height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]'
 
   return (
     <div
-      className="tour-fade fixed inset-0 z-50"
+      className="tour-fade-always fixed inset-0 z-50"
       role="dialog"
       aria-modal="true"
       aria-label={t('footer.tutorial')}
@@ -305,7 +305,7 @@ export function Tour() {
         style={{ width: cardW, top: cardTop, left: cardLeft }}
       >
         {/* Текст меняется с коротким появлением, карточка при этом переезжает */}
-        <div key={`${advancedOpen ? 'a' : 'b'}:${step.title}`} className="tour-fade">
+        <div key={`${advancedOpen ? 'a' : 'b'}:${step.title}`} className="tour-fade-always">
           <p className="label mb-1">
             {advancedOpen ? (t('tour.advanced')) : ''}
             {index + 1} / {available.length}

@@ -528,11 +528,24 @@ html.overlay body {
   }
 }
 
-/* Анимации интерфейса выключены в настройках */
-:root[data-motion="off"] *,
-:root[data-motion="off"] *::before,
-:root[data-motion="off"] *::after {
+/*
+ * Анимации по видам (настройки → Анимации). Переезд обучения и круг при смене
+ * темы встроены и всегда включены: у них класс keep-motion / tour-fade-always.
+ */
+:root[data-m-numbers="off"] .num-pop {
   animation: none !important;
+}
+:root[data-m-switches="off"] .seg-pill {
   transition: none !important;
-  scroll-behavior: auto !important;
+}
+:root[data-m-appear="off"] .tour-fade {
+  animation: none !important;
+}
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill),
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill)::before,
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill)::after {
+  transition: none !important;
+}
+.tour-fade-always {
+  animation: tour-fade 0.35s ease-out;
 }

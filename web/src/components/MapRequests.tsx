@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { deviceId } from '../lib/markers'
 import {
   openRequests,
+  type RequestKind,
   parseWorkshopLink,
   type MapRequest,
   type RequestsSession,
@@ -18,7 +19,15 @@ import { FieldIcon } from './FieldIcon'
  * ниже — все запрошенные карты с голосами, за которые может проголосовать
  * любой. Данные живут на публичных MQTT-брокерах (lib/mapRequests).
  */
-export function MapRequests({ onClose }: { onClose: () => void }) {
+export function MapRequests({
+  onClose,
+  kind = 'map',
+}: {
+  onClose: () => void
+  // Что предлагают: карту (по умолчанию) или орудие
+  kind?: RequestKind
+}) {
+  const weapon = kind === 'weapon'
   const [link, setLink] = useState('')
   const [name, setName] = useState('')
   const [requests, setRequests] = useState<MapRequest[]>([])
@@ -32,7 +41,8 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
       SYNC_SERVERS.map((server) => server.url),
       deviceId,
       (list) => !cancelled && setRequests(list),
-      (next) => !cancelled && setStatus(next)
+      (next) => !cancelled && setStatus(next),
+      kind
     )
       .then((s) => {
         if (cancelled) s.close()
@@ -47,7 +57,7 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
       opened?.close()
       session.current = null
     }
-  }, [])
+  }, [kind])
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -67,7 +77,7 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t('requests.title')}
+      aria-label={weapon ? t('requests.weapon-title') : t('requests.title')}
       className="tour-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
@@ -76,7 +86,9 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-app-text">{t('requests.title')}</h2>
+          <h2 className="text-lg font-semibold text-app-text">
+            {weapon ? t('requests.weapon-title') : t('requests.title')}
+          </h2>
           <button
             type="button"
             className="btn btn-ghost px-2"
@@ -87,7 +99,9 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-2 text-[13.5px] text-app-muted">{t('requests.intro')}</p>
+        <p className="mt-2 text-[13.5px] text-app-muted">
+          {weapon ? t('requests.weapon-intro') : t('requests.intro')}
+        </p>
 
         <input
           value={link}
@@ -100,7 +114,7 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
           value={name}
           maxLength={60}
           onChange={(event) => setName(event.target.value)}
-          placeholder={t('requests.name-placeholder')}
+          placeholder={weapon ? t('requests.weapon-name-placeholder') : t('requests.name-placeholder')}
           className="field mt-2"
         />
 
@@ -112,7 +126,7 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
           {existing ? (
             <>
               <span className="text-[13.5px] text-app-text-2">
-                {t('requests.already', existing.votes)}
+                {weapon ? t('requests.weapon-already', existing.votes) : t('requests.already', existing.votes)}
               </span>
               <button
                 type="button"
@@ -153,7 +167,9 @@ export function MapRequests({ onClose }: { onClose: () => void }) {
           </span>
         </div>
 
-        <h3 className="mt-5 font-semibold text-app-text">{t('requests.list-title')}</h3>
+        <h3 className="mt-5 font-semibold text-app-text">
+          {weapon ? t('requests.weapon-list-title') : t('requests.list-title')}
+        </h3>
         {requests.length === 0 ? (
           <p className="mt-2 text-[13.5px] text-app-muted">
             {status === 'ready' ? t('requests.empty') : t('requests.loading')}

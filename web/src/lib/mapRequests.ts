@@ -15,6 +15,13 @@
  */
 
 export const TOPIC_ROOT = 'artcalc-maps/v1/req'
+
+/** Что предлагают: карту или орудие — у каждого свой раздел тем на брокере. */
+export type RequestKind = 'map' | 'weapon'
+export const REQUEST_ROOTS: Record<RequestKind, string> = {
+  map: TOPIC_ROOT,
+  weapon: 'artcalc-weapons/v1/req',
+}
 export const MAX_NAME = 60
 
 export interface WorkshopLink {
@@ -45,12 +52,16 @@ export function parseWorkshopLink(input: string): WorkshopLink | null {
   return null
 }
 
-export function infoTopic(workshopId: string): string {
-  return `${TOPIC_ROOT}/${workshopId}/info`
+export function infoTopic(workshopId: string, root = TOPIC_ROOT): string {
+  return `${root}/${workshopId}/info`
 }
 
-export function voteTopic(workshopId: string, device: string): string {
-  return `${TOPIC_ROOT}/${workshopId}/v/${device}`
+export function voteTopic(
+  workshopId: string,
+  device: string,
+  root = TOPIC_ROOT
+): string {
+  return `${root}/${workshopId}/v/${device}`
 }
 
 export type ParsedTopic =
@@ -58,9 +69,9 @@ export type ParsedTopic =
   | { kind: 'vote'; workshopId: string; device: string }
 
 /** Разбор темы сообщения; null — не наша или с подозрительным содержимым. */
-export function parseTopic(topic: string): ParsedTopic | null {
-  if (!topic.startsWith(`${TOPIC_ROOT}/`)) return null
-  const rest = topic.slice(TOPIC_ROOT.length + 1).split('/')
+export function parseTopic(topic: string, root = TOPIC_ROOT): ParsedTopic | null {
+  if (!topic.startsWith(`${root}/`)) return null
+  const rest = topic.slice(root.length + 1).split('/')
   if (!/^\d{6,12}$/.test(rest[0] ?? '')) return null
   if (rest.length === 2 && rest[1] === 'info') {
     return { kind: 'info', workshopId: rest[0] }
@@ -81,12 +92,18 @@ export interface MapRequest {
 
 /** Сводка по сообщениям брокеров: заявки и голоса (одно устройство — один голос). */
 export class Tally {
+  private root: string
+
+  constructor(root = TOPIC_ROOT) {
+    this.root = root
+  }
+
   private info = new Map<string, string>()
   private votes = new Map<string, Set<string>>()
 
   /** Сообщение брокера; пустое тело у retained-темы — отзыв (голоса или заявки). */
   apply(topic: string, payload: string) {
-    const parsed = parseTopic(topic)
+    const parsed = parseTopic(topic, this.root)
     if (!parsed) return
     if (parsed.kind === 'info') {
       if (payload === '') {
@@ -143,13 +160,15 @@ export async function openRequests(
   servers: readonly string[],
   device: string,
   onUpdate: (requests: MapRequest[]) => void,
-  onStatus: (status: RequestsStatus) => void
+  onStatus: (status: RequestsStatus) => void,
+  kind: RequestKind = 'map'
 ): Promise<RequestsSession> {
+  const root = REQUEST_ROOTS[kind]
   const mqtt = await import('mqtt')
   // Сборка mqtt — CommonJS: в разработке Vite отдаёт её только как default
   const connect = mqtt.connect ?? mqtt.default.connect
 
-  const tally = new Tally()
+  const tally = new Tally(root)
   const clients: ReturnType<typeof connect>[] = []
   let online = 0
   let closed = false
@@ -166,7 +185,7 @@ export async function openRequests(
 
   for (const [index, url] of servers.entries()) {
     const client = connect(url, {
-      clientId: `artcalc_req_${device}_${index}`,
+      clientId: `artcalc_${kind}_${device}_${index}`,
       reconnectPeriod: 4000,
       connectTimeout: 8000,
       clean: true,
@@ -174,7 +193,7 @@ export async function openRequests(
     clients.push(client)
     client.on('connect', () => {
       online += 1
-      client.subscribe(`${TOPIC_ROOT}/#`, { qos: 1 })
+      client.subscribe(`${root}/#`, { qos: 1 })
       // Брокер присылает накопленное пачкой — показываем, когда пачка улеглась
       clearTimeout(settle)
       settle = setTimeout(() => {
@@ -205,14 +224,14 @@ export async function openRequests(
 
   return {
     vote(workshopId, on) {
-      publishAll(voteTopic(workshopId, device), on ? '1' : '')
+      publishAll(voteTopic(workshopId, device, root), on ? '1' : '')
     },
     suggest(link, name) {
       publishAll(
-        infoTopic(link.id),
+        infoTopic(link.id, root),
         JSON.stringify({ name: name.trim().slice(0, MAX_NAME) })
       )
-      publishAll(voteTopic(link.id, device), '1')
+      publishAll(voteTopic(link.id, device, root), '1')
     },
     close() {
       closed = true

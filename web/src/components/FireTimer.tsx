@@ -1,13 +1,13 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 
 import { t } from '../i18n'
+import { useFeature } from '../lib/features'
 import { playSound } from '../lib/sound'
 import { shellKind } from '../lib/shellKind'
 import { useTimerSound } from '../lib/timerSound'
 import type { ArtilleryCategory } from '../types/gameModel'
 import { FieldIcon } from './FieldIcon'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
-import { ProgressBar } from './FormControls'
 
 /** Управление таймером снаружи (горячие клавиши). */
 export interface FireTimerHandle {
@@ -26,10 +26,10 @@ interface Props {
   // Класс орудия и тип снаряда — от них зависит анимация полёта
   category?: ArtilleryCategory
   shellType?: string
-  // Полёт начался (shot) или закончился / остановлен (null)
-  onShotChange?: (shot: FlightShot | null) => void
-  // bar — кнопка «Огонь» вверху страницы: полоса состояния появляется только в полёте;
-  // full — боевой экран: полоса состояния видна всегда
+  // Снаряды в полёте изменились (старт, залп, разрыв, стоп)
+  onShotChange?: (shots: FlightShot[]) => void
+  // bar — кнопка «Огонь» вверху страницы: линия полёта появляется только в полёте;
+  // full — боевой экран: линия видна всегда
   variant?: 'bar' | 'full'
   // Нет решения — стрелять нечем
   disabled?: boolean
@@ -43,14 +43,15 @@ const SPLASH_WARNING_S = 5
 // Сколько показывать «Разрыв» после падения
 const IMPACT_HOLD_MS = 4000
 
-interface Shot {
-  firedAt: number
-  tof: number
+interface Shot extends FlightShot {
+  id: number
 }
 
 /**
- * Таймер «Огонь → разрыв»: отсчёт по времени полёта,
- * сигнал за 5 с до разрыва и в момент разрыва.
+ * Таймер «Огонь → разрыв»: отсчёт по времени полёта, сигнал за 5 с до
+ * разрыва и в момент разрыва. Линия таймера — она же анимация полёта.
+ * Если включён «залп», в полёте появляется кнопка «+ снаряд»: ещё один
+ * снаряд летит рядом с предыдущими, видно, когда упадёт каждый.
  */
 export function FireTimer({
   tof,
@@ -63,75 +64,85 @@ export function FireTimer({
   disabled = false,
   onCombat,
 }: Props) {
-  const [shot, setShot] = useState<Shot | null>(null)
+  const [shots, setShots] = useState<Shot[]>([])
   const [now, setNow] = useState(() => Date.now())
   const sound = useTimerSound()
+  const volley = useFeature('volley')
+  const nextId = useRef(1)
+  // Какие сигналы у какого снаряда уже прозвучали
+  const signaled = useRef(new Map<number, { splash: boolean; impact: boolean }>())
 
   const shotChangeRef = useRef(onShotChange)
   useEffect(() => {
     shotChangeRef.current = onShotChange
   })
   useEffect(() => {
-    shotChangeRef.current?.(shot)
-  }, [shot])
-
-  const splashSignaled = useRef(false)
-  const impactSignaled = useRef(false)
+    shotChangeRef.current?.(shots)
+  }, [shots])
 
   // Тикаем, пока снаряд в полёте и немного после разрыва.
+  const active = shots.length > 0
   useEffect(() => {
-    if (!shot) return
+    if (!active) return
 
     const interval = window.setInterval(() => {
       const current = Date.now()
-      const left = shot.tof - (current - shot.firedAt) / 1000
-
-      if (!splashSignaled.current && left <= SPLASH_WARNING_S) {
-        splashSignaled.current = true
-        if (sound && shot.tof > SPLASH_WARNING_S) playSound('splash')
+      let changed = false
+      const kept: Shot[] = []
+      for (const shot of shots) {
+        const left = shot.tof - (current - shot.firedAt) / 1000
+        const flags = signaled.current.get(shot.id) ?? { splash: false, impact: false }
+        if (!flags.splash && left <= SPLASH_WARNING_S) {
+          flags.splash = true
+          if (sound && shot.tof > SPLASH_WARNING_S) playSound('splash')
+        }
+        if (!flags.impact && left <= 0) {
+          flags.impact = true
+          if (sound) playSound('impact')
+        }
+        signaled.current.set(shot.id, flags)
+        if (left * 1000 < -IMPACT_HOLD_MS) {
+          changed = true
+          signaled.current.delete(shot.id)
+        } else {
+          kept.push(shot)
+        }
       }
-      if (!impactSignaled.current && left <= 0) {
-        impactSignaled.current = true
-        if (sound) playSound('impact')
-      }
-      if (left * 1000 < -IMPACT_HOLD_MS) {
-        setShot(null)
-        return
-      }
+      if (changed) setShots(kept)
       setNow(current)
     }, 100)
 
     return () => window.clearInterval(interval)
-  }, [shot, sound])
+  }, [active, shots, sound])
 
   useImperativeHandle(ref, () => ({
     fire,
-    remoteFire: start,
-    stop: () => setShot(null),
+    remoteFire: () => start(false),
+    stop: () => setShots([]),
   }))
 
   function fire() {
     if (disabled) return
-    start()
+    start(false)
     onFire?.()
   }
 
-  function start() {
-    splashSignaled.current = false
-    impactSignaled.current = false
+  // append — добавить к летящим (залп), иначе начать заново
+  function start(append: boolean) {
     const firedAt = Date.now()
+    const shot: Shot = { id: nextId.current++, firedAt, tof }
+    signaled.current = append ? signaled.current : new Map()
     setNow(firedAt)
-    setShot({ firedAt, tof })
+    setShots((list) => (append ? [...list, shot] : [shot]))
     // Короткий щелчок подтверждает нажатие и разблокирует звук
     // в браузере (AudioContext запускается только после жеста).
     if (sound) playSound('fire')
   }
 
-  const left = shot ? shot.tof - (now - shot.firedAt) / 1000 : null
-  const progress =
-    shot && left !== null
-      ? Math.min(1, Math.max(0, 1 - left / shot.tof))
-      : 0
+  // Ближайший разрыв (или последний, если все уже упали)
+  const lefts = shots.map((s) => s.tof - (now - s.firedAt) / 1000)
+  const pending = lefts.filter((l) => l > 0)
+  const left = shots.length === 0 ? null : pending.length > 0 ? Math.min(...pending) : Math.max(...lefts)
 
   const phase =
     left === null
@@ -151,7 +162,7 @@ export function FireTimer({
   }[phase]
 
   const bar = variant === 'bar'
-  const showStatus = !bar || shot !== null
+  const showStatus = !bar || active
 
   return (
     <div className={bar ? '' : 'mt-4 rounded-lg bg-app-surface p-3'}>
@@ -164,16 +175,28 @@ export function FireTimer({
           className="btn btn-primary btn-lg flex-1"
         >
           <FieldIcon name="fire" className="h-5 w-5" />
-          {shot ? t('fireTimer.fire-again') : t('fireTimer.fire')}
+          {active ? t('fireTimer.fire-again') : t('fireTimer.fire')}
           <span className="hidden rounded bg-white/20 px-1.5 text-[12px] font-medium sm:inline">
             F
           </span>
         </button>
 
-        {shot && (
+        {volley && active && (
           <button
             type="button"
-            onClick={() => setShot(null)}
+            onClick={() => start(true)}
+            title={t('fireTimer.add-shell-title')}
+            className="btn min-h-12"
+          >
+            <FieldIcon name="plus" className="h-4 w-4" />
+            {t('fireTimer.add-shell')}
+          </button>
+        )}
+
+        {active && (
+          <button
+            type="button"
+            onClick={() => setShots([])}
             className="btn min-h-12"
           >
             <FieldIcon name="stop" className="h-4 w-4" />
@@ -195,20 +218,12 @@ export function FireTimer({
         )}
       </div>
 
-      {shot && (
-        <FlightCanvas
-          shot={shot}
-          category={category}
-          kind={shellKind(shellType)}
-          className="mt-2 block"
-        />
-      )}
-
       {showStatus && (
         <div className="mt-3" aria-live="polite">
           <div className="flex items-baseline justify-between gap-3">
             <span className={['label', alert ? 'text-danger' : ''].join(' ')}>
               {phaseLabel}
+              {shots.length > 1 && ` · ×${shots.length}`}
               {phase === 'idle' &&
                 ` · ${t('fireTimer.beep-at')} ${SPLASH_WARNING_S} ${t('unit.s')}`}
             </span>
@@ -228,7 +243,15 @@ export function FireTimer({
               </span>
             </span>
           </div>
-          <ProgressBar progress={progress} alert={alert} className="mt-2" />
+          {/* Линия таймера: по ней летит снаряд, она же показывает прогресс */}
+          <FlightCanvas
+            shots={shots}
+            category={category}
+            kind={shellKind(shellType)}
+            alert={alert}
+            idle={!bar}
+            className="mt-1 block"
+          />
         </div>
       )}
     </div>

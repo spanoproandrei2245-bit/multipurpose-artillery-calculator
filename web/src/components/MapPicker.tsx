@@ -99,7 +99,7 @@ interface Props {
   // Радиус досягаемости орудия, м: показывается кольцами вокруг орудия
   reach?: { min: number; max: number } | null
   // Снаряд в полёте: анимация от орудия к цели
-  flight?: FlightShot | null
+  flight?: readonly FlightShot[]
   category?: ArtilleryCategory
   shellType?: string
   // Орудие закреплено на карте (true) или освобождено (false); высота —
@@ -218,7 +218,7 @@ export function MapPicker({
   quickTargets = [],
   targetActions,
   reach = null,
-  flight = null,
+  flight = [],
   category = 'mortar',
   shellType = 'HE',
   onGunLockChange,
@@ -1043,9 +1043,9 @@ export function MapPicker({
             className="block cursor-crosshair touch-none rounded-lg"
           />
 
-          {flight && flightOnMap && gun && target && (
+          {flight.length > 0 && flightOnMap && gun && target && (
             <FlightCanvas
-              shot={flight}
+              shots={flight}
               category={category}
               kind={shellKind(shellType)}
               ends={flightEnds}
@@ -1279,7 +1279,7 @@ export function MapPicker({
                   : t('mapPicker.no-gun')}
               </span>
             </span>
-            <FlightTrack shot={flight} />
+            <FlightTrack shots={flight} />
             <span className="flex items-center gap-2">
               <span>
                 {target

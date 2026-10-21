@@ -225,3 +225,32 @@ describe('openRequests', () => {
     vi.useRealTimers()
   })
 })
+
+describe('орудия: свой раздел тем', () => {
+  it('заявки на орудия и на карты не смешиваются', async () => {
+    const { REQUEST_ROOTS } = await import('./mapRequests')
+    expect(REQUEST_ROOTS.weapon).not.toBe(REQUEST_ROOTS.map)
+    const weapons = new Tally(REQUEST_ROOTS.weapon)
+    weapons.apply(infoTopic('111111111', REQUEST_ROOTS.weapon), JSON.stringify({ name: 'Sholef' }))
+    weapons.apply(voteTopic('111111111', DEVICE_A, REQUEST_ROOTS.weapon), '1')
+    // тема карты в сводке орудий не учитывается
+    weapons.apply(infoTopic('222222222'), JSON.stringify({ name: 'Malden' }))
+    expect(weapons.snapshot(DEVICE_A).map((r) => [r.name, r.votes])).toEqual([['Sholef', 1]])
+    expect(parseTopic(infoTopic('111111111', REQUEST_ROOTS.weapon))).toBeNull()
+  })
+
+  it('сессия для орудий подписывается на свой раздел', async () => {
+    vi.useFakeTimers()
+    clients.length = 0
+    const session = await openRequests(['wss://a'], DEVICE_A, () => {}, () => {}, 'weapon')
+    clients[0].connected = true
+    clients[0].emit('connect')
+    expect(clients[0].subscribed).toEqual(['artcalc-weapons/v1/req/#'])
+    session.suggest({ id: '333333333', url: 'x' }, 'M777')
+    expect(clients[0].published.map((p) => p.topic)).toContain(
+      'artcalc-weapons/v1/req/333333333/info'
+    )
+    session.close()
+    vi.useRealTimers()
+  })
+})

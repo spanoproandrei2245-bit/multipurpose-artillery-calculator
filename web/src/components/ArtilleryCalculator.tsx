@@ -78,7 +78,7 @@ import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
-import { WeatherSection } from './WeatherSection'
+import { WeatherRows } from './WeatherRows'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
 
@@ -351,7 +351,7 @@ export function ArtilleryCalculator({
   // ---- горячие клавиши ----
   const timerRef = useRef<FireTimerHandle>(null)
   // Снаряд в полёте — для анимации на карте
-  const [flight, setFlight] = useState<FlightShot | null>(null)
+  const [flight, setFlight] = useState<FlightShot[]>([])
   const [combatOpen, setCombatOpen] = useState(false)
 
   function focusField(id: string) {
@@ -907,7 +907,7 @@ export function ArtilleryCalculator({
               {/* Автовыбор: какой заряд брать, пока не выбран вручную */}
               <Toggle
                 label={t('artilleryCalculator.which-charge-to-use')}
-                className="min-w-0 flex-1 [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
+                className="min-w-0 flex-1 [&>button]:flex-auto [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
                 value={chosenCharge !== null ? 'manual' : chargePreference}
                 onChange={(value) => {
                   if (value === 'manual') return
@@ -915,30 +915,30 @@ export function ArtilleryCalculator({
                   setChosenCharge(null)
                   markEdited()
                 }}
-                iconOnly
                 options={[
-                  { value: 'best', icon: 'auto', label: t('artilleryCalculator.priority-best'), disabled: applicable.length === 0 },
-                  { value: 'fastest', icon: 'fire', label: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
-                  { value: 'precise', icon: 'correction', label: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
+                  { value: 'best', icon: 'balance', label: t('artilleryCalculator.best'), title: t('artilleryCalculator.priority-best'), disabled: applicable.length === 0 },
+                  { value: 'fastest', icon: 'fire', label: t('artilleryCalculator.fast'), title: t('artilleryCalculator.priority-fastest'), disabled: applicable.length === 0 },
+                  { value: 'precise', icon: 'correction', label: t('artilleryCalculator.precise-short'), title: t('artilleryCalculator.priority-precise'), disabled: applicable.length === 0 },
                 ]}
               />
             </Row>
             {profileModes.length > 1 && (
               <Row icon="trajectory" control="full" label={t('artilleryCalculator.trajectory')}>
                 <Toggle
-                  className="min-w-0 flex-1 overflow-hidden [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
+                  className="min-w-0 flex-1 overflow-hidden [&>button]:flex-auto [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
                   label={t('artilleryCalculator.trajectory-mode')}
                   value={modeChoice}
                   onChange={changeMode}
                   options={[
                     {
                       value: 'auto' as const,
-                      icon: 'auto' as const,
+                      icon: 'trajectoryAuto' as const,
                       label: t('artilleryCalculator.auto'),
                       title: t('artilleryCalculator.trajectory-auto'),
                     },
                     ...profileModes.map((item) => ({
                       value: item,
+                      icon: item === 'HIGH' ? ('trajectoryHigh' as const) : ('trajectoryLow' as const),
                       label:
                         item === 'HIGH'
                           ? t('artilleryCalculator.high')
@@ -1079,7 +1079,15 @@ export function ArtilleryCalculator({
                 block
               />
             </Row>
+            {showWeather && hasWeather && (
+              <WeatherRows inputs={weatherInputs} onEdit={markEdited} />
+            )}
           </dl>
+          {showWeather && !hasWeather && profile && (
+            <p className="mt-2 text-[13px] text-app-muted">
+              {t('artilleryCalculator.weather-corrections-are-unavailable-the')}
+            </p>
+          )}
 
           {showJournal && !mapInput && targetBar}
 
@@ -1257,20 +1265,6 @@ export function ArtilleryCalculator({
             gunAzimuthMil={azimuthMil}
             azimuthUnit={azimuthUnit}
           />
-          )}
-
-          {!showWeather ? null : hasWeather ? (
-            <WeatherSection
-              inputs={weatherInputs}
-              defaultOpen={(initial?.weather ?? null) !== null}
-              onEdit={markEdited}
-            />
-          ) : (
-            profile && (
-              <p className="panel px-4 py-3 text-[13.5px] text-app-muted">
-                {t('artilleryCalculator.weather-corrections-are-unavailable-the')}
-              </p>
-            )
           )}
 
           {solution && (showTot || totAt !== null) && (

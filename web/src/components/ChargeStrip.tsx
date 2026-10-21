@@ -87,7 +87,7 @@ export function ChargeStrip({
                       </b>
                       {usable && several && result.charge === best && (
                         <span title={t('chargeStrip.best-charge')} className="text-accent">
-                          <FieldIcon name="auto" className="h-3.5 w-3.5" />
+                          <FieldIcon name="balance" className="h-3.5 w-3.5" />
                         </span>
                       )}
                       {usable && several && result.charge === fastest && (

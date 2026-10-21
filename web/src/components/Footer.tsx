@@ -278,7 +278,7 @@ export function Footer({
           value=""
           buttonLabel={
             <span className="flex items-center gap-2">
-              <FieldIcon name="help" className="h-[18px] w-[18px]" />
+              <FieldIcon name="book" className="h-[18px] w-[18px]" />
               {t('footer.tutorial')}
             </span>
           }

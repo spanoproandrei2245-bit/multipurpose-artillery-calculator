@@ -59,7 +59,8 @@ function pathPoint(p: FlightParams, t: number) {
 
 
 const INK = '240,244,248'
-const WARM = '255,176,32'
+// Цвет цели на карте: разрыв минимального вида рисуется им
+const TARGET = '228,116,116'
 
 // Короткий след за снарягом: точки по пройденному пути с затуханием
 function drawTrail(ctx: CanvasRenderingContext2D, p: FlightParams, t: number, s: number) {
@@ -92,7 +93,7 @@ function drawProjectile(ctx: CanvasRenderingContext2D, p: FlightParams, t: numbe
     ctx.ellipse(now.gx, now.gy, 3 * s, 1.2 * s, 0, 0, Math.PI * 2)
     ctx.fill()
   }
-  ctx.fillStyle = p.category === 'mlrs' ? `rgb(${WARM})` : `rgb(${INK})`
+  ctx.fillStyle = `rgb(${INK})`
   ctx.beginPath()
   ctx.arc(now.x, now.y, (p.category === 'mortar' ? 2.6 : 2.1) * s, 0, Math.PI * 2)
   ctx.fill()
@@ -119,13 +120,13 @@ function drawHe(ctx: CanvasRenderingContext2D, p: FlightParams, e: number, s: nu
     // Вспышка в центре и два расходящихся кольца
     const flash = clamp01(1 - local / 0.2)
     if (flash > 0) {
-      ctx.fillStyle = `rgba(${WARM},${flash})`
+      ctx.fillStyle = `rgba(${TARGET},${flash})`
       ctx.beginPath()
       ctx.arc(cx, cy, 3.5 * s, 0, Math.PI * 2)
       ctx.fill()
     }
     const k1 = clamp01(local / 0.7)
-    ring(ctx, cx, cy, radius * (0.2 + k1 * 0.8), (1 - k1) * 0.9, 1.6 * s, WARM)
+    ring(ctx, cx, cy, radius * (0.2 + k1 * 0.8), (1 - k1) * 0.9, 1.6 * s, TARGET)
     const k2 = clamp01((local - 0.12) / 1.1)
     if (local > 0.12) ring(ctx, cx, cy, radius * (0.2 + k2 * 1.15), (1 - k2) * 0.5, 1 * s, INK)
   }
