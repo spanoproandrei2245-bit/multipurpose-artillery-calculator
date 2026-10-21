@@ -62,12 +62,14 @@ import type { ArtilleryMode } from '../types/artillery'
 import type { Language } from '../types/settings'
 import { AdjustFire, type AdjustmentEntry } from './AdjustFire'
 import { AmmunitionSelector } from './AmmunitionSelector'
-import { Dropdown } from './Dropdown'
+import { AnimatedNumber } from './AnimatedNumber'
+import { ChargeStrip } from './ChargeStrip'
 import { FieldIcon } from './FieldIcon'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 import type { FlightShot } from './FlightCanvas'
+import type { JournalActions } from '../lib/journalIO'
 import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MrsiPanel } from './MrsiPanel'
@@ -105,6 +107,8 @@ interface Props {
   // Все цели журнала — для отметок на карте
   journalEntries?: readonly JournalEntry[]
   onLoadEntry?: (id: string) => void
+  // Экспорт, импорт, переименование и удаление целей — в панели целей на карте
+  journalActions?: JournalActions
   onSave: (draft: JournalDraft) => void
   onUpdate?: (id: string, draft: JournalDraft) => void
 }
@@ -122,6 +126,7 @@ export function ArtilleryCalculator({
   activeEntry = null,
   journalEntries = [],
   onLoadEntry,
+  journalActions,
   onSave,
   onUpdate,
 }: Props) {
@@ -500,20 +505,28 @@ export function ArtilleryCalculator({
   // меняют руками, а пусковую не перенаведёшь за секунды.
   const category = models[modelId].category as ArtilleryCategory
   const mrsiAllowed = category === 'towed' || category === 'spg'
+  // Все способы выстрела по текущей дистанции: каждый режим и заряд
+  const modeResults =
+    profile && baseRange !== null
+      ? profileModes.map((item) => ({
+          mode: item,
+          results:
+            item === mode
+              ? results
+              : solveAllCharges(
+                  profile,
+                  item,
+                  selectedAmmo?.charges,
+                  baseRange,
+                  heightDifference,
+                  weatherInputs.weather
+                ),
+        }))
+      : []
   const mrsiOptions: MrsiOption[] =
-    mrsiAllowed && solution !== null && profile && baseRange !== null
-      ? profileModes.flatMap((item) =>
-          (item === mode
-            ? results
-            : solveAllCharges(
-                profile,
-                item,
-                selectedAmmo?.charges,
-                baseRange,
-                heightDifference,
-                weatherInputs.weather
-              )
-          ).flatMap((result) =>
+    mrsiAllowed && solution !== null
+      ? modeResults.flatMap(({ mode: item, results: list }) =>
+          list.flatMap((result) =>
             result.solution
               ? [
                   {
@@ -527,6 +540,30 @@ export function ArtilleryCalculator({
           )
         )
       : []
+
+  // Досягаемость орудия не зависит от введённой дистанции — для колец на карте
+  const reach = profile
+    ? overallRange(
+        solveAllCharges(
+          profile,
+          mode,
+          selectedAmmo?.charges,
+          baseRange ?? 1000,
+          heightDifference,
+          weatherInputs.weather
+        )
+      )
+    : null
+
+  // Дистанция не достаёт или слишком мала для всех зарядов выбранной траектории
+  const outOfRange =
+    profile && validDistance && applicable.length === 0 && range && baseRange !== null
+      ? baseRange > range.max
+        ? ('far' as const)
+        : baseRange < range.min
+          ? ('near' as const)
+          : null
+      : null
 
   // Быстрый список сохранённых целей на карте
   const quickTargets = useMemo(
@@ -729,11 +766,6 @@ export function ArtilleryCalculator({
     if (sync.active) sendShot()
   }
 
-  const chargeValue =
-    chosenCharge !== null && applicable.some((r) => r.charge === chosenCharge)
-      ? String(chosenCharge)
-      : 'auto'
-
   const alertClass = 'rounded-md bg-app-raised px-3 py-2 text-[13.5px]'
 
   return (
@@ -762,6 +794,8 @@ export function ArtilleryCalculator({
                   currentTarget={mapTarget}
                   journalTargets={journalTargets}
                   quickTargets={quickTargets}
+                  targetActions={showJournal ? journalActions : undefined}
+                  reach={reach}
                   flight={flight}
                   category={category}
                   shellType={selectedAmmo?.type}
@@ -804,87 +838,73 @@ export function ArtilleryCalculator({
 
         {/* ---- Решение и вводные: «подпись — значение» ---- */}
         <div className="min-w-0">
-          <dl>
-            <Row icon="elevation" label={ru ? 'Возвышение' : 'Elevation'}>
-              <span
-                className={[
-                  'text-2xl font-semibold tabular-nums',
-                  solution ? 'text-app-text' : 'text-app-faint',
-                ].join(' ')}
+          <div className="relative">
+            <dl>
+              <Row icon="elevation" label={ru ? 'Возвышение' : 'Elevation'}>
+                <AnimatedNumber
+                  value={solution ? solution.elevation : null}
+                  className={[
+                    'text-2xl font-semibold tabular-nums',
+                    solution ? 'text-app-text' : 'text-app-faint',
+                  ].join(' ')}
+                />
+                <span className="w-7 text-left text-app-muted">{unitMil}</span>
+              </Row>
+              <Row icon="azimuth" label={ru ? 'Азимут' : 'Azimuth'}>
+                <AnimatedNumber
+                  value={firingAzimuth}
+                  format={formatAzimuth}
+                  maxTween={azimuthUnit === 'mil' ? 3000 : 180}
+                  className={[
+                    'text-2xl font-semibold tabular-nums',
+                    firingAzimuth === null ? 'text-app-faint' : 'text-app-text',
+                  ].join(' ')}
+                />
+                <span className="w-7 text-left text-app-muted">{unitAzimuth}</span>
+              </Row>
+              <Row icon="time" label={ru ? 'Время полёта' : 'Time of flight'}>
+                <AnimatedNumber
+                  value={solution ? solution.tof : null}
+                  format={(v) => v.toFixed(1)}
+                />
+                <span className="w-7 text-left text-app-muted">{unitS}</span>
+              </Row>
+            </dl>
+            {outOfRange && range && (
+              <div
+                role="alert"
+                className="tour-fade absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-warn bg-app-bg/95 px-4 text-center backdrop-blur-sm"
               >
-                {solution ? Math.round(solution.elevation) : '—'}
-              </span>
-              <span className="w-7 text-left text-app-muted">{unitMil}</span>
-            </Row>
-            <Row icon="azimuth" label={ru ? 'Азимут' : 'Azimuth'}>
-              <span
-                className={[
-                  'text-2xl font-semibold tabular-nums',
-                  firingAzimuth === null ? 'text-app-faint' : 'text-app-text',
-                ].join(' ')}
-              >
-                {firingAzimuth === null ? '—' : formatAzimuth(firingAzimuth)}
-              </span>
-              <span className="w-7 text-left text-app-muted">
-                {unitAzimuth}
-              </span>
-            </Row>
-            <Row icon="time" label={ru ? 'Время полёта' : 'Time of flight'}>
-              {solution ? solution.tof.toFixed(1) : '—'}
-              <span className="w-7 text-left text-app-muted">{unitS}</span>
-            </Row>
-            <Row icon="charge" control="full" label={ru ? 'Заряд' : 'Charge'}>
-              {/* «Быстрый» — заряд с наименьшим временем полёта,
-                  «точный» — с наименьшим «1 мил ≈ X м». Оба
-                  пересчитываются при смене дистанции. */}
-              <div role="group" aria-label={ru ? 'Выбор заряда' : 'Charge choice'} className="seg min-w-0 flex-1 overflow-hidden [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]">
-                {(['fastest', 'precise'] as const).map((preference) => (
-                  <button
-                    key={preference}
-                    type="button"
-                    disabled={applicable.length === 0}
-                    aria-pressed={
-                      chosenCharge === null && chargePreference === preference
-                    }
-                    onClick={() => {
-                      setChargePreference(preference)
-                      setChosenCharge(null)
-                      markEdited()
-                    }}
-                  >
-                    {preference === 'fastest'
-                      ? ru ? 'быстрый' : 'fast'
-                      : ru ? 'точный' : 'precise'}
-                  </button>
-                ))}
+                <p className="font-semibold text-warn">
+                  {outOfRange === 'far'
+                    ? ru ? 'Слишком большая дистанция' : 'Target too far'
+                    : ru ? 'Слишком близко' : 'Target too close'}
+                </p>
+                <p className="text-[13px] text-app-text-2 tabular-nums">
+                  {ru
+                    ? `${Math.round(baseRange ?? 0)} м — орудие бьёт на ${range.min}–${range.max} м`
+                    : `${Math.round(baseRange ?? 0)} m — the gun reaches ${range.min}–${range.max} m`}
+                </p>
               </div>
-              <Dropdown
-                fullWidth
-                className="w-[5.75rem] shrink-0"
-                label={ru ? 'Заряд' : 'Charge'}
-                disabled={applicable.length === 0}
-                buttonLabel={chargeValue === 'auto' ? (ru ? 'Авто' : 'Auto') : '№ ' + chargeValue}
-                value={chargeValue}
+            )}
+          </div>
+          <dl>
+            <Row icon="charge" control="full" label={ru ? 'Заряд' : 'Charge'}>
+              {/* Автовыбор: какой заряд брать, пока не выбран вручную */}
+              <Toggle
+                label={ru ? 'Какой заряд брать' : 'Which charge to use'}
+                className="min-w-0 flex-1 [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
+                value={chosenCharge !== null ? 'manual' : chargePreference}
                 onChange={(value) => {
-                  if (value === 'auto') setChargePreference('lowest')
-                  setChosenCharge(value === 'auto' ? null : Number(value))
+                  if (value === 'manual') return
+                  setChargePreference(value)
+                  setChosenCharge(null)
                   markEdited()
                 }}
                 options={[
-                  {
-                    value: 'auto',
-                    label: ru ? 'Авто' : 'Auto',
-                    description:
-                      (ru ? 'наименьший подходящий' : 'lowest that fits') +
-                      (activeResult ? ` · ${activeResult.charge}` : ''),
-                  },
-                  ...applicable.map((result) => ({
-                    value: String(result.charge),
-                    label: `${ru ? 'Заряд' : 'Charge'} ${result.charge}`,
-                    description: result.solution
-                      ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
-                      : undefined,
-                  })),
+                  { value: 'lowest', label: ru ? 'меньший' : 'lowest', disabled: applicable.length === 0 },
+                  { value: 'fastest', label: ru ? 'быстрый' : 'fastest', disabled: applicable.length === 0 },
+                  { value: 'precise', label: ru ? 'точный' : 'precise', disabled: applicable.length === 0 },
                 ]}
               />
             </Row>
@@ -910,6 +930,29 @@ export function ArtilleryCalculator({
               </Row>
             )}
           </dl>
+
+          {modeResults.length > 0 && (
+            <div className="mt-2 mb-1">
+              <ChargeStrip
+                groups={modeResults.map((group) => ({
+                  mode: group.mode,
+                  results: group.results,
+                  label:
+                    group.mode === 'HIGH'
+                      ? ru ? 'Навесная траектория' : 'High trajectory'
+                      : ru ? 'Настильная траектория' : 'Low trajectory',
+                }))}
+                activeMode={mode}
+                activeCharge={activeResult?.charge ?? null}
+                language={language}
+                onPick={(pickedMode, charge) => {
+                  if (pickedMode !== mode) setMode(pickedMode)
+                  setChosenCharge(charge)
+                  markEdited()
+                }}
+              />
+            </div>
+          )}
 
           <div className="my-3 flex items-center gap-3">
             <div className="h-px flex-1 bg-app-border" />
@@ -1020,7 +1063,7 @@ export function ArtilleryCalculator({
             </Row>
           </dl>
 
-          {showJournal && targetBar}
+          {showJournal && !mapInput && targetBar}
 
           {/* ---- Состояние расчёта и предупреждения ---- */}
           <div className="mt-4 space-y-2">
@@ -1029,22 +1072,6 @@ export function ArtilleryCalculator({
                 {ru
                   ? 'Для этого боеприпаса нет таблиц.'
                   : 'No tables for this ammunition.'}
-              </p>
-            )}
-
-            {profile && validDistance && applicable.length === 0 && range && (
-              <p className={`${alertClass} text-warn`}>
-                {rangeAdjust !== 0
-                  ? ru
-                    ? `Дальность ${baseRange} м (дистанция ${distanceValue} м, корректировка ${formatSigned(rangeAdjust, 0)} м) вне таблиц. Доступно: ${range.min}–${range.max} м.`
-                    : `Range ${baseRange} m (distance ${distanceValue} m, adjustment ${formatSigned(rangeAdjust, 0)} m) is outside the tables. Available: ${range.min}–${range.max} m.`
-                  : ru
-                    ? `Дистанция ${distanceValue} м вне таблиц. Доступно: ${range.min}–${range.max} м.`
-                    : `Distance ${distanceValue} m is outside the tables. Available: ${range.min}–${range.max} m.`}
-                {weatherInputs.entered &&
-                  (ru
-                    ? ' С погодной поправкой дальность могла выйти за край таблицы.'
-                    : ' The weather correction may have pushed the range past the table edge.')}
               </p>
             )}
 
@@ -1296,101 +1323,12 @@ export function ArtilleryCalculator({
         </div>
 
         <div className="min-w-0 space-y-3">
-          {results.length > 0 && (
-            <details className="disclosure panel p-4 sm:p-5">
-              <summary>
-                <span className="inline-flex items-center gap-2">
-                  <FieldIcon name="charge" className="h-5 w-5 text-app-muted" />
-                  {ru ? 'Заряды' : 'Charges'}
-                </span>
-                {activeResult && (
-                  <span className="tag">
-                    {ru ? 'выбран' : 'selected'} {activeResult.charge}
-                  </span>
-                )}
-              </summary>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                <span className="label">
-                  {ru ? 'Заряд по умолчанию' : 'Default charge'}
-                </span>
-                <Toggle
-                  label={ru ? 'Заряд по умолчанию' : 'Default charge'}
-                  value={chargePreference}
-                  onChange={(value) => {
-                    setChargePreference(value)
-                    setChosenCharge(null)
-                    markEdited()
-                  }}
-                  options={[
-                    { value: 'lowest', label: ru ? 'меньший' : 'lowest' },
-                    { value: 'fastest', label: ru ? 'быстрее' : 'fastest' },
-                    { value: 'precise', label: ru ? 'точнее' : 'precise' },
-                  ]}
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {results.map((result) => {
-                  const usable = result.solution !== null
-                  const active = usable && result.charge === activeResult?.charge
-
-                  return (
-                    <button
-                      key={result.charge}
-                      type="button"
-                      disabled={!usable}
-                      aria-pressed={active}
-                      onClick={() => {
-                        setChosenCharge(result.charge)
-                        markEdited()
-                      }}
-                      className={[
-                        'rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                        active
-                          ? 'bg-accent-soft ring-1 ring-accent'
-                          : 'bg-app-raised',
-                        usable
-                          ? 'cursor-pointer hover:bg-app-raised-hover'
-                          : 'cursor-not-allowed opacity-40',
-                      ].join(' ')}
-                    >
-                      <span className="block font-medium text-app-text">
-                        {ru ? 'Заряд' : 'Charge'} {result.charge}
-                      </span>
-                      <span className="block text-[12.5px] text-app-muted tabular-nums">
-                        {result.solution
-                          ? `${Math.round(result.solution.elevation)} ${unitMil} · ${result.solution.tof.toFixed(1)} ${unitS}`
-                          : `${result.minRange}–${result.maxRange} ${unitM}`}
-                      </span>
-                      {result.solution && result.metersPerMil !== null && (
-                        <span
-                          className={[
-                            'block text-[12.5px] tabular-nums',
-                            result.nearEdge ? 'text-warn' : 'text-app-muted',
-                          ].join(' ')}
-                        >
-                          1 {unitMil} ≈ {result.metersPerMil.toFixed(1)} {unitM}
-                          {result.nearEdge && (ru ? ' · край' : ' · edge')}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <p className="mt-3 text-[13px] text-app-muted">
-                {ru
-                  ? '«1 мил ≈ X м» — насколько сдвинется разрыв при ошибке возвышения в 1 мил: чем меньше, тем точнее. «Точнее» выбирает заряд с наименьшим значением. Между строками таблицы — линейная интерполяция.'
-                  : '"1 mil ≈ X m" is how far the impact moves for a 1 mil elevation error: smaller is more precise. "Precise" picks the charge with the smallest value. Linear interpolation between table rows.'}
-              </p>
-
-              <MrsiPanel
-                options={mrsiOptions}
-                showMode={profileModes.length > 1}
-                language={language}
-              />
-            </details>
+          {mrsiAllowed && (
+            <MrsiPanel
+              options={mrsiOptions}
+              showMode={profileModes.length > 1}
+              language={language}
+            />
           )}
 
           {profile && showTable && (

@@ -202,60 +202,57 @@ export function Footer({
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <Dropdown
           up
-          variant="ghost"
-          label={ru ? 'Обучение' : 'Tutorial'}
+          variant="icon"
+          tourId="help"
+          label={ru ? 'Справка' : 'Help'}
           value=""
-          placeholder={ru ? 'Обучение' : 'Tutorial'}
-          buttonLabel={
-            <span className="flex items-center gap-2">
-              <FieldIcon name="help" className="h-[18px] w-[18px]" />
-              {ru ? 'Обучение' : 'Tutorial'}
-            </span>
-          }
+          buttonLabel={<FieldIcon name="help" className="h-5 w-5" />}
           onChange={(value) => {
+            if (value === 'desktop') {
+              window.open(RELEASES_URL, '_blank', 'noopener')
+              return
+            }
+            if (value === 'hotkeys') {
+              togglePanel('hotkeys')
+              return
+            }
             onViewChange('dashboard')
             setPanel(value === 'advanced' ? 'tourAdvanced' : 'tour', true)
           }}
           options={[
             {
               value: 'basic',
-              label: ru ? 'Базовое' : 'Basic',
+              label: ru ? 'Базовое обучение' : 'Basic tutorial',
               description: ru ? 'Карта, ввод, заряд, огонь' : 'Map, input, charge, fire',
+              group: ru ? 'Обучение' : 'Tutorial',
             },
             {
               value: 'advanced',
-              label: ru ? 'Продвинутое' : 'Advanced',
+              label: ru ? 'Продвинутое обучение' : 'Advanced tutorial',
               description: ru ? 'Карты, линия, связка, мелочи' : 'Maps, line, link, details',
+              group: ru ? 'Обучение' : 'Tutorial',
             },
+            {
+              value: 'hotkeys',
+              label: ru ? 'Горячие клавиши' : 'Keyboard shortcuts',
+              icon: <FieldIcon name="keyboard" className="h-4 w-4 text-app-muted" />,
+              group: ru ? 'Справка' : 'Help',
+            },
+            ...(isDesktop
+              ? []
+              : [
+                  {
+                    value: 'desktop',
+                    label: ru ? 'Программа для ПК' : 'Desktop app',
+                    description: ru
+                      ? 'Оверлей поверх игры'
+                      : 'Overlay on top of the game',
+                    icon: <FieldIcon name="desktop" className="h-4 w-4 text-app-muted" />,
+                    group: ru ? 'Справка' : 'Help',
+                  },
+                ]),
           ]}
         />
-
-        <button
-          type="button"
-          onClick={() => togglePanel('hotkeys')}
-          data-tour="hotkeys"
-          className="btn btn-ghost hidden sm:inline-flex"
-        >
-          <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
-          {ru ? 'Горячие клавиши' : 'Shortcuts'}
-        </button>
-
-        {!isDesktop && (
-          <a
-            href={RELEASES_URL}
-            target="_blank"
-            rel="noreferrer"
-            title={
-              ru
-                ? 'Программа для ПК с оверлеем поверх игры'
-                : 'Desktop app with an in-game overlay'
-            }
-            className="btn btn-ghost"
-          >
-            <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
-            {ru ? 'Программа для ПК' : 'Desktop app'}
-          </a>
-        )}
 
         <button
           type="button"

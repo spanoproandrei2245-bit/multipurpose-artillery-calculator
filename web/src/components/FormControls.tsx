@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { isInvalid } from '../lib/input'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
@@ -96,8 +96,41 @@ export function Toggle<T extends string>({
   label,
   className = '',
 }: ToggleProps<T>) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Подвижная «таблетка» под выбранной кнопкой: переключение скользит
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const measure = () => {
+      const el = root.querySelector<HTMLElement>('button[aria-pressed="true"]')
+      setPill(el ? { x: el.offsetLeft, w: el.offsetWidth } : null)
+    }
+    const frame = requestAnimationFrame(measure)
+    const observer = new ResizeObserver(measure)
+    observer.observe(root)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [value, options.length])
+
   return (
-    <div role="group" aria-label={label} className={`seg ${className}`}>
+    <div
+      ref={ref}
+      role="group"
+      aria-label={label}
+      data-pill={pill ? '' : undefined}
+      className={`seg ${className}`}
+    >
+      {pill && (
+        <span
+          aria-hidden="true"
+          className="seg-pill"
+          style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
+        />
+      )}
       {options.map((option) => (
         <button
           key={option.value}

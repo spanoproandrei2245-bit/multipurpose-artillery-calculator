@@ -144,11 +144,11 @@ const ADVANCED: Step[] = [
     },
   },
   {
-    target: byTour('hotkeys'),
-    title: { ru: 'Горячие клавиши', en: 'Shortcuts' },
+    target: byTour('help'),
+    title: { ru: 'Справка', en: 'Help' },
     text: {
-      ru: 'F — огонь, B — боевой экран, 0–9 — заряд, N / P — цели. Полный список — по этой кнопке или клавишей «?».',
-      en: 'F — fire, B — combat screen, 0–9 — charge, N / P — targets. The full list is behind this button or the “?” key.',
+      ru: 'Здесь обучение, список горячих клавиш (F — огонь, B — боевой экран, 0–9 — заряд, N / P — цели; список открывает и клавиша «?») и ссылка на программу для ПК.',
+      en: 'Tutorials, the list of shortcuts (F — fire, B — combat screen, 0–9 — charge, N / P — targets; the “?” key opens it too) and the desktop app link.',
     },
   },
   {

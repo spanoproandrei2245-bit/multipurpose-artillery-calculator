@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import exportScript from '../data/export-heightmap.sqf?raw'
 import {
   bearing,
   heightAt,
   isInside,
   mapExtent,
-  parseHeightmap,
   toGridReference,
   type Heightmap,
   type MapPoint,
@@ -33,13 +31,6 @@ import {
 } from '../lib/markers'
 import { useSync } from '../lib/syncContext'
 import type { MapTarget } from '../lib/journal'
-import {
-  deleteHeightmap,
-  listHeightmaps,
-  loadHeightmap,
-  saveHeightmap,
-  type StoredMapInfo,
-} from '../lib/mapStore'
 import { renderRelief, type ReliefPalette } from '../lib/relief'
 import {
   listBuiltinMaps,
@@ -53,6 +44,8 @@ import {
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
 import { Dropdown, type DropdownOption } from './Dropdown'
+import { MapRequests } from './MapRequests'
+import type { JournalActions } from '../lib/journalIO'
 import { FieldIcon, type FieldIconName } from './FieldIcon'
 import { useFlightOnMap } from '../lib/animation'
 import { FlightCanvas, type FlightShot } from './FlightCanvas'
@@ -97,6 +90,10 @@ interface Props {
   currentTarget?: MapTarget | null
   // Быстрый выбор сохранённых целей: список слева на карте
   quickTargets?: readonly QuickTarget[]
+  // Журнал целей: экспорт, импорт, переименование, удаление; без него панели нет
+  targetActions?: JournalActions
+  // Радиус досягаемости орудия, м: показывается кольцами вокруг орудия
+  reach?: { min: number; max: number } | null
   // Снаряд в полёте: анимация от орудия к цели
   flight?: FlightShot | null
   category?: ArtilleryCategory
@@ -215,6 +212,8 @@ export function MapPicker({
   showMarkers = false,
   showScreenMarkers = false,
   quickTargets = [],
+  targetActions,
+  reach = null,
   flight = null,
   category = 'mortar',
   shellType = 'HE',
@@ -224,7 +223,6 @@ export function MapPicker({
   const unitM = ru ? 'м' : 'm'
 
   const flightOnMap = useFlightOnMap()
-  const [maps, setMaps] = useState<StoredMapInfo[]>([])
   // Избранные карты: ключи пунктов списка, показываются сверху
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -251,7 +249,8 @@ export function MapPicker({
   // Какой пункт списка открыт: «builtin:stratis» или «local:altis»
   const [mapKey, setMapKey] = useState('')
   const [map, setMap] = useState<Heightmap | null>(null)
-  const [adding, setAdding] = useState(false)
+  // Окно «Предложить карту»
+  const [suggesting, setSuggesting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const [gun, setGun] = useState<MapPoint | null>(null)
@@ -261,6 +260,9 @@ export function MapPicker({
   // Орудие закреплено на карте: касания его не двигают
   const [gunLocked, setGunLocked] = useState(false)
   // Список целей слева: на узком экране свёрнут
+  const importRef = useRef<HTMLInputElement>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [targetsOpen, setTargetsOpen] = useState(
     () => typeof window === 'undefined' || window.innerWidth >= 768
   )
@@ -286,7 +288,6 @@ export function MapPicker({
   // Холст в состоянии: эффекты перезапускаются, когда он появляется
   // или пересоздаётся (после выбора карты, «Добавить карту»)
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
   const dragRef = useRef<{
     x: number
     y: number
@@ -361,20 +362,16 @@ export function MapPicker({
 
   // ---- загрузка списка и последней карты ----
   function openMap(key: string) {
-    const [source, world] = key.includes(':') ? key.split(':', 2) : ['local', key]
-    const load =
-      source === 'builtin'
-        ? loadBuiltinMap(world).then((result) =>
-            result ? { heightmap: result.heightmap, tiles: result.tiles } : null
-          )
-        : loadHeightmap(world).then((heightmap) =>
-            heightmap ? { heightmap, tiles: null } : null
-          )
+    // Старые версии хранили «local:…» и просто имя мира: берём только имя
+    const world = key.includes(':') ? key.split(':', 2)[1] : key
+    const load = loadBuiltinMap(world).then((result) =>
+      result ? { heightmap: result.heightmap, tiles: result.tiles } : null
+    )
     load
       .then((loaded) => {
         if (!loaded) return
-        writeStored('mapWorld', key)
-        setMapKey(key)
+        writeStored('mapWorld', `builtin:${world}`)
+        setMapKey(`builtin:${world}`)
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
         setGun(readGun(world))
@@ -388,7 +385,6 @@ export function MapPicker({
         )
         setPlacing('gun')
         setView(null)
-        setAdding(false)
       })
       .catch(() =>
         setNotice(ru ? 'Не удалось открыть карту.' : 'Could not open the map.')
@@ -396,104 +392,19 @@ export function MapPicker({
   }
 
   useEffect(() => {
-    void Promise.all([
-      // IndexedDB недоступна — свои карты не сохраняются, встроенные есть
-      listHeightmaps().catch(() => [] as StoredMapInfo[]),
-      listBuiltinMaps(),
-    ]).then(([local, embedded]) => {
-      setMaps(local)
+    void listBuiltinMaps().then((embedded) => {
       setBuiltin(embedded)
-      const keys = [
-        ...embedded.map((m) => `builtin:${m.world}`),
-        ...local.map((m) => `local:${m.world}`),
-      ]
+      const keys = embedded.map((m) => `builtin:${m.world}`)
       const last = readStoredText('mapWorld')
-      // Старые версии хранили просто имя мира
       const key =
         keys.find((k) => k === last) ??
-        keys.find((k) => k === `local:${last}`) ??
+        keys.find((k) => k === `builtin:${last}`) ??
         keys[0]
       if (key) openMap(key)
     })
     // Только при первом показе
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  async function importText(text: string) {
-    const parsed = parseHeightmap(text)
-    if (!parsed) {
-      setNotice(
-        ru
-          ? 'Это не высоты из игры. Запустите скрипт ещё раз и вставьте результат.'
-          : 'These are not heights from the game. Run the script again and paste the result.'
-      )
-      return
-    }
-    try {
-      await saveHeightmap(parsed)
-      setMaps(await listHeightmaps())
-    } catch {
-      // Сохранить не удалось — карта работает до перезагрузки
-    }
-    writeStored('mapWorld', `local:${parsed.world}`)
-    setMapKey(`local:${parsed.world}`)
-    setMap(parsed)
-    setTiles(null)
-    setGun(readGun(parsed.world))
-    setTarget(null)
-    setPlacing('gun')
-    setView(null)
-    setAdding(false)
-    setNotice(
-      ru
-        ? `Карта ${parsed.world} загружена: ${parsed.size}×${parsed.size} точек, шаг ${parsed.step} м.`
-        : `Map ${parsed.world} loaded: ${parsed.size}×${parsed.size} points, step ${parsed.step} m.`
-    )
-  }
-
-  async function pasteFromClipboard() {
-    try {
-      await importText(await navigator.clipboard.readText())
-    } catch {
-      setNotice(
-        ru
-          ? 'Браузер не дал прочитать буфер. Вставьте высоты в поле ниже (Ctrl+V).'
-          : 'The browser blocked the clipboard. Paste the heights into the field below (Ctrl+V).'
-      )
-    }
-  }
-
-  async function copyScript() {
-    try {
-      await navigator.clipboard.writeText(exportScript)
-      setNotice(ru ? 'Скрипт скопирован.' : 'Script copied.')
-    } catch {
-      setNotice(
-        ru
-          ? 'Не удалось скопировать — скрипт есть в файле web/src/data/export-heightmap.sqf.'
-          : 'Copy failed — the script is in web/src/data/export-heightmap.sqf.'
-      )
-    }
-  }
-
-  async function removeMap() {
-    if (!map || !mapKey.startsWith('local:')) return
-    const message = ru
-      ? `Удалить высоты карты ${map.world}?`
-      : `Delete the heights of ${map.world}?`
-    if (!window.confirm(message)) return
-    try {
-      await deleteHeightmap(map.world)
-      setMaps(await listHeightmaps())
-    } catch {
-      // Не удалось удалить — список не меняется
-    }
-    setMap(null)
-    setMapKey('')
-    setTiles(null)
-    setGun(null)
-    setTarget(null)
-  }
 
   // ---- размер холста ----
   // Ширина контейнера: сразу при появлении и при каждом изменении
@@ -752,6 +663,39 @@ export function MapPicker({
       ctx.textAlign = 'start'
     }
 
+    // Досягаемость орудия: дальний край — сплошное кольцо, ближний — пунктир
+    if (gun && reach && reach.max > 0) {
+      const c = toScreen(gun)
+      ctx.lineWidth = 1.5
+      ctx.strokeStyle = 'rgba(255,176,32,0.9)'
+      ctx.beginPath()
+      ctx.arc(c.x, c.y, reach.max * scale, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(255,176,32,0.06)'
+      ctx.fill()
+      if (reach.min > 0) {
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = 'rgba(255,176,32,0.6)'
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, reach.min * scale, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      // Подпись на верхней точке дальнего кольца
+      const label = `${ru ? 'макс' : 'max'} ${Math.round(reach.max)} ${unitM}`
+      ctx.font = '11px ' + sans
+      const w = ctx.measureText(label).width
+      const ly = c.y - reach.max * scale
+      if (ly > 14 && ly < size.height - 6) {
+        ctx.fillStyle = ink.plate
+        ctx.fillRect(c.x - w / 2 - 4, ly - 8, w + 8, 16)
+        ctx.fillStyle = 'rgba(255,196,80,1)'
+        ctx.textAlign = 'center'
+        ctx.fillText(label, c.x, ly + 4)
+        ctx.textAlign = 'start'
+      }
+    }
+
     // Линия огня
     if (gun && target) {
       const a = toScreen(gun)
@@ -790,7 +734,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -1016,7 +960,6 @@ export function MapPicker({
 
   const buttonClass = 'btn btn-sm'
 
-  const showLoader = adding || !map
 
   // ---- список карт: избранные сверху, потом по происхождению ----
   const ADD_MAP = '__add__'
@@ -1034,7 +977,7 @@ export function MapPicker({
       )
       .map((m) => ({
         key: `builtin:${m.world}`,
-        name: m.displayName,
+        name: ru && m.nameRu ? m.nameRu : m.displayName,
         author: m.author,
         group:
           mapKind(m) === 'official'
@@ -1042,13 +985,6 @@ export function MapPicker({
             : ru ? 'Сообщество' : 'Community',
         preview: `${MAPS_BASE}${m.world}/tiles/0/0_0.webp`,
       })),
-    ...maps.map((m) => ({
-      key: `local:${m.world}`,
-      name: m.world,
-      author: ru ? 'свои высоты' : 'own heights',
-      group: ru ? 'Загруженные' : 'Imported',
-      preview: null,
-    })),
   ]
   function mapLabel(key: string): string {
     return mapEntries.find((e) => e.key === key)?.name ?? '—'
@@ -1105,93 +1041,17 @@ export function MapPicker({
         </span>
       ),
     }))
-mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою карту…' : 'Add your own map…',    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
+mapOptions.push({    value: ADD_MAP,    label: ru ? 'Предложить карту…' : 'Suggest a map…',    icon: (      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">        <FieldIcon name="plus" className="h-4 w-4" />      </span>    ),    divider: true,  })
 
   return (
     <div>
-      {showLoader && (
-        <div className="flex aspect-square flex-col justify-center gap-4 rounded-lg bg-app-surface p-6 text-[15px] text-app-text-2 sm:p-10">
-          <p className="text-lg font-semibold text-app-text">
-            {ru ? 'Добавьте карту' : 'Add a map'}
-          </p>
-          <ol className="list-decimal space-y-3 pl-5">
-            <li>
-              <button type="button" className={buttonClass} onClick={() => void copyScript()}>
-                {ru ? 'Скопировать скрипт для игры' : 'Copy the game script'}
-              </button>
-            </li>
-            <li>
-              {ru
-                ? 'В Arma 3: редактор Eden на нужной карте → Play → Esc → Debug Console → вставить скрипт → LOCAL EXEC. Высоты скопируются в буфер обмена.'
-                : 'In Arma 3: Eden editor on the map → Play → Esc → Debug Console → paste the script → LOCAL EXEC. The heights are copied to the clipboard.'}
-            </li>
-            <li className="space-x-2">
-              <button type="button" className={buttonClass} onClick={() => void pasteFromClipboard()}>
-                {ru ? 'Вставить высоты' : 'Paste heights'}
-              </button>
-              <span className="text-app-muted">{ru ? 'или' : 'or'}</span>
-              <button type="button" className={buttonClass} onClick={() => fileRef.current?.click()}>
-                {ru ? 'Загрузить файл' : 'Load a file'}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".json,.txt,application/json,text/plain"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void file.text().then(importText)
-                  event.target.value = ''
-                }}
-              />
-            </li>
-          </ol>
-          <textarea
-            rows={2}
-            aria-label={ru ? 'Вставьте высоты сюда' : 'Paste the heights here'}
-            placeholder={ru ? '…или вставьте высоты сюда (Ctrl+V)' : '…or paste the heights here (Ctrl+V)'}
-            onPaste={(event) => {
-              event.preventDefault()
-              void importText(event.clipboardData.getData('text'))
-            }}
-            className="field text-sm"
-          />
-          <p className="text-[13px] text-app-muted">
-            {ru
-              ? 'Способ 1 (выше): карта рисуется из высот, чужие изображения не нужны. Высоты хранятся только на этом устройстве.'
-              : 'Method 1 (above): the map is drawn from the heights, no map images needed. Heights stay on this device.'}
-          </p>
-          <details className="text-[13px] text-app-muted">
-            <summary className="cursor-pointer text-app-text-2">
-              {ru ? 'Способ 2: спутниковый снимок через grad_meh' : 'Method 2: satellite imagery via grad_meh'}
-            </summary>
-            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
-              <li>
-                {ru
-                  ? 'Включите на своём компьютере мод Gruppe Adler Map Exporter (grad_meh) и выгрузите карту: в папке Arma 3 появится grad_meh/<карта> со снимком (sat), высотами (dem.asc.gz) и meta.json.'
-                  : 'Run the Gruppe Adler Map Exporter (grad_meh) mod and export the map: Arma 3/grad_meh/<map> gets the imagery (sat), heights (dem.asc.gz) and meta.json.'}
-              </li>
-              <li>
-                {ru
-                  ? 'Разработчик приложения превращает папку в встроенную карту командой npm run maps:import -- "<путь к папке карты>" — так добавлены карты сообщества из списка.'
-                  : 'The app developer turns the folder into a built-in map with npm run maps:import -- "<map folder>" — this is how the community maps in the list were added.'}
-              </li>
-              <li>
-                {ru
-                  ? 'Оговорка: сетка высот из grad_meh грубее игровой (шаг ~20 м, у нас — после прореживания), поэтому высоты у цели могут отличаться на метры. Снимок — только для ориентира; для точных высот надёжнее способ 1.'
-                  : 'Caveat: the grad_meh height grid is coarser than the game’s (~20 m step, thinned further here), so heights at a target can be off by metres. The imagery is for orientation; method 1 is more reliable for exact heights.'}
-              </li>
-            </ol>
-          </details>
-          {map && (
-            <button type="button" className="btn self-start" onClick={() => setAdding(false)}>
-              {ru ? 'Назад к карте' : 'Back to the map'}
-            </button>
-          )}
+      {!map && (
+        <div className="flex aspect-square items-center justify-center rounded-lg bg-app-surface">
+          <p className="label">{ru ? 'Загрузка карты…' : 'Loading the map…'}</p>
         </div>
       )}
 
-      {map && !adding && (
+      {map && (
         <div ref={containerRef} data-tour="map" className="relative w-full">
           <canvas
             ref={setCanvas}
@@ -1310,47 +1170,146 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
             })}
           </div>
 
-          {/* Слева: быстрый выбор сохранённых целей */}
-          {quickTargets.length > 0 && (
-            <div className="absolute top-2 left-2 flex max-w-[55%] flex-col items-start gap-1">
-              <button
-                type="button"
-                aria-expanded={targetsOpen}
-                onClick={() => setTargetsOpen((v) => !v)}
-                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
-              >
-                <FieldIcon name="list" className="h-5 w-5" />
-                {ru ? 'Цели' : 'Targets'}
-                <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
-                  {quickTargets.length}
-                </span>
-              </button>
+          {/* Слева: цели журнала — выбор, экспорт и импорт */}
+          {targetActions && (
+            <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-1">
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  aria-expanded={targetsOpen}
+                  onClick={() => setTargetsOpen((v) => !v)}
+                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+                >
+                  <FieldIcon name="list" className="h-5 w-5" />
+                  {ru ? 'Цели' : 'Targets'}
+                  <span className="rounded-full bg-white/20 px-1.5 text-[11.5px]">
+                    {quickTargets.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={quickTargets.length === 0}
+                  title={ru ? 'Экспорт целей в файл' : 'Export targets to a file'}
+                  aria-label={ru ? 'Экспорт целей' : 'Export targets'}
+                  onClick={targetActions.exportAll}
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FieldIcon name="export" className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  title={ru ? 'Импорт целей из файла' : 'Import targets from a file'}
+                  aria-label={ru ? 'Импорт целей' : 'Import targets'}
+                  onClick={() => importRef.current?.click()}
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+                >
+                  <FieldIcon name="import" className="h-[18px] w-[18px]" />
+                </button>
+                <input
+                  ref={importRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) void targetActions.importFile(file).then(setNotice)
+                    event.target.value = ''
+                  }}
+                />
+              </div>
               {targetsOpen && (
-                <ul className="max-h-[min(22rem,60%)] w-48 max-w-full overflow-y-auto rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm">
+                <ul className="max-h-[min(22rem,60%)] w-56 max-w-full overflow-y-auto rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm">
+                  {quickTargets.length === 0 && (
+                    <li className="px-2 py-1.5 text-[12.5px] text-white/60">
+                      {ru
+                        ? 'Пока пусто. Рассчитайте установки и сохраните цель — или импортируйте файл.'
+                        : 'Empty so far. Work out a solution and save a target — or import a file.'}
+                    </li>
+                  )}
                   {quickTargets.map((t) => (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        aria-current={t.active ? 'true' : undefined}
-                        onClick={() => onPickJournalTarget?.(t.id)}
-                        className={[
-                          'flex w-full cursor-pointer flex-col rounded-md px-2 py-1 text-left transition-colors',
-                          t.active
-                            ? 'bg-accent-solid text-white'
-                            : 'text-white/90 hover:bg-white/15',
-                        ].join(' ')}
-                      >
-                        <span className="truncate text-[13px] font-medium">{t.name}</span>
-                        <span className="truncate text-[11.5px] tabular-nums opacity-70">
-                          {t.detail}
-                        </span>
-                      </button>
+                    <li key={t.id} className="group relative">
+                      {renamingId === t.id ? (
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          maxLength={60}
+                          onChange={(event) => setRenameValue(event.target.value)}
+                          onBlur={() => {
+                            targetActions.rename(t.id, renameValue)
+                            setRenamingId(null)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') event.currentTarget.blur()
+                            if (event.key === 'Escape') setRenamingId(null)
+                          }}
+                          className="field m-0.5 h-8 w-[calc(100%-0.25rem)] py-0 text-[13px]"
+                        />
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            aria-current={t.active ? 'true' : undefined}
+                            onClick={() => onPickJournalTarget?.(t.id)}
+                            className={[
+                              'flex w-full cursor-pointer flex-col rounded-md py-1 pr-14 pl-2 text-left transition-colors',
+                              t.active
+                                ? 'bg-accent-solid text-white'
+                                : 'text-white/90 hover:bg-white/15',
+                            ].join(' ')}
+                          >
+                            <span className="truncate text-[13px] font-medium">{t.name}</span>
+                            <span className="truncate text-[11.5px] tabular-nums opacity-70">
+                              {t.detail}
+                            </span>
+                          </button>
+                          <span className="absolute top-1/2 right-1 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                            <button
+                              type="button"
+                              aria-label={ru ? 'Переименовать' : 'Rename'}
+                              title={ru ? 'Переименовать' : 'Rename'}
+                              onClick={() => {
+                                setRenamingId(t.id)
+                                setRenameValue(t.name)
+                              }}
+                              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
+                            >
+                              <FieldIcon name="edit" className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={ru ? 'Удалить' : 'Delete'}
+                              title={ru ? 'Удалить' : 'Delete'}
+                              onClick={() => targetActions.remove(t.id)}
+                              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-white/80 hover:bg-white/20"
+                            >
+                              <FieldIcon name="trash" className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
           )}
+
+          {/* Снизу по центру: координаты орудия и цели */}
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-1.5 text-[12.5px] whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-gun" />
+              {gun
+                ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
+                : ru ? 'орудие не задано' : 'no gun'}
+            </span>
+            <span className="text-white/30">|</span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-target" />
+              {target
+                ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
+                : ru ? 'цель не задана' : 'no target'}
+            </span>
+          </div>
         </div>
       )}
 
@@ -1362,19 +1321,19 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
 
       {/* ---- Панель под картой ---- */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {(maps.length > 0 || builtin.length > 0) && <MapGlyph big />}
-        {(maps.length > 0 || builtin.length > 0) && (
+        {builtin.length > 0 && <MapGlyph big />}
+        {builtin.length > 0 && (
           <Dropdown
             label={ru ? 'Карта' : 'Map'}
             value={mapKey}
-            onChange={(key) => (key === ADD_MAP ? setAdding(true) : openMap(key))}
+            onChange={(key) => (key === ADD_MAP ? setSuggesting(true) : openMap(key))}
             alignLeft
             placeholder="—"
             buttonLabel={mapLabel(mapKey)}
             options={mapOptions}
           />
         )}
-        {map && !adding && (
+        {map && (
           <>
             <div className="ml-auto flex gap-1">
               <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}><FieldIcon name="minus" /></button>
@@ -1388,24 +1347,8 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
         )}
       </div>
 
-      {map && !adding && (
+      {map && (
         <>
-          <p className="mt-2 text-[13px] text-app-muted tabular-nums">
-            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-gun" />
-            {gun
-              ? `${toGridReference(gun, 8)} · ${Math.round(gunHeight ?? 0)} ${unitM}`
-              : ru
-                ? 'орудие не задано'
-                : 'no gun'}
-            <span className="mx-3 text-app-faint">|</span>
-            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-target" />
-            {target
-              ? `${toGridReference(target, 8)} · ${Math.round(targetHeight ?? 0)} ${unitM}`
-              : ru
-                ? 'цель не задана'
-                : 'no target'}
-          </p>
-
           {(placing === 'line' || linePoints.length > 0) && (
             <div className="mt-3 rounded-lg bg-app-surface p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -1604,15 +1547,10 @@ mapOptions.push({    value: ADD_MAP,    label: ru ? 'Добавить свою �
           {showMarkers && showScreenMarkers && (
             <ScreenMarkers world={map.world} author={author} language={language} />
           )}
-
-          {mapKey.startsWith('local:') && (
-            <div className="mt-3">
-              <button type="button" className="btn btn-ghost btn-danger btn-sm" onClick={() => void removeMap()}>
-                {ru ? 'Удалить карту' : 'Delete map'}
-              </button>
-            </div>
-          )}
         </>
+      )}
+      {suggesting && (
+        <MapRequests language={language} onClose={() => setSuggesting(false)} />
       )}
     </div>
   )

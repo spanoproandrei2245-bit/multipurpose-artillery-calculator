@@ -58,24 +58,27 @@
     },
     {
       "world": "altis",
-      "displayName": "Алтис",
+      "displayName": "Altis",
       "author": "Bohemia Interactive",
       "kind": "official",
-      "worldSize": 30720
+      "worldSize": 30720,
+      "nameRu": "Алтис"
     },
     {
       "world": "stratis",
-      "displayName": "Стратис",
+      "displayName": "Stratis",
       "author": "Bohemia Interactive",
       "kind": "official",
-      "worldSize": 8192
+      "worldSize": 8192,
+      "nameRu": "Стратис"
     },
     {
       "world": "tanoa",
-      "displayName": "Таноа",
+      "displayName": "Tanoa",
       "author": "Bohemia Interactive",
       "kind": "official",
-      "worldSize": 15360
+      "worldSize": 15360,
+      "nameRu": "Таноа"
     }
   ]
 }

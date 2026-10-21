@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 
 import { ArtilleryCalculator } from '../components/ArtilleryCalculator'
 import { ModelSelector } from '../components/ModelSelector'
-import { ShotJournal } from '../components/ShotJournal'
 import { TargetBar } from '../components/TargetBar'
 import { isModelId, type ModelId } from '../data/models'
 import { onHotkey } from '../lib/desktop'
+import { downloadJournal, importJournalFile, type JournalActions } from '../lib/journalIO'
 import {
   neighbourEntry,
   recentEntries,
@@ -13,7 +13,6 @@ import {
   type JournalDraft,
   type JournalEntry,
 } from '../lib/journal'
-import { useFeature } from '../lib/features'
 import { useHotkeys } from '../lib/useHotkeys'
 import type { Language } from '../types/settings'
 
@@ -42,7 +41,6 @@ export function DashboardPage({
   showScreenMarkers,
 }: DashboardPageProps) {
   const journal = useJournal()
-  const showJournal = useFeature('journal')
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(
     null
   )
@@ -115,6 +113,14 @@ export function DashboardPage({
       ? loadRequest.entry
       : null
 
+  const journalActions: JournalActions = {
+    exportAll: () => downloadJournal(journal.entries),
+    importFile: (file) =>
+      importJournalFile(file, journal.importEntries, language === 'ru'),
+    rename: journal.rename,
+    remove: journal.remove,
+  }
+
   const selector = (
     <ModelSelector
       value={selectedModel}
@@ -131,6 +137,7 @@ export function DashboardPage({
         modelSelector={selector}
         targetBar={
           <TargetBar
+            actions={journalActions}
             entries={journal.entries}
             activeId={activeEntry?.id ?? null}
             onLoad={handleLoad}
@@ -145,6 +152,7 @@ export function DashboardPage({
         showScreenMarkers={showScreenMarkers}
         activeEntry={activeEntry}
         journalEntries={journal.entries}
+        journalActions={journalActions}
         onLoadEntry={(id) => {
           const entry = journal.entries.find((e) => e.id === id)
           if (entry) handleLoad(entry)
@@ -153,18 +161,6 @@ export function DashboardPage({
         onUpdate={handleUpdate}
       />
 
-      {showJournal && (
-      <ShotJournal
-        entries={journal.entries}
-        language={language}
-        activeId={activeEntry?.id ?? null}
-        onLoad={handleLoad}
-        onRename={journal.rename}
-        onRemove={journal.remove}
-        onClearDay={journal.clearDay}
-        onImport={journal.importEntries}
-      />
-      )}
     </section>
   )
 }

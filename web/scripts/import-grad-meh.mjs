@@ -46,7 +46,9 @@ async function buildTiles(source, outDir, worldSize, background) {
   const n = columns.length
   const sourceMeters = worldSize / n
   // Сколько выходных тайлов на один исходный по стороне
-  const perSource = Math.ceil(sourceMeters / (TILE * TARGET_METERS_PER_PIXEL))
+  // Огромные карты (Беккетов, Алтис) грубее: иначе тайлы весят десятки МБ
+  const mpp = Math.max(TARGET_METERS_PER_PIXEL, worldSize / 6144)
+  const perSource = Math.ceil(sourceMeters / (TILE * mpp))
   const maxCols = n * perSource
   const levels = Math.ceil(Math.log2(maxCols)) + 1
   const top = levels - 1
@@ -202,6 +204,9 @@ const index = existsSync(indexFile)
 
 for (const source of sources) {
   const entry = await importMap(source)
+  // Русское название задаётся в index.json руками — не затираем
+  const previous = index.maps.find((m) => m.world === entry.world)
+  if (previous?.nameRu) entry.nameRu = previous.nameRu
   index.maps = [...index.maps.filter((m) => m.world !== entry.world), entry].sort(
     (a, b) => a.displayName.localeCompare(b.displayName)
   )

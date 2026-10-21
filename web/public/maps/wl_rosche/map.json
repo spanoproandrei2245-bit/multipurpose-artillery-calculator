@@ -14,8 +14,8 @@
   },
   "tiles": {
     "size": 512,
-    "levels": 5,
-    "metersPerTile": 960,
+    "levels": 4,
+    "metersPerTile": 1920,
     "ext": "webp"
   }
 }

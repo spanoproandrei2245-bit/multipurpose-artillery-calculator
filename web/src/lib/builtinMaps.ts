@@ -15,6 +15,8 @@ export const MAPS_BASE = isDesktop ? `${PUBLIC_SITE_URL}maps/` : './maps/'
 export interface BuiltinMapEntry {
   world: string
   displayName: string
+  // Название по-русски, если отличается от displayName
+  nameRu?: string
   author: string
   // official — Bohemia Interactive, community — карты сообщества
   kind?: 'official' | 'community'

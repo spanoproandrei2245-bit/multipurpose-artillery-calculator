@@ -30,7 +30,9 @@ interface DropdownProps<T extends string> {
   buttonLabel?: ReactNode
   className?: string
   // field — поле с фоном; ghost — как значение в строке списка, фон при наведении
-  variant?: 'field' | 'ghost'
+  variant?: 'field' | 'ghost' | 'icon'
+  // Для обучения: подсвечиваемый элемент
+  tourId?: string
   // Кнопка занимает всю ширину контейнера, шеврон — справа
   fullWidth?: boolean
   // Список раскрывается вверх (у нижнего края страницы)
@@ -53,10 +55,16 @@ export function Dropdown<T extends string>({
   className = '',
   variant = 'field',
   fullWidth = false,
-  up = false,
+  up: upProp = false,
+  tourId,
 }: DropdownProps<T>) {
   const id = useId()
   const [open, setOpen] = useState(false)
+  // Раскрытие вверх: явно или когда снизу не хватает места
+  const [flipUp, setFlipUp] = useState(false)
+  // Высота списка по свободному месту, чтобы он не раздувал страницу
+  const [maxHeight, setMaxHeight] = useState(320)
+  const up = upProp || flipUp
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
@@ -89,6 +97,14 @@ export function Dropdown<T extends string>({
 
   function openList() {
     if (disabled) return
+    // Не раздувать страницу: если снизу тесно, а сверху просторнее — раскрыть вверх
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (rect) {
+      const below = window.innerHeight - rect.bottom
+      const up = below < 280 && rect.top > below
+      setFlipUp(up)
+      setMaxHeight(Math.max(140, Math.min(320, (up ? rect.top : below) - 16)))
+    }
     setActive(Math.max(0, selectedIndex))
     setOpen(true)
   }
@@ -144,7 +160,7 @@ export function Dropdown<T extends string>({
   }
 
   return (
-    <div ref={rootRef} className={`relative ${className}`}>
+    <div ref={rootRef} data-tour={tourId} className={`relative ${className}`}>
       <button
         ref={buttonRef}
         type="button"
@@ -166,12 +182,15 @@ export function Dropdown<T extends string>({
             : 'flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50',
           variant === 'ghost'
             ? 'h-9 rounded-md pr-1.5 pl-2 text-app-text transition-colors hover:bg-app-raised-hover'
-            : 'field h-9 py-0 pr-2',
+            : variant === 'icon'
+              ? 'btn px-2.5'
+              : 'field h-9 py-0 pr-2',
         ].join(' ')}
       >
         <span className="min-w-0 flex-1 truncate">
           {buttonLabel ?? current?.label ?? placeholder}
         </span>
+        {variant !== 'icon' && (
         <svg
           viewBox="0 0 24 24"
           aria-hidden="true"
@@ -186,6 +205,7 @@ export function Dropdown<T extends string>({
             strokeLinejoin="round"
           />
         </svg>
+        )}
       </button>
 
       {open && (
@@ -197,8 +217,9 @@ export function Dropdown<T extends string>({
           aria-label={label}
           aria-activedescendant={`${id}-opt-${active}`}
           onKeyDown={handleListKey}
+          style={{ maxHeight }}
           className={[
-            'absolute z-30 max-h-80 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none',
+            'absolute z-30 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-lg bg-app-raised p-1 shadow-xl shadow-black/50 outline-none',
             up ? 'bottom-full mb-1' : 'mt-1',
             alignLeft ? 'left-0' : 'right-0',
           ].join(' ')}
