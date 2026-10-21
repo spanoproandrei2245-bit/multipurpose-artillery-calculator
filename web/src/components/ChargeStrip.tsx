@@ -17,6 +17,8 @@ interface Props {
   onPick: (mode: ArtilleryMode, charge: number) => void
   // Не показывать заряды, которые не достают до цели
   hideUnfit?: boolean
+  // Только заряды, чем-то хорошие: лучший, самый быстрый, самый точный (и выбранный)
+  onlyGood?: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function ChargeStrip({
   activeCharge,
   onPick,
   hideUnfit = false,
+  onlyGood = false,
 }: Props) {
   const unitMil = t('unit.mil')
   const unitS = t('unit.s')
@@ -37,9 +40,21 @@ export function ChargeStrip({
   return (
     <div className="space-y-2.5" aria-label={t('chargeStrip.ways-to-fire')}>
       {groups.map((group) => {
-        const visible = hideUnfit
-          ? group.results.filter((r) => r.solution !== null)
-          : group.results
+        const fastestCharge = pickCharge(group.results, 'fastest')?.charge
+        const preciseCharge = pickCharge(group.results, 'precise')?.charge
+        const bestCharge = pickCharge(group.results, 'best')?.charge
+        const usableOnly = hideUnfit || onlyGood
+        const visible = group.results.filter((r) => {
+          if (usableOnly && r.solution === null) return false
+          if (!onlyGood) return true
+          const selected = group.mode === activeMode && r.charge === activeCharge
+          return (
+            selected ||
+            r.charge === bestCharge ||
+            r.charge === fastestCharge ||
+            r.charge === preciseCharge
+          )
+        })
         // Траектория, по которой до цели не достать, при скрытии пропадает целиком
         if (visible.length === 0) return null
         const best = pickCharge(group.results, 'best')?.charge

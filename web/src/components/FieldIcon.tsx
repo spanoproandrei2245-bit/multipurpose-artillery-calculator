@@ -367,6 +367,18 @@ const paths = {
       <path d="M12 6.5v13" />
     </>
   ),
+  // карандаш
+  pen: <path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19zM14 7l3 3" />,
+  // прямая линия рисунка
+  drawLine: (
+    <>
+      <path d="M5 19 19 5" />
+      <circle cx="5" cy="19" r="1.3" />
+      <circle cx="19" cy="5" r="1.3" />
+    </>
+  ),
+  // ластик
+  eraser: <path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 20H7.5l-2-2a2 2 0 0 1 0-2.8z" />,
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

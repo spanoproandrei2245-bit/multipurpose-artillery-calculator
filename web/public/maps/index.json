@@ -54,7 +54,13 @@
       "displayName": "Virtual Reality",
       "author": "Bohemia Interactive",
       "kind": "official",
-      "worldSize": 8192
+      "worldSize": 8192,
+      "names": {
+        "ru": "Виртуальная реальность",
+        "uk": "Віртуальна реальність",
+        "ja": "バーチャルリアリティ",
+        "zh": "虚拟现实"
+      }
     },
     {
       "world": "altis",
@@ -62,7 +68,12 @@
       "author": "Bohemia Interactive",
       "kind": "official",
       "worldSize": 30720,
-      "nameRu": "Алтис"
+      "names": {
+        "ru": "Алтис",
+        "uk": "Алтіс",
+        "ja": "アルティス",
+        "zh": "阿尔蒂斯"
+      }
     },
     {
       "world": "stratis",
@@ -70,7 +81,12 @@
       "author": "Bohemia Interactive",
       "kind": "official",
       "worldSize": 8192,
-      "nameRu": "Стратис"
+      "names": {
+        "ru": "Стратис",
+        "uk": "Стратіс",
+        "ja": "ストラティス",
+        "zh": "斯特拉蒂斯"
+      }
     },
     {
       "world": "tanoa",
@@ -78,7 +94,12 @@
       "author": "Bohemia Interactive",
       "kind": "official",
       "worldSize": 15360,
-      "nameRu": "Таноа"
+      "names": {
+        "ru": "Таноа",
+        "uk": "Таноа",
+        "ja": "タノア",
+        "zh": "塔诺亚"
+      }
     }
   ]
 }

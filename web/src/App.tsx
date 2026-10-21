@@ -1,4 +1,10 @@
-import { setLanguage as setI18nLanguage, t } from './i18n'
+import {
+  detectLanguage,
+  isLanguage,
+  localeOf,
+  setLanguage as setI18nLanguage,
+  t,
+} from './i18n'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 
@@ -25,10 +31,8 @@ const SettingsPage = lazy(() =>
 
 // Язык по умолчанию — как у системы
 function defaultLanguage(): Language {
-  return typeof navigator !== 'undefined' &&
-    navigator.language.toLowerCase().startsWith('ru')
-    ? 'ru'
-    : 'en'
+  if (typeof navigator === 'undefined') return 'en'
+  return detectLanguage(navigator.languages?.length ? navigator.languages : [navigator.language])
 }
 
 const parseFlag = (fallback: boolean) => (raw: string | null) =>
@@ -72,7 +76,7 @@ function App() {
 
   const [language, setLanguage] = usePersistentState<Language>(
     'language',
-    (raw) => (raw === 'ru' || raw === 'en' ? raw : defaultLanguage())
+    (raw) => (isLanguage(raw) ? raw : defaultLanguage())
   )
   // Язык для t(): задаётся до отрисовки дочерних компонентов
   setI18nLanguage(language)
@@ -114,7 +118,7 @@ function App() {
   )
 
   useEffect(() => {
-    document.documentElement.lang = language
+    document.documentElement.lang = localeOf(language)
   }, [language])
 
   useEffect(() => {

@@ -16,6 +16,8 @@ export type FeatureId =
   | 'hideUnfit'
   // Кнопка «+ снаряд»: ещё один снаряд в полёте рядом с предыдущим
   | 'volley'
+  // Только заряды, чем-то хорошие: лучший, быстрый, точный
+  | 'onlyGood'
 
 const KEY_PREFIX = 'feature:'
 const DEFAULT_ON: ReadonlySet<FeatureId> = new Set<FeatureId>(['hints', 'hideUnfit'])

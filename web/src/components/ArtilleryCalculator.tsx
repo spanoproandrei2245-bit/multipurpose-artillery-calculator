@@ -140,6 +140,7 @@ export function ArtilleryCalculator({
   const showTable = useFeature('table')
   const showHints = useFeature('hints')
   const hideUnfit = useFeature('hideUnfit')
+  const onlyGood = useFeature('onlyGood')
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
@@ -899,7 +900,8 @@ export function ArtilleryCalculator({
               {/* Автовыбор: какой заряд брать, пока не выбран вручную */}
               <Toggle
                 label={t('artilleryCalculator.which-charge-to-use')}
-                className="min-w-0 flex-1 [&>button]:flex-auto [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
+                equal
+                className="min-w-0 flex-1 [&>button]:px-1.5 [&>button]:text-[13px]"
                 value={chosenCharge !== null ? 'manual' : chargePreference}
                 onChange={(value) => {
                   if (value === 'manual') return
@@ -917,7 +919,8 @@ export function ArtilleryCalculator({
             {profileModes.length > 1 && (
               <Row icon="trajectory" control="full" label={t('artilleryCalculator.trajectory')}>
                 <Toggle
-                  className="min-w-0 flex-1 overflow-hidden [&>button]:flex-auto [&>button]:justify-center [&>button]:px-1.5 [&>button]:text-[13px]"
+                  equal
+                  className="min-w-0 flex-1 overflow-hidden [&>button]:px-1.5 [&>button]:text-[13px]"
                   label={t('artilleryCalculator.trajectory-mode')}
                   value={modeChoice}
                   onChange={changeMode}
@@ -954,6 +957,7 @@ export function ArtilleryCalculator({
                 }))}
                 activeMode={mode}
                 hideUnfit={hideUnfit}
+                onlyGood={onlyGood}
                 activeCharge={activeResult?.charge ?? null}
                 onPick={(pickedMode, charge) => {
                   setModeChoice(pickedMode)

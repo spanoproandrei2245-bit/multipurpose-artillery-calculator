@@ -68,6 +68,7 @@ export function SettingsPage({
   const hints = useFeature('hints')
   const hideUnfit = useFeature('hideUnfit')
   const volley = useFeature('volley')
+  const onlyGood = useFeature('onlyGood')
   const flightStyle = useFlightStyle()
   const motionNumbers = useMotion('numbers')
   const motionSwitches = useMotion('switches')
@@ -257,6 +258,12 @@ export function SettingsPage({
                 onChange={(v) => setFeature('volley', v)}
                 label={t('settingsPage.volley')}
                 description={t('settingsPage.volley-description')}
+              />
+              <Switch
+                checked={onlyGood}
+                onChange={(v) => setFeature('onlyGood', v)}
+                label={t('settingsPage.only-good')}
+                description={t('settingsPage.only-good-description')}
               />
               <Switch
                 checked={hideUnfit}

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import { isDesktop } from '../lib/desktop'
 import { syncStatusColor, useSync } from '../lib/syncContext'
 import { setPanel, togglePanel } from '../lib/uiPanels'
+import { LANGUAGES } from '../i18n'
 import type { Language, Theme } from '../types/settings'
 
 const REPO_URL =
@@ -14,8 +15,8 @@ const REPO_URL =
 // Страница автора на GitHub
 const AUTHOR_URL = 'https://github.com/spanoproandrei2245-bit'
 
-// Профиль автора в Steam (подставьте ссылку — появится кнопка Steam)
-const AUTHOR_STEAM_URL: string | null = null
+// Профиль автора в Steam
+const AUTHOR_STEAM_URL: string | null = 'https://steamcommunity.com/id/Aron_Heis/'
 
 // Релизы с установщиком программы для ПК
 const RELEASES_URL = `${REPO_URL}/releases`
@@ -59,10 +60,62 @@ function FlagGb() {
   )
 }
 
-const LANGUAGES: { id: Language; name: string; Flag: () => JSX.Element }[] = [
-  { id: 'ru', name: 'Русский', Flag: FlagRu },
-  { id: 'en', name: 'English', Flag: FlagGb },
-]
+// Простые флаги: полосы и круг, без внешних файлов
+function Stripes({ colors, vertical = false }: { colors: string[]; vertical?: boolean }) {
+  const n = colors.length
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      {colors.map((color, i) =>
+        vertical ? (
+          <rect key={i} x={(9 / n) * i} width={9 / n + 0.02} height="6" fill={color} />
+        ) : (
+          <rect key={i} y={(6 / n) * i} width="9" height={6 / n + 0.02} fill={color} />
+        )
+      )}
+    </svg>
+  )
+}
+
+function FlagUa() {
+  return <Stripes colors={['#0057b7', '#ffd700']} />
+}
+function FlagDe() {
+  return <Stripes colors={['#000000', '#dd0000', '#ffce00']} />
+}
+function FlagFr() {
+  return <Stripes colors={['#0055a4', '#ffffff', '#ef4135']} vertical />
+}
+function FlagJp() {
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      <rect width="9" height="6" fill="#fff" />
+      <circle cx="4.5" cy="3" r="1.8" fill="#bc002d" />
+    </svg>
+  )
+}
+function FlagCn() {
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      <rect width="9" height="6" fill="#de2910" />
+      <path d="m1.9 .6.4 1.1h1.1l-.9.7.3 1.1-.9-.7-.9.7.3-1.1-.9-.7h1.1z" fill="#ffde00" />
+    </svg>
+  )
+}
+
+function Flag({ id }: { id: Language }) {
+  const Component = FLAGS[id]
+  return <Component />
+}
+
+const FLAGS: Record<Language, () => JSX.Element> = {
+  ru: FlagRu,
+  en: FlagGb,
+  uk: FlagUa,
+  de: FlagDe,
+  fr: FlagFr,
+  ja: FlagJp,
+  zh: FlagCn,
+}
 
 /** Выбор языка: кнопка с флагом и меню вверх. */
 function LanguageSelect({
@@ -94,7 +147,7 @@ function LanguageSelect({
         onClick={() => setOpen((value) => !value)}
         className="btn pr-2.5"
       >
-        <current.Flag />
+        <Flag id={current.id} />
         {current.name}
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-app-muted" aria-hidden="true">
           <path
@@ -129,7 +182,7 @@ function LanguageSelect({
                     : 'text-app-text-2 hover:bg-app-raised-hover',
                 ].join(' ')}
               >
-                <item.Flag />
+                <Flag id={item.id} />
                 {item.name}
               </button>
             </li>

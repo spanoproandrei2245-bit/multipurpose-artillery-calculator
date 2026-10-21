@@ -91,6 +91,8 @@ interface ToggleProps<T extends string> {
   className?: string
   // Только значки: подпись остаётся в подсказке и для экранного диктора
   iconOnly?: boolean
+  // Кнопки одной ширины (сетка): не зависит от длины подписей на разных языках
+  equal?: boolean
 }
 
 export function Toggle<T extends string>({
@@ -100,6 +102,7 @@ export function Toggle<T extends string>({
   label,
   className = '',
   iconOnly = false,
+  equal = false,
 }: ToggleProps<T>) {
   const ref = useRef<HTMLDivElement>(null)
   // Подвижная «таблетка» под выбранной кнопкой: переключение скользит
@@ -113,8 +116,11 @@ export function Toggle<T extends string>({
       setPill(el ? { x: el.offsetLeft, w: el.offsetWidth } : null)
     }
     const frame = requestAnimationFrame(measure)
+    // Ширины кнопок меняются, когда догружается шрифт или меняется язык
     const observer = new ResizeObserver(measure)
     observer.observe(root)
+    root.querySelectorAll('button').forEach((b) => observer.observe(b))
+    void document.fonts?.ready.then(measure)
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
@@ -127,7 +133,7 @@ export function Toggle<T extends string>({
       role="group"
       aria-label={label}
       data-pill={pill ? '' : undefined}
-      className={`seg ${className}`}
+      className={`seg ${equal ? '!grid grid-flow-col auto-cols-fr' : ''} ${className}`}
     >
       {pill && (
         <span
@@ -145,11 +151,12 @@ export function Toggle<T extends string>({
           aria-label={iconOnly ? option.label : undefined}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
+          className={equal ? 'min-w-0 justify-center' : undefined}
         >
           {option.icon && (
             <FieldIcon name={option.icon} className={iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} />
           )}
-          {!iconOnly && option.label}
+          {!iconOnly && <span className={equal ? 'truncate' : undefined}>{option.label}</span>}
         </button>
       ))}
     </div>

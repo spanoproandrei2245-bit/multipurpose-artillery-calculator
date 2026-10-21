@@ -7,6 +7,11 @@ import { describe, expect, it } from 'vitest'
 
 import { getLanguage, setLanguage, t, translate } from './index'
 import { en, ru } from './messages'
+import { de } from './messages.de'
+import { fr } from './messages.fr'
+import { ja } from './messages.ja'
+import { uk } from './messages.uk'
+import { zh } from './messages.zh'
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\d+)\}/g)].map((m) => m[1]).sort()
 const cyrillic = /[А-Яа-яЁё]/
@@ -125,4 +130,46 @@ describe('словарь без мусора', () => {
     )
     expect(unused).toEqual([])
   })
+})
+
+describe('все языки интерфейса', () => {
+  const keys = Object.keys(ru) as (keyof typeof ru)[]
+  // Обозначения и имена собственные, одинаковые на всех языках
+  const SAME_AS_EN = /^(unit\.|picker\.vanilla|about\.)/
+  const others = { uk, de, fr, ja, zh }
+
+  for (const [id, dict] of Object.entries(others)) {
+    describe(id, () => {
+      it('те же ключи и подстановки, что в русском', () => {
+        expect(Object.keys(dict).sort()).toEqual([...keys].sort())
+        const bad = keys.filter(
+          (k) => JSON.stringify(placeholders(dict[k])) !== JSON.stringify(placeholders(ru[k]))
+        )
+        expect(bad).toEqual([])
+      })
+
+      it('кириллица только в украинском (без ы, э, ъ, ё)', () => {
+        const withCyr = keys.filter((k) => cyrillic.test(dict[k]))
+        if (id === 'uk') {
+          expect(withCyr.length).toBeGreaterThan(keys.length * 0.9)
+          expect(keys.filter((k) => /[ыэъёЫЭЪЁ]/.test(dict[k]))).toEqual([])
+        } else {
+          expect(withCyr).toEqual([])
+        }
+      })
+
+      it('не осталось непереведённых английских строк', () => {
+        // В немецком и французском бывают совпадения (Auto, Distance): допускаем короткие
+        const cognates = id === 'de' || id === 'fr'
+        const same = keys.filter(
+          (k) =>
+            dict[k] === en[k] &&
+            !SAME_AS_EN.test(k) &&
+            /[A-Za-z]{4,}/.test(en[k]) &&
+            !(cognates && en[k].split(' ').length <= 3)
+        )
+        expect(same).toEqual([])
+      })
+    })
+  }
 })

@@ -207,9 +207,9 @@ const index = existsSync(indexFile)
 
 for (const source of sources) {
   const entry = await importMap(source)
-  // Русское название задаётся в index.json руками — не затираем
+  // Названия на других языках задаются в index.json руками — не затираем
   const previous = index.maps.find((m) => m.world === entry.world)
-  if (previous?.nameRu) entry.nameRu = previous.nameRu
+  if (previous?.names) entry.names = previous.names
   index.maps = [...index.maps.filter((m) => m.world !== entry.world), entry].sort(
     (a, b) => a.displayName.localeCompare(b.displayName)
   )
