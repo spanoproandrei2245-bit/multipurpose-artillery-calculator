@@ -1,15 +1,7 @@
 import type { ArtilleryCategory } from '../types/gameModel'
-import type { Language } from '../types/settings'
-import { categoryLabels } from '../data/categories'
+import { t } from '../i18n'
+import { categoryLabels, categoryMarks } from '../data/categories'
 
-// Класс орудия — цветная точка в углу значка:
-// миномёт — зелёная, буксируемое — жёлтая, САУ — красная, РСЗО — синяя.
-const categoryMarks: Record<ArtilleryCategory, string> = {
-  mortar: 'bg-ok',
-  towed: 'bg-warn',
-  spg: 'bg-danger',
-  mlrs: 'bg-info',
-}
 
 // Линейные значки в сетке 24×24: контур 1.5, скруглённые стыки.
 function Glyph({ category }: { category: ArtilleryCategory }) {
@@ -46,12 +38,12 @@ function Glyph({ category }: { category: ArtilleryCategory }) {
     case 'mlrs':
       return (
         <>
-          <path d="M3.8 13.6 L13.4 8 L14.6 10.2 L5 15.6 Z" />
-          <path d="M8.5 13 V16.5" />
-          <path d="M2.5 16.5 H21 V14 L19 11.5 H16 V16.5" />
-          <circle cx="6" cy="18.6" r="1.4" />
-          <circle cx="10" cy="18.6" r="1.4" />
-          <circle cx="18" cy="18.6" r="1.4" />
+          <path d="M3 17h18v-3.2l-2.2-2.8H15.5V17" />
+          <path d="M5.2 14.2 15.6 6l2.4 3-10.4 8.2z" />
+          <path d="M9.4 11.6l2.3 2.9M12.2 9.4l2.3 2.9" />
+          <circle cx="6.5" cy="19.2" r="1.5" />
+          <circle cx="11.5" cy="19.2" r="1.5" />
+          <circle cx="17.5" cy="19.2" r="1.5" />
         </>
       )
   }
@@ -59,23 +51,22 @@ function Glyph({ category }: { category: ArtilleryCategory }) {
 
 interface Props {
   category: ArtilleryCategory
-  // sm — в списке, md — в карточках
-  size?: 'sm' | 'md'
-  language: Language
+  // xs — на кнопке выбора, sm — в списке, md — в карточках
+  size?: 'xs' | 'sm' | 'md'
 }
 
-export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
+export function ArtilleryIcon({ category, size = 'sm', }: Props) {
   return (
     <span
-      title={categoryLabels[category][language]}
+      title={t(categoryLabels[category])}
       className={[
         'relative inline-flex shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text',
-        size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',
+        size === 'xs' ? 'h-7 w-7' : size === 'sm' ? 'h-9 w-9' : 'h-12 w-12',
       ].join(' ')}
     >
       <span
         aria-hidden="true"
-        className={`absolute top-1 right-1 h-1.5 w-1.5 rounded-full ${categoryMarks[category]}`}
+        className={`absolute top-0.5 left-0.5 h-1.5 w-1.5 rounded-full ${categoryMarks[category]}`}
       />
       <svg
         viewBox="0 0 24 24"
@@ -85,7 +76,7 @@ export function ArtilleryIcon({ category, size = 'sm', language }: Props) {
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        className={size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'}
+        className={size === 'xs' ? 'h-[18px] w-[18px]' : size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'}
       >
         <Glyph category={category} />
       </svg>

@@ -1,10 +1,25 @@
+import { t } from '../i18n'
+import { Dropdown } from './Dropdown'
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
+import { isDesktop } from '../lib/desktop'
 import { syncStatusColor, useSync } from '../lib/syncContext'
-import type { Language } from '../types/settings'
+import { setPanel, togglePanel } from '../lib/uiPanels'
+import { LANGUAGES } from '../i18n'
+import type { Language, Theme } from '../types/settings'
 
 const REPO_URL =
   'https://github.com/spanoproandrei2245-bit/multipurpose-artillery-calculator'
+
+// Страница автора на GitHub
+const AUTHOR_URL = 'https://github.com/spanoproandrei2245-bit'
+
+// Профиль автора в Steam
+const AUTHOR_STEAM_URL: string | null = 'https://steamcommunity.com/id/Aron_Heis/'
+
+// Релизы с установщиком программы для ПК
+const RELEASES_URL = `${REPO_URL}/releases`
 
 export type View = 'dashboard' | 'sync' | 'settings'
 
@@ -13,6 +28,9 @@ interface Props {
   onViewChange: (view: View) => void
   language: Language
   onLanguageChange: (language: Language) => void
+  theme: Theme
+  // Центр кнопки — откуда расходится круг смены темы
+  onToggleTheme: (origin: { x: number; y: number }) => void
 }
 
 function FlagRu() {
@@ -42,10 +60,62 @@ function FlagGb() {
   )
 }
 
-const LANGUAGES: { id: Language; name: string; Flag: () => JSX.Element }[] = [
-  { id: 'ru', name: 'Русский', Flag: FlagRu },
-  { id: 'en', name: 'English', Flag: FlagGb },
-]
+// Простые флаги: полосы и круг, без внешних файлов
+function Stripes({ colors, vertical = false }: { colors: string[]; vertical?: boolean }) {
+  const n = colors.length
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      {colors.map((color, i) =>
+        vertical ? (
+          <rect key={i} x={(9 / n) * i} width={9 / n + 0.02} height="6" fill={color} />
+        ) : (
+          <rect key={i} y={(6 / n) * i} width="9" height={6 / n + 0.02} fill={color} />
+        )
+      )}
+    </svg>
+  )
+}
+
+function FlagUa() {
+  return <Stripes colors={['#0057b7', '#ffd700']} />
+}
+function FlagDe() {
+  return <Stripes colors={['#000000', '#dd0000', '#ffce00']} />
+}
+function FlagFr() {
+  return <Stripes colors={['#0055a4', '#ffffff', '#ef4135']} vertical />
+}
+function FlagJp() {
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      <rect width="9" height="6" fill="#fff" />
+      <circle cx="4.5" cy="3" r="1.8" fill="#bc002d" />
+    </svg>
+  )
+}
+function FlagCn() {
+  return (
+    <svg viewBox="0 0 9 6" className="h-3.5 w-5 rounded-[2px]" aria-hidden="true">
+      <rect width="9" height="6" fill="#de2910" />
+      <path d="m1.9 .6.4 1.1h1.1l-.9.7.3 1.1-.9-.7-.9.7.3-1.1-.9-.7h1.1z" fill="#ffde00" />
+    </svg>
+  )
+}
+
+function Flag({ id }: { id: Language }) {
+  const Component = FLAGS[id]
+  return <Component />
+}
+
+const FLAGS: Record<Language, () => JSX.Element> = {
+  ru: FlagRu,
+  en: FlagGb,
+  uk: FlagUa,
+  de: FlagDe,
+  fr: FlagFr,
+  ja: FlagJp,
+  zh: FlagCn,
+}
 
 /** Выбор языка: кнопка с флагом и меню вверх. */
 function LanguageSelect({
@@ -77,7 +147,7 @@ function LanguageSelect({
         onClick={() => setOpen((value) => !value)}
         className="btn pr-2.5"
       >
-        <current.Flag />
+        <Flag id={current.id} />
         {current.name}
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-app-muted" aria-hidden="true">
           <path
@@ -112,7 +182,7 @@ function LanguageSelect({
                     : 'text-app-text-2 hover:bg-app-raised-hover',
                 ].join(' ')}
               >
-                <item.Flag />
+                <Flag id={item.id} />
                 {item.name}
               </button>
             </li>
@@ -123,42 +193,226 @@ function LanguageSelect({
   )
 }
 
+/** Версия, автор и ссылка на проект — во всплывающей подписи за одной иконкой. */
+/** Значок GitHub. */
+function GithubMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden="true">
+      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+    </svg>
+  )
+}
+
+function AboutButton() {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function close(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={t('footer.about')}
+        title={t('footer.about')}
+        onClick={() => setOpen((v) => !v)}
+        className="btn btn-ghost px-2 text-app-faint"
+      >
+        <FieldIcon name="info" className="h-5 w-5" />
+      </button>
+      {open && (
+        <div className="tour-fade absolute bottom-full left-0 z-30 mb-2 w-72 rounded-xl bg-app-raised p-2 text-[13.5px] shadow-xl shadow-black/40">
+          <p className="px-2.5 pt-1.5 pb-2 font-semibold text-app-text">
+            Multipurpose Artillery Calculator
+          </p>
+
+          {/* Автор: ник и ссылки на его профили справа */}
+          <div className="flex items-center gap-3 rounded-lg px-2.5 py-2">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+              <FieldIcon name="user" className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-app-text">Heis</span>
+              <span className="block truncate text-[12px] text-app-muted">
+                {t('footer.author-on-github')}
+              </span>
+            </span>
+            {AUTHOR_STEAM_URL && (
+              <a
+                href={AUTHOR_STEAM_URL}
+                target="_blank"
+                rel="noreferrer"
+                title={t('footer.author-steam')}
+                aria-label={t('footer.author-steam')}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-raised-hover hover:text-app-text"
+              >
+                <FieldIcon name="steam" className="h-[18px] w-[18px]" />
+              </a>
+            )}
+            <a
+              href={AUTHOR_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={t('footer.author-github')}
+              aria-label={t('footer.author-github')}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-raised-hover hover:text-app-text"
+            >
+              <GithubMark />
+            </a>
+          </div>
+
+          {[
+            {
+              href: REPO_URL,
+              title: t('footer.project-on-github'),
+              text: t('footer.source-and-releases'),
+              icon: <GithubMark />,
+            },
+            {
+              href: `${REPO_URL}/issues`,
+              title: t('footer.report-a-problem'),
+              text: t('footer.report-hint'),
+              icon: <FieldIcon name="help" className="h-4 w-4" />,
+            },
+          ].map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-app-raised-hover"
+            >
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+                {item.icon}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-app-text">{item.title}</span>
+                <span className="block truncate text-[12px] text-app-muted">{item.text}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /**
  * Подвал: ссылка на проект слева; справа — связка, настройки и язык.
  */
-export function Footer({ view, onViewChange, language, onLanguageChange }: Props) {
-  const ru = language === 'ru'
+export function Footer({
+  view,
+  onViewChange,
+  language,
+  onLanguageChange,
+  theme,
+  onToggleTheme,
+}: Props) {
   const sync = useSync()
 
   return (
     <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-2 px-4 py-5 sm:px-6">
-      <a
-        href={REPO_URL}
-        target="_blank"
-        rel="noreferrer"
-        aria-label="GitHub"
-        className="btn btn-ghost px-2"
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
-          <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
-        </svg>
-      </a>
-      <span className="label text-app-faint">v{__APP_VERSION__} · made by Heis</span>
+      <AboutButton />
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
+        <Dropdown
+          up
+          variant="ghost"
+          tourId="help"
+          label={t('footer.tutorial')}
+          value=""
+          buttonLabel={
+            <span className="flex items-center gap-2">
+              <FieldIcon name="book" className="h-[18px] w-[18px]" />
+              {t('footer.tutorial')}
+            </span>
+          }
+          onChange={(value) => {
+            onViewChange('dashboard')
+            setPanel(value === 'advanced' ? 'tourAdvanced' : 'tour', true)
+          }}
+          options={[
+            {
+              value: 'basic',
+              label: t('footer.basic-tutorial'),
+              description: t('footer.map-input-charge-fire'),
+            },
+            {
+              value: 'advanced',
+              label: t('footer.advanced-tutorial'),
+              description: t('footer.maps-line-link-details'),
+            },
+          ]}
+        />
+
+        <button
+          type="button"
+          onClick={() => togglePanel('hotkeys')}
+          data-tour="hotkeys"
+          className="btn btn-ghost hidden sm:inline-flex"
+        >
+          <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
+          {t('footer.keyboard-shortcuts')}
+        </button>
+
+        {!isDesktop && (
+          <a
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noreferrer"
+            title={t('footer.overlay-on-top-of-the')}
+            className="btn btn-ghost"
+          >
+            <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
+            {t('footer.desktop-app')}
+          </a>
+        )}
+
         <button
           type="button"
           onClick={() => onViewChange(view === 'sync' ? 'dashboard' : 'sync')}
+          data-tour="link"
           aria-pressed={view === 'sync'}
           className={['btn', view === 'sync' ? 'bg-app-raised-hover text-app-text' : ''].join(' ')}
         >
           <span
             className={`h-2 w-2 rounded-full ${syncStatusColor(sync.enabled ? sync.status : 'off')}`}
           />
-          {ru ? 'Связка' : 'Link'}
+          <FieldIcon name="link" className="h-[18px] w-[18px]" />
+          {t('footer.link')}
           {sync.enabled && sync.code && (
             <span className="text-app-muted">{sync.code}</span>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={(event) => {
+            const r = event.currentTarget.getBoundingClientRect()
+            onToggleTheme({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+          }}
+          aria-label={t('footer.toggle-theme')}
+          data-tour="theme"
+          title={
+            theme === 'dark'
+              ? t('footer.light-theme')
+              : t('footer.dark-theme')
+          }
+          className="btn px-2.5"
+        >
+          <FieldIcon
+            key={theme}
+            name={theme === 'dark' ? 'moon' : 'sun'}
+            className="theme-icon h-5 w-5"
+          />
         </button>
 
         <button
@@ -167,8 +421,9 @@ export function Footer({ view, onViewChange, language, onLanguageChange }: Props
             onViewChange(view === 'settings' ? 'dashboard' : 'settings')
           }
           aria-pressed={view === 'settings'}
-          aria-label={ru ? 'Настройки' : 'Settings'}
-          title={ru ? 'Настройки' : 'Settings'}
+          data-tour="settings"
+          aria-label={t('app.settings')}
+          title={t('app.settings')}
           className={[
             'btn px-2.5',
             view === 'settings' ? 'bg-app-raised-hover text-app-text' : '',

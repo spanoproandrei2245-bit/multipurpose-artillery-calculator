@@ -1,3 +1,4 @@
+import { applyMotion } from './lib/motion'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -27,6 +28,7 @@ if (!isOverlayWindow) void loadCustomSounds()
 // Поверх игры — всегда тёмная тема, независимо от настроек основного окна.
 if (isOverlayWindow) document.documentElement.classList.add('overlay', 'dark')
 
+applyMotion()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isOverlayWindow ? (

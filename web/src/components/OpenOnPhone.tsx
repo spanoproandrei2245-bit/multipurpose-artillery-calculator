@@ -1,7 +1,7 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 
-import type { Language } from '../types/settings'
 
 /** Адрес, который телефон не сможет открыть: только этот компьютер. */
 function isLocalOnly(hostname: string): boolean {
@@ -17,8 +17,7 @@ function isLocalOnly(hostname: string): boolean {
  * QR-код со ссылкой на текущую страницу: открыть приложение на
  * телефоне, отсканировав экран компьютера.
  */
-export function OpenOnPhone({ language }: { language: Language }) {
-  const ru = language === 'ru'
+export function OpenOnPhone() {
   const url = window.location.origin + window.location.pathname
   const [image, setImage] = useState<string | null>(null)
 
@@ -44,7 +43,7 @@ export function OpenOnPhone({ language }: { language: Language }) {
             src={image}
             width={128}
             height={128}
-            alt={ru ? 'QR-код со ссылкой на приложение' : 'QR code with the app link'}
+            alt={t('openOnPhone.qr-code-with-the-app')}
             className="block bg-white p-1"
           />
         </div>
@@ -54,12 +53,8 @@ export function OpenOnPhone({ language }: { language: Language }) {
         <p className="text-[12.5px] break-all text-app-text">{url}</p>
         <p className="mt-2 text-xs text-app-muted">
           {isLocalOnly(window.location.hostname)
-            ? ru
-              ? 'Сейчас приложение открыто локально — телефон по этой ссылке его не найдёт. QR-код заработает на опубликованном сайте (GitHub Pages).'
-              : 'The app is running locally — a phone cannot open this link. The QR code works on the published site (GitHub Pages).'
-            : ru
-              ? 'Наведите камеру телефона, откройте ссылку и выберите «Установить приложение» / «На экран Домой».'
-              : 'Point the phone camera at it, open the link and choose "Install app" / "Add to Home screen".'}
+            ? t('openOnPhone.the-app-is-running-locally')
+            : t('openOnPhone.point-the-phone-camera-at')}
         </p>
       </div>
     </div>

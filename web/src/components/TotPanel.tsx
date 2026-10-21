@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState } from 'react'
 
 import { playSound } from '../lib/sound'
@@ -8,7 +10,6 @@ import {
   parseClock,
   suggestImpactTime,
 } from '../lib/tot'
-import type { Language } from '../types/settings'
 import { ProgressBar } from './FormControls'
 
 // Отсчёт со звуком за столько секунд до выстрела
@@ -24,7 +25,6 @@ interface Props {
   onImpactChange?: (impactAt: number | null) => void
   // Момент выстрела настал: запустить таймер полёта
   onFireMoment: () => void
-  language: Language
   // Оформление блока: по умолчанию — самостоятельная панель
   className?: string
 }
@@ -38,10 +38,8 @@ export function TotPanel({
   impactAt,
   onImpactChange,
   onFireMoment,
-  language,
   className = 'panel p-4 sm:p-5',
 }: Props) {
-  const ru = language === 'ru'
   const editable = onImpactChange !== undefined
   const [draft, setDraft] = useState('')
   const [now, setNow] = useState(() => Date.now())
@@ -105,31 +103,28 @@ export function TotPanel({
       open={impactAt !== null || undefined}
     >
       <summary>
-        <span className="text-app-text">
-          {ru ? 'Огонь по времени · TOT' : 'Time on target · TOT'}
+        <span className="inline-flex items-center gap-2 text-app-text">
+          <FieldIcon name="clock" className="h-5 w-5 text-app-muted" />
+          {t('totPanel.time-on-target')}
         </span>
         {impactAt !== null && (
           <span className="tag tag-accent">
-            {ru ? 'разрыв' : 'impact'} {formatClock(impactAt)}
+            {t('totPanel.impact')} {formatClock(impactAt)}
           </span>
         )}
       </summary>
 
       <p className="mt-3 text-xs text-app-muted">
         {editable
-          ? ru
-            ? 'Задайте время разрыва — выстрел будет за время полёта до него, с отсчётом 5-4-3-2-1. В связке время уходит стрелкам: несколько орудий кладут снаряды одновременно.'
-            : 'Set the impact time — the round goes out one flight time earlier, with a 5-4-3-2-1 countdown. In a link the time goes to the gunners, so several guns land together.'
-          : ru
-            ? 'Время разрыва задал наводчик. Стреляйте по отсчёту.'
-            : 'The FDC set the impact time. Fire on the countdown.'}
+          ? t('totPanel.set-the-impact-time-the')
+          : t('totPanel.the-fdc-set-the-impact')}
       </p>
 
       {editable && (
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <label className="block">
             <span className="label mb-1 block">
-              {ru ? 'Разрыв в' : 'Impact at'}
+              {t('featurePreview.impact-at')}
             </span>
             <input
               value={draft}
@@ -149,21 +144,21 @@ export function TotPanel({
             disabled={draftAt === null}
             onClick={() => setImpact(draftAt)}
           >
-            {ru ? 'Задать' : 'Set'}
+            {t('totPanel.set')}
           </button>
           <button
             type="button"
             className="btn btn-sm"
             onClick={() => setImpact(suggestImpactTime(Date.now(), tof, 30))}
           >
-            +30 {ru ? 'с' : 's'}
+            +30 {t('unit.s')}
           </button>
           <button
             type="button"
             className="btn btn-sm"
             onClick={() => setImpact(suggestImpactTime(Date.now(), tof, 60))}
           >
-            +1 {ru ? 'мин' : 'min'}
+            +1 {t('totPanel.min')}
           </button>
           {impactAt !== null && (
             <button
@@ -171,7 +166,7 @@ export function TotPanel({
               className="btn btn-sm btn-danger"
               onClick={() => setImpact(null)}
             >
-              {ru ? 'Сброс' : 'Clear'}
+              {t('totPanel.clear')}
             </button>
           )}
         </div>
@@ -187,14 +182,10 @@ export function TotPanel({
               ].join(' ')}
             >
               {phase === 'fire'
-                ? ru
-                  ? 'Огонь!'
-                  : 'Fire!'
+                ? t('overlayApp.fire')
                 : phase === 'past'
-                  ? ru
-                    ? 'Время выстрела прошло'
-                    : 'Fire time has passed'
-                  : `${ru ? 'Выстрел в' : 'Fire at'} ${formatClockTenths(fireAt)}`}
+                  ? t('totPanel.fire-time-has-passed')
+                  : `${t('totPanel.fire-at')} ${formatClockTenths(fireAt)}`}
             </span>
             <span
               className={[
@@ -218,8 +209,8 @@ export function TotPanel({
             className="mt-2"
           />
           <p className="label mt-2 text-app-faint">
-            {ru ? 'Разрыв' : 'Impact'} {formatClock(impactAt)} ·{' '}
-            {ru ? 'полёт' : 'flight'} {tof.toFixed(1)} {ru ? 'с' : 's'}
+            {t('fireTimer.impact')} {formatClock(impactAt)} ·{' '}
+            {t('totPanel.flight')} {tof.toFixed(1)} {t('unit.s')}
           </p>
         </div>
       )}

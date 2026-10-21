@@ -1,154 +1,82 @@
 #!/usr/bin/env node
 /**
- * Иконки приложения (PWA и favicon) без внешних зависимостей:
- * силуэт миномёта из ArtilleryIcon, отрисованный в PNG вручную.
+ * Иконки приложения (PWA, favicon, программа для ПК): белый силуэт
+ * гаубицы на тёмном фоне — как в калькуляторе MTC.
  *
  *   node scripts/make-icons.mjs
  *
- * Результат — в public/: icon-192.png, icon-512.png,
- * icon-maskable-512.png, favicon.svg.
+ * Результат — в public/ (icon-192.png, icon-512.png, icon-maskable-512.png,
+ * favicon.svg) и в src-tauri/icons/ (PNG и icon.ico).
  */
 import { writeFileSync } from 'node:fs'
-import { deflateSync } from 'node:zlib'
+import sharp from 'sharp'
 
-const BACKGROUND = [10, 10, 10] // фон тёмной темы
-const STROKE = [255, 90, 31] // акцент
+const BACKGROUND = '#0a0a0a' // фон тёмной темы
+const INK = '#f5f5f5'
 
-// Линии значка в сетке 24×24 (как в ArtilleryIcon, категория mortar)
-const SEGMENTS = [
-  // ствол (контур)
-  [6.6, 17.6, 15.4, 5.4],
-  [15.4, 5.4, 17.4, 6.8],
-  [17.4, 6.8, 8.6, 19],
-  [8.6, 19, 6.6, 17.6],
-  // двунога
-  [13.6, 10.4, 10.5, 19.5],
-  [13.6, 10.4, 18, 19.5],
-  // опорная плита
-  [4, 19.5, 11, 19.5],
-]
-const GLYPH_CENTER = [11, 12.45]
-const GLYPH_HEIGHT = 14.1
-const STROKE_WIDTH = 1.5
+// Силуэт в сетке 24×24: ствол под углом, казённик со щитом, колесо, станина
+const GLYPH = `
+  <g fill="${INK}" stroke="${INK}" stroke-linejoin="round" stroke-linecap="round">
+    <line x1="11.5" y1="12.5" x2="21.2" y2="5.6" stroke-width="2.4"/>
+    <line x1="19.2" y1="7" x2="21.7" y2="5.2" stroke-width="3.6"/>
+    <path d="M7.4 10.6 L12.6 9.6 L14 15.4 L8.6 16.6 Z" stroke-width="1"/>
+    <circle cx="10.6" cy="17.2" r="3" stroke="none"/>
+    <line x1="8" y1="14.8" x2="2.2" y2="19.4" stroke-width="1.8"/>
+    <line x1="1.8" y1="20.6" x2="7.2" y2="20.6" stroke-width="1.6"/>
+  </g>
+  <circle cx="10.6" cy="17.2" r="1" fill="${BACKGROUND}"/>`
 
-function distanceToSegment(px, py, [x1, y1, x2, y2]) {
-  const dx = x2 - x1
-  const dy = y2 - y1
-  const t = Math.max(
-    0,
-    Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))
-  )
-  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+// Центр силуэта в сетке (для вписывания с запасом)
+const CENTER = [11.9, 12.4]
+
+function svg(scale, radius) {
+  const tx = 12 - CENTER[0] * scale
+  const ty = 12 - CENTER[1] * scale
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="${radius}" fill="${BACKGROUND}"/><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale})">${GLYPH}</g></svg>`
 }
 
-/**
- * size — сторона, px; glyphShare — доля высоты под значок;
- * radius — скругление фона в долях стороны (0 — квадрат на всю площадь).
- */
-function render(size, glyphShare, radius) {
-  const scale = (size * glyphShare) / GLYPH_HEIGHT
-  const halfWidth = (STROKE_WIDTH * scale) / 2
-  const r = radius * size
-  const pixels = Buffer.alloc(size * size * 4)
+const png = (size, scale, radius) =>
+  sharp(Buffer.from(svg(scale, radius)), { density: (72 * size) / 24 })
+    .resize(size, size)
+    .png()
+    .toBuffer()
 
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const cx = x + 0.5
-      const cy = y + 0.5
-
-      // Фон: скруглённый квадрат со сглаживанием краёв
-      let background = 1
-      if (r > 0) {
-        const qx = Math.max(r - cx, cx - (size - r), 0)
-        const qy = Math.max(r - cy, cy - (size - r), 0)
-        background = Math.max(0, Math.min(1, r + 0.5 - Math.hypot(qx, qy)))
-      }
-
-      // Значок: расстояние до ближайшей линии в координатах сетки
-      const gx = (cx - size / 2) / scale + GLYPH_CENTER[0]
-      const gy = (cy - size / 2) / scale + GLYPH_CENTER[1]
-      let d = Infinity
-      for (const segment of SEGMENTS) {
-        d = Math.min(d, distanceToSegment(gx, gy, segment))
-      }
-      const ink = Math.max(0, Math.min(1, halfWidth + 0.5 - d * scale))
-
-      const i = (y * size + x) * 4
-      for (let c = 0; c < 3; c += 1) {
-        pixels[i + c] = Math.round(
-          BACKGROUND[c] * (1 - ink) + STROKE[c] * ink
-        )
-      }
-      pixels[i + 3] = Math.round(255 * background)
-    }
-  }
-
-  return encodePng(size, pixels)
+// ICO из PNG-кадров (формат Vista+: PNG прямо внутри)
+function ico(frames) {
+  const head = Buffer.alloc(6)
+  head.writeUInt16LE(1, 2)
+  head.writeUInt16LE(frames.length, 4)
+  let offset = 6 + 16 * frames.length
+  const entries = frames.map(({ size, data }) => {
+    const e = Buffer.alloc(16)
+    e[0] = size === 256 ? 0 : size
+    e[1] = size === 256 ? 0 : size
+    e.writeUInt16LE(1, 4)
+    e.writeUInt16LE(32, 6)
+    e.writeUInt32LE(data.length, 8)
+    e.writeUInt32LE(offset, 12)
+    offset += data.length
+    return e
+  })
+  return Buffer.concat([head, ...entries, ...frames.map((f) => f.data)])
 }
 
-// ---- PNG ----
+const pub = new URL('../public/', import.meta.url)
+const tauri = new URL('../src-tauri/icons/', import.meta.url)
 
-const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
-  let c = n
-  for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-  return c >>> 0
-})
-
-function crc32(buffer) {
-  let c = 0xffffffff
-  for (const byte of buffer) c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8)
-  return (c ^ 0xffffffff) >>> 0
-}
-
-function chunk(type, data) {
-  const length = Buffer.alloc(4)
-  length.writeUInt32BE(data.length)
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
-  const crc = Buffer.alloc(4)
-  crc.writeUInt32BE(crc32(body))
-  return Buffer.concat([length, body, crc])
-}
-
-function encodePng(size, pixels) {
-  const header = Buffer.alloc(13)
-  header.writeUInt32BE(size, 0)
-  header.writeUInt32BE(size, 4)
-  header[8] = 8 // бит на канал
-  header[9] = 6 // RGBA
-
-  // Каждая строка начинается с байта фильтра (0 — без фильтра)
-  const raw = Buffer.alloc(size * (size * 4 + 1))
-  for (let y = 0; y < size; y += 1) {
-    pixels.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4)
-  }
-
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ])
-}
-
-// ---- SVG ----
-
-function svg() {
-  const scale = (24 * 0.62) / GLYPH_HEIGHT
-  const tx = 12 - GLYPH_CENTER[0] * scale
-  const ty = 12 - GLYPH_CENTER[1] * scale
-  const lines = SEGMENTS.map(
-    ([x1, y1, x2, y2]) =>
-      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
-  ).join('')
-  const hex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="1.5" fill="${hex(BACKGROUND)}"/><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale.toFixed(4)})" stroke="${hex(STROKE)}" stroke-width="${STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">${lines}</g></svg>\n`
-}
-
-const out = new URL('../public/', import.meta.url)
-writeFileSync(new URL('icon-192.png', out), render(192, 0.62, 0.06))
-writeFileSync(new URL('icon-512.png', out), render(512, 0.62, 0.06))
+writeFileSync(new URL('favicon.svg', pub), svg(0.8, 3) + '\n')
+writeFileSync(new URL('icon-192.png', pub), await png(192, 0.8, 3))
+writeFileSync(new URL('icon-512.png', pub), await png(512, 0.8, 3))
 // Maskable: фон на всю площадь, значок в безопасной зоне (центр 80 %)
-writeFileSync(new URL('icon-maskable-512.png', out), render(512, 0.5, 0))
-writeFileSync(new URL('favicon.svg', out), svg())
-console.log('icons written to public/')
+writeFileSync(new URL('icon-maskable-512.png', pub), await png(512, 0.62, 0))
+
+writeFileSync(new URL('32x32.png', tauri), await png(32, 0.8, 3))
+writeFileSync(new URL('128x128.png', tauri), await png(128, 0.8, 3))
+writeFileSync(new URL('128x128@2x.png', tauri), await png(256, 0.8, 3))
+writeFileSync(new URL('icon.png', tauri), await png(512, 0.8, 3))
+const frames = []
+for (const size of [16, 32, 48, 64, 128, 256]) {
+  frames.push({ size, data: await png(size, 0.8, 3) })
+}
+writeFileSync(new URL('icon.ico', tauri), ico(frames))
+console.log('icons written')

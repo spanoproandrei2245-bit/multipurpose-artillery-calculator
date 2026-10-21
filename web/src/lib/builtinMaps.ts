@@ -15,8 +15,18 @@ export const MAPS_BASE = isDesktop ? `${PUBLIC_SITE_URL}maps/` : './maps/'
 export interface BuiltinMapEntry {
   world: string
   displayName: string
+  // Названия на других языках (ключ — код языка), если отличаются от displayName
+  names?: Partial<Record<string, string>>
   author: string
+  // official — Bohemia Interactive, community — карты сообщества
+  kind?: 'official' | 'community'
   worldSize: number
+}
+
+/** Происхождение карты; у старых записей index.json kind нет — смотрим на автора. */
+export function mapKind(entry: Pick<BuiltinMapEntry, 'kind' | 'author'>): 'official' | 'community' {
+  if (entry.kind) return entry.kind
+  return /bohemia/i.test(entry.author) ? 'official' : 'community'
 }
 
 export interface MapTiles {

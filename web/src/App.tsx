@@ -1,6 +1,16 @@
+import {
+  detectLanguage,
+  isLanguage,
+  localeOf,
+  setLanguage as setI18nLanguage,
+  t,
+} from './i18n'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 
 import { Footer, type View } from './components/Footer'
+import { HotkeysDialog } from './components/HotkeysDialog'
+import { Tour } from './components/Tour'
 import { DashboardPage } from './pages/DashboardPage'
 
 import { isModelId, type ModelId } from './data/models'
@@ -21,10 +31,8 @@ const SettingsPage = lazy(() =>
 
 // Язык по умолчанию — как у системы
 function defaultLanguage(): Language {
-  return typeof navigator !== 'undefined' &&
-    navigator.language.toLowerCase().startsWith('ru')
-    ? 'ru'
-    : 'en'
+  if (typeof navigator === 'undefined') return 'en'
+  return detectLanguage(navigator.languages?.length ? navigator.languages : [navigator.language])
 }
 
 const parseFlag = (fallback: boolean) => (raw: string | null) =>
@@ -34,12 +42,11 @@ const parseFlag = (fallback: boolean) => (raw: string | null) =>
 function SubView({
   title,
   onBack,
-  language,
   children,
 }: {
   title: string
   onBack: () => void
-  language: Language
+  
   children: ReactNode
 }) {
   return (
@@ -47,7 +54,7 @@ function SubView({
       <div className="mb-6 flex items-center gap-3">
         <button type="button" onClick={onBack} className="btn btn-ghost -ml-3">
           <span aria-hidden="true">←</span>
-          {language === 'ru' ? 'Назад' : 'Back'}
+          {t('app.back')}
         </button>
         <h1 className="text-2xl font-semibold text-app-text">{title}</h1>
       </div>
@@ -69,8 +76,10 @@ function App() {
 
   const [language, setLanguage] = usePersistentState<Language>(
     'language',
-    (raw) => (raw === 'ru' || raw === 'en' ? raw : defaultLanguage())
+    (raw) => (isLanguage(raw) ? raw : defaultLanguage())
   )
+  // Язык для t(): задаётся до отрисовки дочерних компонентов
+  setI18nLanguage(language)
   const [theme, setTheme] = usePersistentState<Theme>('theme', (raw) =>
     raw === 'light' ? 'light' : 'dark'
   )
@@ -87,6 +96,16 @@ function App() {
   // Карта с метками и высотами
   const [mapInput, setMapInput] = usePersistentState('showMap', parseFlag(true))
 
+  // Метки на карте и метки с экрана игры — по желанию, в настройках
+  const [showMarkers, setShowMarkers] = usePersistentState(
+    'showMarkers',
+    parseFlag(false)
+  )
+  const [showScreenMarkers, setShowScreenMarkers] = usePersistentState(
+    'showScreenMarkers',
+    parseFlag(false)
+  )
+
   useWakeLock(keepAwake)
 
   // Программа для ПК: Ctrl+Alt+O показывает и скрывает оверлей
@@ -99,7 +118,7 @@ function App() {
   )
 
   useEffect(() => {
-    document.documentElement.lang = language
+    document.documentElement.lang = localeOf(language)
   }, [language])
 
   useEffect(() => {
@@ -109,8 +128,43 @@ function App() {
       ?.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff')
   }, [theme])
 
-  const ru = language === 'ru'
   const back = () => setView('dashboard')
+
+  // Смена темы: круг расходится от кнопки; без поддержки браузера — сразу
+  function toggleTheme(origin: { x: number; y: number }) {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { ready: Promise<void> }
+    }
+    // Круг при смене темы встроен и работает всегда, где браузер умеет
+    if (!doc.startViewTransition) {
+      setTheme(next)
+      return
+    }
+    const radius = Math.hypot(
+      Math.max(origin.x, window.innerWidth - origin.x),
+      Math.max(origin.y, window.innerHeight - origin.y)
+    )
+    const transition = doc.startViewTransition(() => {
+      document.documentElement.classList.toggle('dark', next === 'dark')
+      flushSync(() => setTheme(next))
+    })
+    void transition.ready.then(() =>
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${origin.x}px ${origin.y}px)`,
+            `circle(${radius}px at ${origin.x}px ${origin.y}px)`,
+          ],
+        },
+        {
+          duration: 650,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      )
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -122,21 +176,22 @@ function App() {
             language={language}
             gridInput={gridInput}
             mapInput={mapInput}
+            showMarkers={showMarkers}
+            showScreenMarkers={showScreenMarkers}
           />
         )}
 
         <Suspense
           fallback={
             <p className="label py-16 text-center">
-              {ru ? 'Загрузка…' : 'Loading…'}
+              {t('app.loading')}
             </p>
           }
         >
           {view === 'sync' && (
             <SubView
-              title={ru ? 'Связка наводчик ↔ стрелок' : 'FDC ↔ gunner link'}
+              title={t('app.fdc-gunner-link')}
               onBack={back}
-              language={language}
             >
               <SyncPage language={language} />
             </SubView>
@@ -144,19 +199,18 @@ function App() {
 
           {view === 'settings' && (
             <SubView
-              title={ru ? 'Настройки' : 'Settings'}
+              title={t('app.settings')}
               onBack={back}
-              language={language}
             >
               <SettingsPage
-                language={language}
-                onLanguageChange={setLanguage}
-                theme={theme}
-                onThemeChange={setTheme}
                 gridInput={gridInput}
                 onGridInputChange={setGridInput}
                 mapInput={mapInput}
                 onMapInputChange={setMapInput}
+                showMarkers={showMarkers}
+                onShowMarkersChange={setShowMarkers}
+                showScreenMarkers={showScreenMarkers}
+                onShowScreenMarkersChange={setShowScreenMarkers}
                 keepAwake={keepAwake}
                 onKeepAwakeChange={setKeepAwake}
               />
@@ -165,11 +219,16 @@ function App() {
         </Suspense>
       </main>
 
+      <HotkeysDialog />
+      {view === 'dashboard' && <Tour />}
+
       <Footer
         view={view}
         onViewChange={setView}
         language={language}
         onLanguageChange={setLanguage}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     </div>
   )

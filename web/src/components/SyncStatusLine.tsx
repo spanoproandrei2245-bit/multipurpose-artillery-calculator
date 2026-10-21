@@ -1,9 +1,8 @@
+import { t } from '../i18n'
 import { syncStatusColor, syncStatusText, useSync } from '../lib/syncContext'
-import type { Language } from '../types/settings'
 
 /** Короткая строка о связке под таймером калькулятора. */
-export function SyncStatusLine({ language }: { language: Language }) {
-  const ru = language === 'ru'
+export function SyncStatusLine() {
   const sync = useSync()
   if (!sync.enabled) return null
 
@@ -15,11 +14,11 @@ export function SyncStatusLine({ language }: { language: Language }) {
         className={`inline-block h-1.5 w-1.5 shrink-0 ${syncStatusColor(sync.status)}`}
       />
       <span>
-        {ru ? 'Связка' : 'Link'} {sync.code} · {syncStatusText(sync.status, ru)}
+        {t('footer.link')} {sync.code} · {syncStatusText(sync.status)}
         {sync.status === 'online' &&
           (sync.role === 'computer'
-            ? ` · ${ru ? 'стрелков' : 'gunners'}: ${gunners}`
-            : ` · ${ru ? 'вы стрелок, установки — во вкладке «Связка»' : 'you are a gunner, see the Link tab'}`)}
+            ? ` · ${t('syncStatusLine.gunners')}: ${gunners}`
+            : ` · ${t('syncStatusLine.you-are-a-gunner-see')}`)}
       </span>
     </p>
   )

@@ -1,9 +1,9 @@
+import { t } from '../i18n'
 import { useEffect, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useWakeLock } from '../lib/useWakeLock'
 import type { ArtilleryMode } from '../types/artillery'
-import type { Language } from '../types/settings'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
 
 interface Props {
@@ -19,7 +19,6 @@ interface Props {
   timerRef: Ref<FireTimerHandle>
   onFire?: () => void
   onClose: () => void
-  language: Language
 }
 
 /**
@@ -38,9 +37,7 @@ export function CombatScreen({
   timerRef,
   onFire,
   onClose,
-  language,
 }: Props) {
-  const ru = language === 'ru'
 
   useWakeLock(true)
 
@@ -61,7 +58,7 @@ export function CombatScreen({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={ru ? 'Боевой экран' : 'Combat screen'}
+      aria-label={t('artilleryCalculator.combat-screen')}
       className="fixed inset-0 z-50 flex flex-col overflow-auto bg-app-bg p-3 sm:p-6"
     >
       <div className="flex items-start justify-between gap-4">
@@ -75,7 +72,7 @@ export function CombatScreen({
         </div>
 
         <button type="button" onClick={onClose} className="btn shrink-0">
-          {ru ? 'Закрыть' : 'Close'}
+          {t('combatScreen.close')}
           <span className="kbd hidden sm:inline-block">Esc</span>
         </button>
       </div>
@@ -83,7 +80,7 @@ export function CombatScreen({
       <div className="mt-4 grid flex-1 gap-3 sm:grid-cols-2">
         <div className={cell}>
           <p className={caption}>
-            {ru ? 'Возвышение' : 'Elevation'}, {ru ? 'мил' : 'mil'}
+            {t('artilleryCalculator.elevation')}, {t('unit.mil')}
           </p>
           <p className="readout mt-3 text-[clamp(5rem,24vw,12rem)] font-semibold">
             {Math.round(elevation)}
@@ -92,7 +89,7 @@ export function CombatScreen({
 
         <div className={cell}>
           <p className={caption}>
-            {ru ? 'Азимут' : 'Azimuth'}
+            {t('artilleryCalculator.azimuth')}
             {azimuth !== null && `, ${azimuthUnit}`}
           </p>
           <p
@@ -107,7 +104,7 @@ export function CombatScreen({
 
         <div className={`${cell} flex items-end gap-12`}>
           <div>
-            <p className={caption}>{ru ? 'Заряд' : 'Charge'}</p>
+            <p className={caption}>{t('artilleryCalculator.charge')}</p>
             <p className="readout mt-3 flex items-baseline gap-3 text-7xl font-semibold">
               {charge}
               {mode === 'LOW' && <span className="tag tag-warn">LOW</span>}
@@ -115,7 +112,7 @@ export function CombatScreen({
           </div>
           <div>
             <p className={caption}>
-              {ru ? 'Полёт' : 'Flight'}, {ru ? 'с' : 's'}
+              {t('combatScreen.flight')}, {t('unit.s')}
             </p>
             <p className="readout mt-3 text-7xl font-semibold">{tof.toFixed(1)}</p>
           </div>
@@ -125,14 +122,13 @@ export function CombatScreen({
           <FireTimer
             ref={timerRef}
             tof={tof}
-            language={language}
             onFire={onFire}
           />
         </div>
       </div>
 
       <p className="label mt-3 hidden text-center sm:block">
-        F — {ru ? 'огонь' : 'fire'} · Esc — {ru ? 'закрыть' : 'close'}
+        F — {t('combatScreen.fire')} · Esc — {t('combatScreen.close-2')}
       </p>
     </div>,
     document.body

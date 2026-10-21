@@ -1,3 +1,4 @@
+import { t, type MessageKey } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -12,33 +13,24 @@ import {
   SOUND_EVENTS,
   type SoundEvent,
 } from '../lib/sound'
-import type { Language } from '../types/settings'
-import { SectionHeading } from './FormControls'
+import { setTimerSound, useTimerSound } from '../lib/timerSound'
+import { SectionHeading, Switch } from './FormControls'
 
-const LABELS: Record<SoundEvent, { ru: string; en: string }> = {
-  fire: { ru: 'Выстрел (нажали «Огонь»)', en: 'Fire (button pressed)' },
-  splash: { ru: 'Сплэш — 5 с до разрыва', en: 'Splash — 5 s to impact' },
-  impact: { ru: 'Разрыв', en: 'Impact' },
-  mrsiTick: {
-    ru: 'Отсчёт 3-2-1 (MRSI, по времени)',
-    en: '3-2-1 countdown (MRSI, on time)',
-  },
-  mrsiFire: {
-    ru: '«Огонь» (MRSI, по времени)',
-    en: 'Fire (MRSI, on time)',
-  },
-  syncUpdate: {
-    ru: 'Связка: новые установки',
-    en: 'Link: new settings',
-  },
+const LABELS: Record<SoundEvent, MessageKey> = {
+  fire: 'soundSettings.fire-button-pressed',
+  splash: 'soundSettings.splash-5-s-to-impact',
+  impact: 'fireTimer.impact',
+  mrsiTick: 'soundSettings.3-2-1-countdown-mrsi',
+  mrsiFire: 'soundSettings.fire-mrsi-on-time',
+  syncUpdate: 'soundSettings.link-new-settings',
 }
 
 /** Свои звуковые файлы на события и общая громкость. */
-export function SoundSettings({ language }: { language: Language }) {
-  const ru = language === 'ru'
+export function SoundSettings() {
   const [volume, setVolumeState] = useState(getVolume)
   const [names, setNames] = useState(readNames)
   const [error, setError] = useState<string | null>(null)
+  const timerSound = useTimerSound()
   const inputs = useRef<Partial<Record<SoundEvent, HTMLInputElement>>>({})
 
   useEffect(() => onCustomSoundsChange(() => setNames(readNames())), [])
@@ -54,15 +46,11 @@ export function SoundSettings({ language }: { language: Language }) {
     const result = await setCustomSound(event, file)
     if (result === 'too-large') {
       setError(
-        ru
-          ? `«${file.name}» больше ${MAX_SOUND_BYTES / 1024 / 1024} МБ — возьмите короткий звук.`
-          : `"${file.name}" is over ${MAX_SOUND_BYTES / 1024 / 1024} MB — use a short sound.`
+        t('soundSettings.is-over-mb-use-a', file.name, MAX_SOUND_BYTES / 1024 / 1024)
       )
     } else if (result === 'not-audio') {
       setError(
-        ru
-          ? `«${file.name}» не читается как звук. Подойдут MP3, WAV, OGG.`
-          : `"${file.name}" is not a playable sound. Use MP3, WAV or OGG.`
+        t('soundSettings.is-not-a-playable-sound', file.name)
       )
     } else {
       playSound(event)
@@ -73,15 +61,22 @@ export function SoundSettings({ language }: { language: Language }) {
 
   return (
     <div className="panel p-4 sm:p-5">
-      <SectionHeading index="02" title={ru ? 'Звуки' : 'Sounds'} />
+      <SectionHeading index="02" title={t('soundSettings.sounds')} />
       <p className="mt-3 text-sm text-app-muted">
-        {ru
-          ? 'Свой файл на каждое событие (MP3, WAV, OGG до 2 МБ). Файлы хранятся только на этом устройстве.'
-          : 'Your own file for each event (MP3, WAV, OGG up to 2 MB). Files stay on this device.'}
+        {t('soundSettings.your-own-file-for-each')}
       </p>
 
+      <div className="mt-4">
+        <Switch
+          checked={timerSound}
+          onChange={setTimerSound}
+          label={t('soundSettings.timer-sound')}
+          description={t('soundSettings.timer-sound-description')}
+        />
+      </div>
+
       <label className="mt-4 flex items-center gap-3">
-        <span className="label">{ru ? 'Громкость' : 'Volume'}</span>
+        <span className="label">{t('soundSettings.volume')}</span>
         <input
           type="range"
           min={0}
@@ -105,7 +100,7 @@ export function SoundSettings({ language }: { language: Language }) {
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm text-app-text">
-                {ru ? LABELS[event].ru : LABELS[event].en}
+                {t(LABELS[event])}
               </p>
               <p
                 className={[
@@ -113,7 +108,7 @@ export function SoundSettings({ language }: { language: Language }) {
                   names[event] ? 'text-accent' : 'text-app-faint',
                 ].join(' ')}
               >
-                {names[event] ?? (ru ? 'стандартный сигнал' : 'default beep')}
+                {names[event] ?? (t('soundSettings.default-beep'))}
               </p>
             </div>
             <button
@@ -121,14 +116,14 @@ export function SoundSettings({ language }: { language: Language }) {
               onClick={() => playSound(event)}
               className={button}
             >
-              {ru ? '▶ Проверить' : '▶ Test'}
+              {t('soundSettings.test')}
             </button>
             <button
               type="button"
               onClick={() => inputs.current[event]?.click()}
               className={button}
             >
-              {ru ? 'Выбрать файл' : 'Choose file'}
+              {t('soundSettings.choose-file')}
             </button>
             {names[event] && (
               <button
@@ -136,7 +131,7 @@ export function SoundSettings({ language }: { language: Language }) {
                 onClick={() => void resetCustomSound(event)}
                 className={button}
               >
-                {ru ? 'Сбросить' : 'Reset'}
+                {t('adjustFire.reset')}
               </button>
             )}
             <input

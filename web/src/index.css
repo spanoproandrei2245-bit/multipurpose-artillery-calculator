@@ -31,6 +31,7 @@
   --color-info: #12467b;
   --color-gun: #0b6bcb;
   --color-target: #c41c1c;
+  --color-special: #7c3aed;
   color-scheme: light;
 }
 
@@ -57,12 +58,14 @@
   --color-info: #97c3f0;
   --color-gun: #4393e4;
   --color-target: #e47474;
+  --color-special: #b794f6;
   color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+    "Segoe UI", Roboto, "Hiragino Sans", "Yu Gothic UI", "Meiryo",
+    "PingFang SC", "Microsoft YaHei UI", "Noto Sans CJK JP", "Noto Sans CJK SC", sans-serif;
   --font-mono: "Inter Variable", "Inter", ui-sans-serif, sans-serif;
 
   --color-app-bg: var(--color-background);
@@ -87,6 +90,7 @@
   --color-info: var(--color-info);
   --color-gun: var(--color-gun);
   --color-target: var(--color-target);
+  --color-special: var(--color-special);
 }
 
 @layer base {
@@ -279,6 +283,7 @@
 
   /* Значение-поле в строке списка: справа, компактное */
   .field-inline {
+    height: 2.25rem;
     width: 8.5rem;
     text-align: right;
   }
@@ -295,13 +300,21 @@
 
   /* ---- группа переключателей ---- */
   .seg {
+    position: relative;
     display: inline-flex;
+    align-items: stretch;
+    min-height: 2.25rem;
     gap: 2px;
     border-radius: 6px;
     background: var(--color-raised);
     padding: 3px;
   }
   .seg > button {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     border-radius: 4px;
     padding: 0.2rem 0.65rem;
     font-size: 13.5px;
@@ -319,6 +332,21 @@
   .seg > button[aria-pressed="true"] {
     background: var(--color-raised-hover);
     color: var(--color-text);
+  }
+  .seg-pill {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    z-index: 0;
+    border-radius: 4px;
+    background: var(--color-raised-hover);
+    transition:
+      transform 260ms cubic-bezier(0.4, 0, 0.2, 1),
+      width 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .seg[data-pill] > button[aria-pressed="true"] {
+    background: transparent;
   }
   .seg > button:disabled {
     cursor: not-allowed;
@@ -430,4 +458,145 @@ html.overlay body {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
   }
+}
+
+/* Смена темы: круг расходится от кнопки (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Значок темы поворачивается при смене */
+@keyframes theme-icon-spin {
+  from {
+    transform: rotate(-90deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+.theme-icon {
+  animation: theme-icon-spin 0.45s ease-out;
+}
+
+/* Плавное появление окон обучения */
+@keyframes tour-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tour-fade {
+  animation: tour-fade 0.35s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-fade {
+    animation: none;
+  }
+}
+
+/* Число коротко вспыхивает при обновлении расчёта */
+@keyframes num-pop {
+  from {
+    opacity: 0.45;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.num-pop {
+  display: inline-block;
+  animation: num-pop 0.28s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .num-pop {
+    animation: none;
+  }
+}
+
+/*
+ * Анимации по видам (настройки → Анимации). Переезд обучения и круг при смене
+ * темы встроены и всегда включены: у них класс keep-motion / tour-fade-always.
+ */
+:root[data-m-numbers="off"] .num-pop {
+  animation: none !important;
+}
+:root[data-m-switches="off"] .seg-pill {
+  transition: none !important;
+}
+:root[data-m-appear="off"] .tour-fade {
+  animation: none !important;
+}
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill),
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill)::before,
+:root[data-m-smooth="off"] *:not(.keep-motion):not(.seg-pill)::after {
+  transition: none !important;
+}
+.tour-fade-always {
+  animation: tour-fade 0.35s ease-out;
+}
+
+/* Нажатие «Огонь»: короткая отдача кнопки и расходящееся кольцо */
+@keyframes fire-kick {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(67 147 228 / 0.65);
+  }
+  25% {
+    transform: scale(0.965);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 16px rgb(67 147 228 / 0);
+  }
+}
+.fire-kick {
+  animation: fire-kick 0.45s ease-out;
+}
+
+/* Снаряд прилетел: красная волна вокруг таймера и «прыжок» отсчёта */
+@keyframes impact-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(228 116 116 / 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgb(228 116 116 / 0);
+  }
+}
+@keyframes impact-jump {
+  0% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.impact-pulse {
+  animation: impact-pulse 0.9s ease-out;
+}
+.impact-jump {
+  display: inline-block;
+  animation: impact-jump 0.5s ease-out;
+}
+:root[data-m-fire="off"] .fire-kick {
+  animation: none !important;
+}
+:root[data-m-impact="off"] .impact-pulse,
+:root[data-m-impact="off"] .impact-jump {
+  animation: none !important;
 }
