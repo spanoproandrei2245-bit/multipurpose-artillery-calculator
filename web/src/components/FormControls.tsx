@@ -151,10 +151,13 @@ export function Toggle<T extends string>({
           aria-label={iconOnly ? option.label : undefined}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
-          className={equal ? 'min-w-0 justify-center' : undefined}
+          className={equal ? 'min-w-0 justify-center !px-1.5 max-[430px]:!text-[12.5px]' : undefined}
         >
           {option.icon && (
-            <FieldIcon name={option.icon} className={iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} />
+            <FieldIcon
+              name={option.icon}
+              className={`${iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} ${equal ? 'max-[430px]:hidden' : ''}`}
+            />
           )}
           {!iconOnly && <span className={equal ? 'truncate' : undefined}>{option.label}</span>}
         </button>

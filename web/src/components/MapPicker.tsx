@@ -329,6 +329,7 @@ export function MapPicker({
   const [liveStroke, setLiveStroke] = useState<DrawStroke | null>(null)
   const [drawColor, setDrawColor] = useState<MarkerColor>('red')
   const [clearArmed, setClearArmed] = useState(false)
+  const [drawOpen, setDrawOpen] = useState(false)
   const drawSeq = useRef(0)
   const drawRef = useRef<{ stroke: DrawStroke; erasing: boolean } | null>(null)
   useEffect(() => {
@@ -1275,9 +1276,28 @@ export function MapPicker({
           <div
             role="toolbar"
             aria-label={t('mapPicker.draw-tools')}
-            aria-orientation="vertical"
-            className="flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
+            className="flex flex-row-reverse gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
           >
+            <button
+              type="button"
+              aria-expanded={drawOpen}
+              title={t('mapPicker.draw-tools')}
+              aria-label={t('mapPicker.draw-tools')}
+              onClick={() => {
+                if (drawOpen && isDrawTool(placing)) setPlacing('target')
+                setDrawOpen(!drawOpen)
+              }}
+              className={[
+                'inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors',
+                drawOpen || isDrawTool(placing)
+                  ? 'bg-white/20 text-white'
+                  : 'text-white/80 hover:bg-white/15',
+              ].join(' ')}
+            >
+              <FieldIcon name={drawOpen ? 'close' : 'pen'} className="h-5 w-5" />
+            </button>
+            {drawOpen && (
+              <div className="flex gap-1">
             {(
               [
                 { id: 'pen', icon: 'pen', label: 'mapPicker.draw-pen' },
@@ -1346,6 +1366,8 @@ export function MapPicker({
             >
               <FieldIcon name="trash" className="h-5 w-5" />
             </button>
+              </div>
+            )}
           </div>
           </div>
 
