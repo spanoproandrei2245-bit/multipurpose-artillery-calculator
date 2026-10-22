@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const fr: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Seulement les bonnes charges",
+  "settingsPage.adv-ballistics": "Balistique avancée",
+  "settingsPage.adv-ballistics-description": "À activer si la résistance de l’air et la balistique avancée sont actives dans le jeu : les tables du jeu sont alors différentes. Les pièces sans ces tables utilisent les tables normales.",
+  "artilleryCalculator.advanced-missing": "Pas encore de tables de balistique avancée pour cette pièce : les tables normales sont utilisées, les tirs peuvent manquer dans le jeu.",
   "settingsPage.only-good-description": "Seules restent les charges qui excellent en quelque chose : la meilleure, la plus rapide ou la plus précise (et celle sélectionnée).",
   "weatherSection.clear-weather": "Effacer la météo",
   "settingsPage.motion-fire": "Tir : secousse et éclair",

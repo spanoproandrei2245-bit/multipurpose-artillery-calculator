@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "只保留优质装药",
+  "settingsPage.adv-ballistics": "高级弹道",
+  "settingsPage.adv-ballistics-description": "游戏中启用空气阻力和高级弹道时开启：此时游戏内射表不同。没有对应射表的火炮将使用普通射表。",
+  "artilleryCalculator.advanced-missing": "这门火炮暂无高级弹道射表：使用普通射表计算，游戏中可能会打偏。",
   "settingsPage.only-good-description": "只保留在某方面表现突出的装药：最佳、最快或最精确的（以及当前选中的）。",
   "weatherSection.clear-weather": "清除天气",
   "settingsPage.motion-fire": "开火：后坐与闪光",

@@ -13,7 +13,7 @@
  * --check — ничего не записывать, а только сравнить: код выхода 1,
  * если JSON не совпадает с текстовыми источниками.
  */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const BASE_COLUMNS = ['range', 'elevation', 'dElevPer100m', 'dTofPer100m', 'tof']
@@ -159,6 +159,15 @@ function importOne(sourceDir, jsonPath, profileKey, check) {
     modes,
   }
 
+  // Профиль «advanced» (улучшенная баллистика) подключается к боеприпасам обычного
+  if (profileKey === 'advanced') {
+    for (const ammo of data.ammunition ?? []) {
+      if (ammo.profile !== undefined && ammo.profile !== 'advanced') {
+        ammo.advancedProfile = 'advanced'
+      }
+    }
+  }
+
   const output = `${serialize(data)}\n`
   const normalized = original.replace(/\r\n/g, '\n')
 
@@ -192,12 +201,11 @@ if (all) {
   const root = 'data-sources'
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
-    importOne(
-      join(root, entry.name),
-      join('src', 'data', 'artillery', `${entry.name}.json`),
-      'default',
-      check
-    )
+    const json = join('src', 'data', 'artillery', `${entry.name}.json`)
+    importOne(join(root, entry.name), json, 'default', check)
+    // data-sources/<id>/advanced — таблицы при улучшенной баллистике
+    const advanced = join(root, entry.name, 'advanced')
+    if (existsSync(advanced)) importOne(advanced, json, 'advanced', check)
   }
 } else {
   if (positional.length !== 2 || !profileKey) {
