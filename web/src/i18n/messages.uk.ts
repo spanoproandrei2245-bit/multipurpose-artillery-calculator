@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const uk: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Лише вдалі заряди",
+  "settingsPage.adv-ballistics": "Покращена балістика",
+  "settingsPage.adv-ballistics-description": "Увімкніть, якщо в грі ввімкнено опір повітря та покращену балістику: таблиці в грі тоді інші. Для гармат без таких таблиць беруться звичайні.",
+  "artilleryCalculator.advanced-missing": "Для цієї гармати ще немає таблиць покращеної балістики: розрахунок за звичайними таблицями, у грі можливі промахи.",
   "settingsPage.only-good-description": "Залишаються тільки заряди, що чимось виділяються: найкращий, найшвидший або найточніший (та вибраний).",
   "weatherSection.clear-weather": "Ясна погода",
   "settingsPage.motion-fire": "Вогонь: поштовх і спалах",

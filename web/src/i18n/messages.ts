@@ -5,6 +5,9 @@
  */
 export const ru = {
   "settingsPage.only-good": "Только лучшие заряды",
+  "settingsPage.adv-ballistics": "Улучшенная баллистика",
+  "settingsPage.adv-ballistics-description": "Включите, если в игре включены сопротивление воздуха и улучшенная баллистика: таблицы в игре тогда другие. Для орудий без таких таблиц берутся обычные.",
+  "artilleryCalculator.advanced-missing": "Для этого орудия нет таблиц улучшенной баллистики — расчёт по обычным таблицам, в игре возможны промахи.",
   "settingsPage.only-good-description": "В списке остаются заряды, которые чем-то хороши: лучший, самый быстрый или самый точный (и выбранный).",
   "weatherSection.clear-weather": "Очистить погоду",
   "settingsPage.motion-fire": "Выстрел: отдача и вспышка",
@@ -577,6 +580,9 @@ export const ru = {
 
 export const en: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Only the good charges",
+  "settingsPage.adv-ballistics": "Advanced ballistics",
+  "settingsPage.adv-ballistics-description": "Turn on if air drag and advanced ballistics are enabled in the game: its tables are different then. Weapons without such tables use the normal ones.",
+  "artilleryCalculator.advanced-missing": "No advanced-ballistics tables for this weapon yet: the normal tables are used, shots may miss in the game.",
   "settingsPage.only-good-description": "Only charges that excel at something stay: the best, the fastest or the most precise (and the selected one).",
   "weatherSection.clear-weather": "Clear weather",
   "settingsPage.motion-fire": "Fire: kick and flash",

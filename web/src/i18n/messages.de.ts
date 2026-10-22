@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Nur die guten Ladungen",
+  "settingsPage.adv-ballistics": "Erweiterte Ballistik",
+  "settingsPage.adv-ballistics-description": "Einschalten, wenn Luftwiderstand und erweiterte Ballistik im Spiel aktiv sind: Die Tabellen im Spiel sind dann anders. Geschütze ohne solche Tabellen nutzen die normalen.",
+  "artilleryCalculator.advanced-missing": "Für dieses Geschütz gibt es noch keine Tabellen der erweiterten Ballistik: Es gelten die normalen Tabellen, im Spiel sind Fehlschüsse möglich.",
   "settingsPage.only-good-description": "Es bleiben nur Ladungen, die in etwas herausragen: die beste, die schnellste oder die präziseste (und die gewählte).",
   "weatherSection.clear-weather": "Wetter zurücksetzen",
   "settingsPage.motion-fire": "Feuer: Rückstoß und Blitz",

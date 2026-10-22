@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const ja: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "優れた装薬のみ",
+  "settingsPage.adv-ballistics": "高度な弾道計算",
+  "settingsPage.adv-ballistics-description": "ゲームで空気抵抗と高度な弾道計算が有効な場合にオンにします。ゲーム内の射表が変わります。対応する射表がない火砲は通常の射表を使います。",
+  "artilleryCalculator.advanced-missing": "この火砲には高度な弾道計算の射表がまだありません。通常の射表を使用するため、ゲーム内で外れる可能性があります。",
   "settingsPage.only-good-description": "何かに秀でた装薬だけを残します。最良・最速・最精密のもの（と選択中のもの）です。",
   "weatherSection.clear-weather": "天候をクリア",
   "settingsPage.motion-fire": "射撃：反動と閃光",

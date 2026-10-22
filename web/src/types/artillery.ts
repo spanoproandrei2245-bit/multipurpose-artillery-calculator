@@ -60,6 +60,9 @@ export interface Ammunition {
   charges?: number[]
   // Ключ профиля из ArtilleryReference.profiles
   profile?: string
+  // Профиль для игры с включённой улучшенной баллистикой (сопротивление воздуха):
+  // в игре таблица при этом совсем другая. Нет ключа — таблиц ещё нет.
+  advancedProfile?: string
 }
 
 export interface ArtilleryReference {
