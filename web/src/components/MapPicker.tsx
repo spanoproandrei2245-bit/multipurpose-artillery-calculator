@@ -20,6 +20,13 @@ import {
 import { parseGrid } from '../lib/grid'
 import { readStoredText, writeStored } from '../lib/input'
 import {
+  drawVector,
+  loadVector,
+  TOPO_PAPER,
+  type MapStyle,
+  type MapVector,
+} from '../lib/mapVector'
+import {
   distanceToStroke,
   readStrokes,
   simplify,
@@ -241,6 +248,11 @@ export function MapPicker({
   // Встроенные карты (спутник + высоты) и тайлы открытой карты
   const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
   const [tiles, setTiles] = useState<MapTiles | null>(null)
+  // Векторный слой (здания, дороги, горизонтали) и стиль карты
+  const [vector, setVector] = useState<MapVector | null>(null)
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() =>
+    readStoredText('mapStyle') === 'topo' ? 'topo' : 'sat'
+  )
   // Какой пункт списка открыт: «builtin:stratis» или «local:altis»
   const [mapKey, setMapKey] = useState('')
   const [map, setMap] = useState<Heightmap | null>(null)
@@ -378,7 +390,9 @@ export function MapPicker({
     // Старые версии хранили «local:…» и просто имя мира: берём только имя
     const world = key.includes(':') ? key.split(':', 2)[1] : key
     const load = loadBuiltinMap(world).then((result) =>
-      result ? { heightmap: result.heightmap, tiles: result.tiles } : null
+      result
+        ? { heightmap: result.heightmap, tiles: result.tiles, vectorUrl: result.vectorUrl }
+        : null
     )
     load
       .then((loaded) => {
@@ -387,6 +401,8 @@ export function MapPicker({
         setMapKey(`builtin:${world}`)
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
+        setVector(null)
+        if (loaded.vectorUrl) void loadVector(loaded.vectorUrl).then(setVector)
         setGun(readGun(world))
         setGunLocked(readStoredText(`mapGunLocked:${world}`) === 'on')
         setLinePoints(readLine(world))
@@ -494,8 +510,15 @@ export function MapPicker({
     const sans = "'Inter Variable', system-ui, sans-serif"
     const mono = sans
 
+    const topo = mapStyle === 'topo' && vector !== null
+    if (topo) {
+      ink.grid = 'rgba(0,0,0,0.14)'
+      ink.gridKm = 'rgba(0,0,0,0.34)'
+      ink.gridText = 'rgba(0,0,0,0.6)'
+    }
+
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
-    ctx.fillStyle = ink.bg
+    ctx.fillStyle = topo ? TOPO_PAPER : ink.bg
     ctx.fillRect(0, 0, size.width, size.height)
 
     // Пиксель изображения i — узел x = i·step, покрывает ±step/2
@@ -503,7 +526,7 @@ export function MapPicker({
     const half = map.step / 2
     const topLeft = toScreen({ x: -half, y: extent + half })
     ctx.imageSmoothingEnabled = true
-    ctx.drawImage(
+    if (!topo) ctx.drawImage(
       relief,
       topLeft.x,
       topLeft.y,
@@ -512,7 +535,7 @@ export function MapPicker({
     )
 
     // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
-    if (tiles) {
+    if (tiles && !topo) {
       const z = tileLevel(tiles, scale * ratio)
       const visible = visibleTiles(tiles, z, {
         minX: x0,
@@ -528,6 +551,17 @@ export function MapPicker({
         const side = tile.meters * scale + 0.5
         ctx.drawImage(image, p.x, p.y, side, side)
       }
+    }
+
+    // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
+    if (vector) {
+      drawVector(
+        ctx,
+        vector,
+        { x0, y0, scale, width: size.width, height: size.height },
+        mapStyle,
+        sans
+      )
     }
 
     // Сетка: 100 м / 1 км / 10 км — по масштабу
@@ -769,7 +803,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke, vector, mapStyle])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -1373,6 +1407,22 @@ export function MapPicker({
 
           {/* Слева: цели журнала — выбор, экспорт и импорт */}
           <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
+          {vector && (
+            <button
+              type="button"
+              aria-pressed={mapStyle === 'topo'}
+              title={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
+              onClick={() => {
+                const next = mapStyle === 'topo' ? 'sat' : 'topo'
+                setMapStyle(next)
+                writeStored('mapStyle', next)
+              }}
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
+            >
+              <FieldIcon name="map" className="h-5 w-5" />
+              {mapStyle === 'topo' ? t('mapPicker.style-topo-short') : t('mapPicker.style-sat-short')}
+            </button>
+          )}
           {targetActions && (
             <div className="flex flex-col items-start gap-1">
               <div className="flex gap-1">

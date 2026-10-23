@@ -49,6 +49,8 @@ export interface MapDescription {
   worldSize: number
   background: string
   heights: { file: string; step: number; size: number; scale: number }
+  // vector.json: здания, дороги, горизонтали (есть не у всех карт)
+  vector?: string
   tiles: { size: number; levels: number; metersPerTile: number; ext: string }
 }
 
@@ -92,6 +94,7 @@ export function parseMapDescription(value: unknown): MapDescription | null {
     author: isString(v.author) ? v.author : '',
     worldSize: v.worldSize,
     background: isString(v.background) ? v.background : '#4b555f',
+    vector: isString(v.vector) && /^[\w.-]+$/.test(v.vector) ? v.vector : undefined,
     heights: {
       file: h.file,
       step: h.step,
@@ -148,7 +151,12 @@ export async function listBuiltinMaps(): Promise<BuiltinMapEntry[]> {
 
 export async function loadBuiltinMap(
   world: string
-): Promise<{ heightmap: Heightmap; tiles: MapTiles; displayName: string } | null> {
+): Promise<{
+  heightmap: Heightmap
+  tiles: MapTiles
+  displayName: string
+  vectorUrl: string | null
+} | null> {
   const base = `${MAPS_BASE}${world}/`
   const description = parseMapDescription(
     await (await fetch(`${base}map.json`)).json()
@@ -160,6 +168,7 @@ export async function loadBuiltinMap(
   return {
     heightmap,
     displayName: description.displayName,
+    vectorUrl: description.vector ? `${base}${description.vector}` : null,
     tiles: {
       ...description.tiles,
       base: `${base}tiles/`,

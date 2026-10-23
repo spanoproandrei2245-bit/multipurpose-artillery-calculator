@@ -573,4 +573,8 @@ export const uk: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "Скасувати останній штрих",
   "mapPicker.draw-clear": "Стерти все (натисніть двічі)",
   "mapPicker.new-marker": "Нова позначка",
+  "mapPicker.style-sat-short": "Супутник",
+  "mapPicker.style-topo-short": "Топо",
+  "mapPicker.style-sat": "Показати супутниковий знімок",
+  "mapPicker.style-topo": "Показати топографічну карту",
 }
