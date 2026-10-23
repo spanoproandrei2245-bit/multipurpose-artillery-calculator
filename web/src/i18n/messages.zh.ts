@@ -573,4 +573,8 @@ export const zh: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "撤销上一笔",
   "mapPicker.draw-clear": "全部擦除（点按两次）",
   "mapPicker.new-marker": "新标记",
+  "mapPicker.style-sat-short": "卫星",
+  "mapPicker.style-topo-short": "地形",
+  "mapPicker.style-sat": "显示卫星图像",
+  "mapPicker.style-topo": "显示地形图",
 }
