@@ -15,6 +15,8 @@ node scripts/import-tables.mjs data-sources/m252_rhsusaf src/data/artillery/m252
 npm run tables:check
 ```
 
+Перепечатку можно поручить любой нейросети: см. [AI-IMPORT.md](AI-IMPORT.md) (промпт, команды `tables:ingest split/validate`, папка `advanced/` для таблиц с сопротивлением воздуха).
+
 ## Формат
 
 Папка = один справочник. Файл `<РЕЖИМ>-<заряд>.txt` (например,
