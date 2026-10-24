@@ -50,11 +50,14 @@ describe('scripts/import-rpt.mjs', () => {
   })
 })
 
-describe('tools/arma/gradtopo_export.sqf', () => {
-  it('годится для вставки в отладочную консоль: без комментариев и кириллицы', () => {
-    const code = readFileSync('tools/arma/gradtopo_export.sqf', 'utf8')
-    expect(code).not.toContain('/*')
-    expect(code).not.toMatch(/^\s*\/\//m)
-    expect(code).not.toMatch(/[А-Яа-яЁё]/)
-  })
+describe('скрипты для игры', () => {
+  it.each(['gradtopo_export.sqf', 'gradtopo_photos.sqf'])(
+    '%s годится для вставки в отладочную консоль: без комментариев и кириллицы',
+    (file) => {
+      const code = readFileSync(`tools/arma/${file}`, 'utf8')
+      expect(code).not.toContain('/*')
+      expect(code).not.toMatch(/^\s*\/\//m)
+      expect(code).not.toMatch(/[А-Яа-яЁё]/)
+    }
+  )
 })
