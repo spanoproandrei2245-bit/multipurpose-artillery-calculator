@@ -457,6 +457,7 @@ export function MapPicker({
   // Загруженные тайлы спутника; готовый тайл — повод перерисовать
   const tileCache = useRef(new Map<string, HTMLImageElement>())
   const [tileTick, setTileTick] = useState(0)
+  const baseCache = useRef<{ key: string; x0: number; y0: number; canvas: HTMLCanvasElement } | null>(null)
   function tileImage(url: string): HTMLImageElement {
     let image = tileCache.current.get(url)
     if (!image) {
@@ -517,52 +518,78 @@ export function MapPicker({
       ink.gridText = 'rgba(0,0,0,0.6)'
     }
 
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
-    ctx.fillStyle = topo ? TOPO_PAPER : ink.bg
-    ctx.fillRect(0, 0, size.width, size.height)
-
-    // Пиксель изображения i — узел x = i·step, покрывает ±step/2
+    // Основа (фон, рельеф, спутник, векторный слой) рисуется один раз на холст
+    // вдвое больше экрана и при перетаскивании только сдвигается: так карта не
+    // перерисовывается заново на каждое движение мыши
     const extent = mapExtent(map)
     const half = map.step / 2
-    const topLeft = toScreen({ x: -half, y: extent + half })
-    ctx.imageSmoothingEnabled = true
-    if (!topo) ctx.drawImage(
-      relief,
-      topLeft.x,
-      topLeft.y,
-      (extent + map.step) * scale,
-      (extent + map.step) * scale
-    )
-
-    // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
-    if (tiles && !topo) {
-      const z = tileLevel(tiles, scale * ratio)
-      const visible = visibleTiles(tiles, z, {
-        minX: x0,
-        maxX: x0 + size.width / scale,
-        minY: y0 - size.height / scale,
-        maxY: y0,
-      })
-      for (const tile of visible) {
-        const image = tileImage(tile.url)
-        if (!image.complete || image.naturalWidth === 0) continue
-        const p = toScreen({ x: tile.x, y: tile.y })
-        // +0.5 px — без щелей между тайлами при дробном масштабе
-        const side = tile.meters * scale + 0.5
-        ctx.drawImage(image, p.x, p.y, side, side)
+    const paintBase = (target: CanvasRenderingContext2D, bx0: number, by0: number, w: number, h: number) => {
+      const toPx = (p: MapPoint) => ({ x: (p.x - bx0) * scale, y: (by0 - p.y) * scale })
+      target.setTransform(ratio, 0, 0, ratio, 0, 0)
+      target.fillStyle = topo ? TOPO_PAPER : ink.bg
+      target.fillRect(0, 0, w, h)
+      target.imageSmoothingEnabled = true
+      if (!topo) {
+        // Пиксель изображения i — узел x = i·step, покрывает ±step/2
+        const topLeft = toPx({ x: -half, y: extent + half })
+        target.drawImage(relief, topLeft.x, topLeft.y, (extent + map.step) * scale, (extent + map.step) * scale)
+      }
+      // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
+      if (tiles && !topo) {
+        const z = tileLevel(tiles, scale * ratio)
+        const visible = visibleTiles(tiles, z, {
+          minX: bx0,
+          maxX: bx0 + w / scale,
+          minY: by0 - h / scale,
+          maxY: by0,
+        })
+        for (const tile of visible) {
+          const image = tileImage(tile.url)
+          if (!image.complete || image.naturalWidth === 0) continue
+          const p = toPx({ x: tile.x, y: tile.y })
+          // +0.5 px — без щелей между тайлами при дробном масштабе
+          const side = tile.meters * scale + 0.5
+          target.drawImage(image, p.x, p.y, side, side)
+        }
+      }
+      // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
+      if (vector) {
+        drawVector(target, vector, { x0: bx0, y0: by0, scale, width: w, height: h }, mapStyle, sans)
       }
     }
 
-    // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
-    if (vector) {
-      drawVector(
-        ctx,
-        vector,
-        { x0, y0, scale, width: size.width, height: size.height },
-        mapStyle,
-        sans
-      )
+    const cacheKey = [map.world, topo, scale, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0].join('|')
+    let cache = baseCache.current
+    const w2 = size.width * 2
+    const h2 = size.height * 2
+    const inside =
+      cache !== null &&
+      cache.key === cacheKey &&
+      x0 >= cache.x0 &&
+      x0 + size.width / scale <= cache.x0 + w2 / scale &&
+      y0 <= cache.y0 &&
+      y0 - size.height / scale >= cache.y0 - h2 / scale
+    if (!inside) {
+      const surface = cache?.canvas ?? document.createElement('canvas')
+      surface.width = Math.round(w2 * ratio)
+      surface.height = Math.round(h2 * ratio)
+      const sctx = surface.getContext('2d')
+      if (!sctx) return
+      // Экран лежит в середине холста основы
+      const bx0 = x0 - size.width / 2 / scale
+      const by0 = y0 + size.height / 2 / scale
+      paintBase(sctx, bx0, by0, w2, h2)
+      cache = { key: cacheKey, x0: bx0, y0: by0, canvas: surface }
+      baseCache.current = cache
     }
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+    ctx.drawImage(
+      cache!.canvas,
+      Math.round((cache!.x0 - x0) * scale * ratio) / ratio,
+      Math.round((y0 - cache!.y0) * scale * ratio) / ratio,
+      w2,
+      h2
+    )
 
     // Сетка: 100 м / 1 км / 10 км — по масштабу
     const spacing =
@@ -914,6 +941,9 @@ export function MapPicker({
     strokesRef.current = strokes
   })
 
+  const panRef = useRef<View | null>(null)
+  const panFrame = useRef<number | null>(null)
+
   function onPointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
     const drawing = drawRef.current
     if (drawing && activeView) {
@@ -943,11 +973,18 @@ export function MapPicker({
     const dy = event.clientY - drag.y
     if (!drag.moved && Math.hypot(dx, dy) < 4) return
     drag.moved = true
-    setView({
+    // Не чаще одного обновления на кадр: мышь шлёт события чаще экрана
+    panRef.current = {
       scale: drag.view.scale,
       x0: drag.view.x0 - dx / drag.view.scale,
       y0: drag.view.y0 + dy / drag.view.scale,
-    })
+    }
+    if (panFrame.current === null) {
+      panFrame.current = requestAnimationFrame(() => {
+        panFrame.current = null
+        if (panRef.current) setView(panRef.current)
+      })
+    }
   }
 
   /** Подставить орудие и цель в расчёт — сразу, без кнопки. */

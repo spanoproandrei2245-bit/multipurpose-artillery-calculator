@@ -18,7 +18,7 @@
  * Флаг --vector-only: пересобрать только vector.json у уже импортированных карт.
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import sharp from 'sharp'
@@ -163,15 +163,18 @@ function buildHeights(source, outFile) {
 // ---- одна карта ----
 
 async function importVectorOnly(source) {
-  const meta = JSON.parse(readFileSync(join(source, 'meta.json'), 'utf8'))
-  const world = String(meta.worldName).toLowerCase()
+  // У ванильных карт (Altis, Stratis, Tanoa) в выгрузке нет meta.json — имя папки
+  const metaFile = join(source, 'meta.json')
+  const world = existsSync(metaFile)
+    ? String(JSON.parse(readFileSync(metaFile, 'utf8')).worldName).toLowerCase()
+    : basename(source).toLowerCase()
   const outDir = new URL(`./${world}/`, OUT_ROOT)
   const mapFile = new URL('map.json', outDir)
   if (!existsSync(mapFile)) {
     console.log(`${world}: карта ещё не импортирована, пропуск`)
     return
   }
-  const vector = buildVector(source, new URL('vector.json', outDir))
+  const vector = buildVector(source, new URL('vector.json', outDir), fileURLToPath(outDir))
   if (!vector) {
     console.log(`${world}: нет geojson/, пропуск`)
     return
