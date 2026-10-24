@@ -47,23 +47,26 @@ describe('встроенные карты в public/maps', () => {
       const heights = statSync(join(dir, d.heights.file))
       expect(heights.size).toBe(d.heights.size * d.heights.size * 2)
 
-      // Каждому уровню пирамиды соответствует папка с тайлами (в урезанных
-      // картах верхний уровень убран — levels уменьшен вместе с ним)
-      for (let z = 0; z < d.tiles.levels; z += 1) {
-        const level = join(dir, 'tiles', String(z))
-        expect(existsSync(level), `уровень ${z}`).toBe(true)
-        expect(readdirSync(level).length).toBeGreaterThan(0)
+      const tl = d.tiles
+      if (tl) {
+        // Каждому уровню пирамиды соответствует папка с тайлами (в урезанных
+        // картах верхний уровень убран — levels уменьшен вместе с ним)
+        for (let z = 0; z < tl.levels; z += 1) {
+          const level = join(dir, 'tiles', String(z))
+          expect(existsSync(level), `уровень ${z}`).toBe(true)
+          expect(readdirSync(level).length).toBeGreaterThan(0)
+        }
+        expect(existsSync(join(dir, 'tiles', String(tl.levels))), 'лишний уровень').toBe(false)
+  
+        expect(existsSync(join(dir, 'tiles', '0', `0_0.${tl.ext}`))).toBe(true)
+  
+        // Размер сетки тайлов покрывает карту целиком
+        const top = tl.metersPerTile
+        const cols = Math.ceil(d.worldSize / top)
+        expect(existsSync(join(dir, 'tiles', String(tl.levels - 1), `${cols - 1}_${cols - 1}.${tl.ext}`))).toBe(true)
       }
-      expect(existsSync(join(dir, 'tiles', String(d.tiles.levels))), 'лишний уровень').toBe(false)
-
       // Превью карты для списков
-      expect(existsSync(join(dir, 'preview.webp'))).toBe(true)
-      expect(existsSync(join(dir, 'tiles', '0', `0_0.${d.tiles.ext}`))).toBe(true)
-
-      // Размер сетки тайлов покрывает карту целиком
-      const top = d.tiles.metersPerTile
-      const cols = Math.ceil(d.worldSize / top)
-      expect(existsSync(join(dir, 'tiles', String(d.tiles.levels - 1), `${cols - 1}_${cols - 1}.${d.tiles.ext}`))).toBe(true)
+      expect(existsSync(join(dir, "preview.webp"))).toBe(true)
     }
   )
 

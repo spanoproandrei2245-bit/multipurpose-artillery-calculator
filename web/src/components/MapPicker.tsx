@@ -524,7 +524,8 @@ export function MapPicker({
     const sans = "'Inter Variable', system-ui, sans-serif"
     const mono = sans
 
-    const topo = mapStyle === 'topo' && vector !== null
+    // Нет спутника — только топо
+    const topo = (mapStyle === 'topo' || tiles === null) && vector !== null
     if (topo) {
       ink.grid = 'rgba(0,0,0,0.14)'
       ink.gridKm = 'rgba(0,0,0,0.34)'
@@ -584,7 +585,7 @@ export function MapPicker({
       }
       // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
       if (vector) {
-        drawVector(target, vector, { x0: bx0, y0: by0, scale, width: w, height: h }, mapStyle, sans)
+        drawVector(target, vector, { x0: bx0, y0: by0, scale, width: w, height: h }, topo ? 'topo' : 'sat', sans)
       }
     }
 
@@ -1687,7 +1688,7 @@ export function MapPicker({
 
 
           {/* Справа снизу: слой карты (спутник / топо); значок — текущий режим */}
-          {vector && (
+          {vector && tiles && (
             <button
               type="button"
               aria-pressed={mapStyle === 'topo'}
