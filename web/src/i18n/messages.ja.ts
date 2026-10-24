@@ -2,8 +2,8 @@ import type { ru } from './messages'
 
 export const ja: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "優れた装薬のみ",
-  "settingsPage.adv-ballistics": "高度な弾道計算",
-  "settingsPage.adv-ballistics-description": "ゲームで空気抵抗と高度な弾道計算が有効な場合にオンにします。ゲーム内の射表が変わります。対応する射表がない火砲は通常の射表を使います。",
+  "settingsPage.weather-ballistics": "天候と高度な弾道計算",
+  "settingsPage.weather-ballistics-description": "風・気温・気圧と、空気抵抗あり（ACE advanced ballistics）のゲーム用射表。両者はセットです：天候が有効だと射表が変わります。",
   "artilleryCalculator.advanced-missing": "この火砲には高度な弾道計算の射表がまだありません。通常の射表を使用するため、ゲーム内で外れる可能性があります。",
   "settingsPage.only-good-description": "何かに秀でた装薬だけを残します。最良・最速・最精密のもの（と選択中のもの）です。",
   "weatherSection.clear-weather": "天候をクリア",
@@ -295,8 +295,9 @@ export const ja: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "直前の線を取り消す",
   "mapPicker.draw-clear": "すべて消去（2回タップ）",
   "mapPicker.new-marker": "新しいマーカー",
-  "mapPicker.style-sat-short": "衛星",
-  "mapPicker.style-topo-short": "地形図",
+  "mapPicker.hue": "色相",
+  "mapPicker.brightness": "明るさ",
+  "mapPicker.custom-colour": "カスタムカラー",
   "mapPicker.style-sat": "衛星画像を表示",
   "mapPicker.style-topo": "地形図を表示",
   "mapPicker.empty-so-far-work-out": "まだ空です。射撃諸元を求めて目標を保存するか、ファイルをインポートしてください。",
@@ -460,7 +461,6 @@ export const ja: Record<keyof typeof ru, string> = {
   "settingsPage.the-markers-panel-the-marker": "マーカーパネル、マーカーツール、リンク経由の砲手からのマーカー。",
   "settingsPage.the-shell-flies-from-the": "砲弾がマップ上で火砲から目標まで飛びます。オフの場合はタイマーのラインだけが動きます。",
   "settingsPage.turn-on-only-what-you": "メイン画面をすっきり保つため、使うものだけオンにしてください。",
-  "settingsPage.wind-temperature-pressure-only-for": "風、気温、気圧。高度弾道のサーバー専用です。",
   "shellIcon.high-explosive": "榴弾",
   "shellIcon.illumination": "照明弾",
   "shellIcon.smoke": "煙幕弾",
@@ -574,7 +574,6 @@ export const ja: Record<keyof typeof ru, string> = {
   "weatherSection.right": "右",
   "weatherSection.speed-direction": "風速と風向",
   "weatherSection.tail": "追い",
-  "weatherSection.weather-corrections": "天候補正",
   "weatherSection.wind": "風",
   "weatherSection.wind-input": "風の入力",
 }

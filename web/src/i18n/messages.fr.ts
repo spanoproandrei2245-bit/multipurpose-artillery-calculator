@@ -2,8 +2,8 @@ import type { ru } from './messages'
 
 export const fr: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Seulement les bonnes charges",
-  "settingsPage.adv-ballistics": "Balistique avancée",
-  "settingsPage.adv-ballistics-description": "À activer si la résistance de l’air et la balistique avancée sont actives dans le jeu : les tables du jeu sont alors différentes. Les pièces sans ces tables utilisent les tables normales.",
+  "settingsPage.weather-ballistics": "Météo et balistique avancée",
+  "settingsPage.weather-ballistics-description": "Vent, température, pression et tables pour une partie avec résistance de l’air (ACE advanced ballistics). Les deux vont ensemble : avec la météo dans le jeu, les tables sont différentes.",
   "artilleryCalculator.advanced-missing": "Pas encore de tables de balistique avancée pour cette pièce : les tables normales sont utilisées, les tirs peuvent manquer dans le jeu.",
   "settingsPage.only-good-description": "Seules restent les charges qui excellent en quelque chose : la meilleure, la plus rapide ou la plus précise (et celle sélectionnée).",
   "weatherSection.clear-weather": "Effacer la météo",
@@ -293,8 +293,9 @@ export const fr: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "Annuler le dernier trait",
   "mapPicker.draw-clear": "Tout effacer (touchez deux fois)",
   "mapPicker.new-marker": "Nouveau marqueur",
-  "mapPicker.style-sat-short": "Satellite",
-  "mapPicker.style-topo-short": "Topo",
+  "mapPicker.hue": "Teinte",
+  "mapPicker.brightness": "Luminosité",
+  "mapPicker.custom-colour": "Couleur personnalisée",
   "mapPicker.style-sat": "Afficher l’image satellite",
   "mapPicker.style-topo": "Afficher la carte topographique",
   "mapPicker.delete": "Supprimer",
@@ -460,7 +461,6 @@ export const fr: Record<keyof typeof ru, string> = {
   "settingsPage.the-markers-panel-the-marker": "Le panneau des marqueurs, l’outil marqueur et les marqueurs des pourvoyeurs via la liaison.",
   "settingsPage.the-shell-flies-from-the": "L’obus vole de la pièce à la cible sur la carte. Sinon, seule la bande du minuteur s’anime.",
   "settingsPage.turn-on-only-what-you": "N’activez que ce que vous utilisez pour garder l’écran principal épuré.",
-  "settingsPage.wind-temperature-pressure-only-for": "Vent, température, pression. Uniquement pour les serveurs à balistique avancée.",
   "shellIcon.high-explosive": "Explosif",
   "shellIcon.illumination": "Éclairant",
   "shellIcon.smoke": "Fumigène",
@@ -574,7 +574,6 @@ export const fr: Record<keyof typeof ru, string> = {
   "weatherSection.right": "droite",
   "weatherSection.speed-direction": "Vitesse et direction",
   "weatherSection.tail": "arrière",
-  "weatherSection.weather-corrections": "Corrections météo",
   "weatherSection.wind": "Vent",
   "weatherSection.wind-input": "Saisie du vent",
 }

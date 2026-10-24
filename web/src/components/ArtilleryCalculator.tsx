@@ -238,11 +238,12 @@ export function ArtilleryCalculator({
   const selectedAmmo =
     ammunition.find((ammo) => ammo.id === ammoId) ?? ammunition[0]
 
-  const advancedBallistics = useFeature('advancedBallistics')
+  // Погодные поправки и улучшенная баллистика — один переключатель: поправки
+  // имеют смысл только при игре с сопротивлением воздуха и погодой
   const { profile, missingAdvanced } = selectProfile(
     reference,
     selectedAmmo,
-    advancedBallistics
+    showWeather
   )
 
   const hasWeather = profile !== undefined && profileHasWeather(profile)

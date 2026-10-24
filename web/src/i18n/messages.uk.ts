@@ -2,8 +2,8 @@ import type { ru } from './messages'
 
 export const uk: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Лише вдалі заряди",
-  "settingsPage.adv-ballistics": "Покращена балістика",
-  "settingsPage.adv-ballistics-description": "Увімкніть, якщо в грі ввімкнено опір повітря та покращену балістику: таблиці в грі тоді інші. Для гармат без таких таблиць беруться звичайні.",
+  "settingsPage.weather-ballistics": "Погода і покращена балістика",
+  "settingsPage.weather-ballistics-description": "Вітер, температура, тиск і таблиці для гри з опором повітря (ACE advanced ballistics). Одне без одного не працює: у грі з погодою таблиці інші.",
   "artilleryCalculator.advanced-missing": "Для цієї гармати ще немає таблиць покращеної балістики: розрахунок за звичайними таблицями, у грі можливі промахи.",
   "settingsPage.only-good-description": "Залишаються тільки заряди, що чимось виділяються: найкращий, найшвидший або найточніший (та вибраний).",
   "weatherSection.clear-weather": "Ясна погода",
@@ -448,7 +448,6 @@ export const uk: Record<keyof typeof ru, string> = {
   "settingsPage.the-markers-panel-the-marker": "Панель позначок, інструмент позначки та позначки від навідників через зв’язок.",
   "settingsPage.the-shell-flies-from-the": "Снаряд летить від гармати до цілі на карті. Інакше анімується лише смужка таймера.",
   "settingsPage.turn-on-only-what-you": "Вмикайте лише те, чим користуєтеся, щоб головний екран лишався чистим.",
-  "settingsPage.wind-temperature-pressure-only-for": "Вітер, температура, тиск. Лише для серверів із розширеною балістикою.",
   "shellIcon.high-explosive": "Фугасний",
   "shellIcon.illumination": "Освітлювальний",
   "shellIcon.smoke": "Димовий",
@@ -562,7 +561,6 @@ export const uk: Record<keyof typeof ru, string> = {
   "weatherSection.right": "праворуч",
   "weatherSection.speed-direction": "Швидкість і напрям",
   "weatherSection.tail": "попутн.",
-  "weatherSection.weather-corrections": "Погодні поправки",
   "weatherSection.wind": "Вітер",
   "weatherSection.wind-input": "Ввід вітру",
   "mapPicker.draw-tools": "Малювання",
@@ -573,8 +571,9 @@ export const uk: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "Скасувати останній штрих",
   "mapPicker.draw-clear": "Стерти все (натисніть двічі)",
   "mapPicker.new-marker": "Нова позначка",
-  "mapPicker.style-sat-short": "Супутник",
-  "mapPicker.style-topo-short": "Топо",
+  "mapPicker.hue": "Відтінок",
+  "mapPicker.brightness": "Яскравість",
+  "mapPicker.custom-colour": "Власний колір",
   "mapPicker.style-sat": "Показати супутниковий знімок",
   "mapPicker.style-topo": "Показати топографічну карту",
 }

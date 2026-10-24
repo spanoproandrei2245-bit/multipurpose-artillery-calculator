@@ -69,7 +69,6 @@ export function SettingsPage({
   const hideUnfit = useFeature('hideUnfit')
   const volley = useFeature('volley')
   const onlyGood = useFeature('onlyGood')
-  const advancedBallistics = useFeature('advancedBallistics')
   const flightStyle = useFlightStyle()
   const motionNumbers = useMotion('numbers')
   const motionSwitches = useMotion('switches')
@@ -228,10 +227,8 @@ export function SettingsPage({
               <Switch
                 checked={weather}
                 onChange={(v) => setFeature('weather', v)}
-                label={t('weatherSection.weather-corrections')}
-                description={
-                  t('settingsPage.wind-temperature-pressure-only-for')
-                }
+                label={t('settingsPage.weather-ballistics')}
+                description={t('settingsPage.weather-ballistics-description')}
               />
               </FeaturePreview>
               <FeaturePreview id="tot">
@@ -259,12 +256,6 @@ export function SettingsPage({
                 onChange={(v) => setFeature('volley', v)}
                 label={t('settingsPage.volley')}
                 description={t('settingsPage.volley-description')}
-              />
-              <Switch
-                checked={advancedBallistics}
-                onChange={(v) => setFeature('advancedBallistics', v)}
-                label={t('settingsPage.adv-ballistics')}
-                description={t('settingsPage.adv-ballistics-description')}
               />
               <Switch
                 checked={onlyGood}

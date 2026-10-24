@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react'
  * карты игры; по связке расходятся всем в комнате.
  */
 
-export type MarkerColor =
+export type PresetColor =
   | 'red'
   | 'orange'
   | 'yellow'
@@ -15,7 +15,10 @@ export type MarkerColor =
   | 'purple'
   | 'black'
 
-export const MARKER_COLORS: readonly MarkerColor[] = [
+// Готовый цвет Arma или любой свой — «#rrggbb» (круг оттенков)
+export type MarkerColor = PresetColor | `#${string}`
+
+export const MARKER_COLORS: readonly PresetColor[] = [
   'red',
   'orange',
   'yellow',
@@ -26,7 +29,7 @@ export const MARKER_COLORS: readonly MarkerColor[] = [
 ]
 
 // Цвета как у меток Arma (ColorRed, ColorBlue…)
-export const MARKER_RGB: Record<MarkerColor, string> = {
+export const MARKER_RGB: Record<PresetColor, string> = {
   red: '#e60000',
   orange: '#d96600',
   yellow: '#d9d900',
@@ -34,6 +37,19 @@ export const MARKER_RGB: Record<MarkerColor, string> = {
   blue: '#0000ff',
   purple: '#b000b0',
   black: '#000000',
+}
+
+/** Это допустимый цвет метки: готовый или «#rrggbb». */
+export function isMarkerColor(value: unknown): value is MarkerColor {
+  return (
+    typeof value === 'string' &&
+    ((MARKER_COLORS as readonly string[]).includes(value) || /^#[0-9a-fA-F]{6}$/.test(value))
+  )
+}
+
+/** CSS-цвет метки. */
+export function markerRgb(color: MarkerColor): string {
+  return color.startsWith('#') ? color : MARKER_RGB[color as PresetColor]
 }
 
 export interface MapMarker {
@@ -72,7 +88,7 @@ export function parseMarker(value: unknown): MapMarker | null {
     !isNumber(m.x) ||
     !isNumber(m.y) ||
     !isString(m.label) ||
-    !MARKER_COLORS.includes(m.color as MarkerColor) ||
+    !isMarkerColor(m.color) ||
     !isNumber(m.createdAt) ||
     !isString(m.author) ||
     !isString(m.owner) ||
@@ -86,7 +102,7 @@ export function parseMarker(value: unknown): MapMarker | null {
     x: m.x,
     y: m.y,
     label: m.label.slice(0, 40),
-    color: m.color as MarkerColor,
+    color: m.color,
     createdAt: m.createdAt,
     author: m.author.slice(0, 24),
     owner: m.owner,

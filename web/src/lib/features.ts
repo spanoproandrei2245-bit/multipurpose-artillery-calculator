@@ -18,8 +18,6 @@ export type FeatureId =
   | 'volley'
   // Только заряды, чем-то хорошие: лучший, быстрый, точный
   | 'onlyGood'
-  // В игре включена улучшенная баллистика: берутся другие таблицы
-  | 'advancedBallistics'
 
 const KEY_PREFIX = 'feature:'
 const DEFAULT_ON: ReadonlySet<FeatureId> = new Set<FeatureId>(['hints', 'hideUnfit'])
