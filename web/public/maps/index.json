@@ -1,6 +1,19 @@
 {
   "maps": [
     {
+      "world": "altis",
+      "displayName": "Altis",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 30720,
+      "names": {
+        "ru": "Алтис",
+        "uk": "Алтіс",
+        "ja": "アルティス",
+        "zh": "阿尔蒂斯"
+      }
+    },
+    {
       "world": "beketov",
       "displayName": "Beketov",
       "author": "Dead_Kennedy, SenChi",
@@ -36,6 +49,32 @@
       "worldSize": 10240
     },
     {
+      "world": "enoch",
+      "displayName": "Livonia",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 12800,
+      "names": {
+        "ru": "Ливония",
+        "uk": "Лівонія",
+        "ja": "リヴォニア",
+        "zh": "利沃尼亚"
+      }
+    },
+    {
+      "world": "malden",
+      "displayName": "Malden",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 12800,
+      "names": {
+        "ru": "Мальден",
+        "uk": "Мальден",
+        "ja": "マルデン",
+        "zh": "马尔登"
+      }
+    },
+    {
       "world": "wl_rosche",
       "displayName": "Rosche, Germany (2.0)",
       "author": "UnitedOperations.net Team",
@@ -48,32 +87,6 @@
       "author": "jujurat",
       "kind": "community",
       "worldSize": 8192
-    },
-    {
-      "world": "vr",
-      "displayName": "Virtual Reality",
-      "author": "Bohemia Interactive",
-      "kind": "official",
-      "worldSize": 8192,
-      "names": {
-        "ru": "Виртуальная реальность",
-        "uk": "Віртуальна реальність",
-        "ja": "バーチャルリアリティ",
-        "zh": "虚拟现实"
-      }
-    },
-    {
-      "world": "altis",
-      "displayName": "Altis",
-      "author": "Bohemia Interactive",
-      "kind": "official",
-      "worldSize": 30720,
-      "names": {
-        "ru": "Алтис",
-        "uk": "Алтіс",
-        "ja": "アルティス",
-        "zh": "阿尔蒂斯"
-      }
     },
     {
       "world": "stratis",
@@ -99,6 +112,19 @@
         "uk": "Таноа",
         "ja": "タノア",
         "zh": "塔诺亚"
+      }
+    },
+    {
+      "world": "vr",
+      "displayName": "Virtual Reality",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 8192,
+      "names": {
+        "ru": "Виртуальная реальность",
+        "uk": "Віртуальна реальність",
+        "ja": "バーチャルリアリティ",
+        "zh": "虚拟现实"
       }
     }
   ]

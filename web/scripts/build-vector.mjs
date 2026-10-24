@@ -188,7 +188,19 @@ function contourLines({ grid, size, step }) {
   return result
 }
 
-export function buildVector(source, outFile) {
+/** Высоты из уже импортированной карты (heights.bin), если в выгрузке нет dem. */
+function readHeightsBin(mapDir) {
+  const mapFile = join(mapDir, 'map.json')
+  if (!existsSync(mapFile) || !existsSync(join(mapDir, 'heights.bin'))) return null
+  const { heights } = JSON.parse(readFileSync(mapFile, 'utf8'))
+  const raw = readFileSync(join(mapDir, 'heights.bin'))
+  const ints = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2)
+  const grid = new Float32Array(ints.length)
+  for (let i = 0; i < ints.length; i += 1) grid[i] = ints[i] * heights.scale
+  return { grid, size: heights.size, step: heights.step }
+}
+
+export function buildVector(source, outFile, mapDir = null) {
   const dir = join(source, 'geojson')
   if (!existsSync(dir)) return null
 
@@ -250,6 +262,10 @@ export function buildVector(source, outFile) {
 
   let contours = []
   if (existsSync(join(source, 'dem.asc.gz'))) contours = contourLines(readDem(source))
+  else if (mapDir) {
+    const dem = readHeightsBin(mapDir)
+    if (dem) contours = contourLines(dem)
+  }
 
   const vector = {
     version: 1,

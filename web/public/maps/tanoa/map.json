@@ -17,5 +17,6 @@
     "levels": 5,
     "metersPerTile": 960,
     "ext": "webp"
-  }
+  },
+  "vector": "vector.json"
 }

@@ -144,7 +144,9 @@ const TOPO = {
 /** Цвет фона в топо-режиме (рисуется вместо рельефа и спутника). */
 export const TOPO_PAPER = TOPO.paper
 
-function visible(s: Shape, v: VectorView): boolean {
+/** Фигура в кадре и не мельче minPx пикселей (мелочь не рисуется). */
+function visible(s: Shape, v: VectorView, minPx = 0): boolean {
+  if (minPx > 0 && Math.max(s.maxX - s.minX, s.maxY - s.minY) * v.scale < minPx) return false
   const maxX = v.x0 + v.width / v.scale
   const minY = v.y0 - v.height / v.scale
   return s.maxX >= v.x0 && s.minX <= maxX && s.maxY >= minY && s.minY <= v.y0
@@ -175,7 +177,7 @@ export function drawVector(
   if (topo) {
     ctx.fillStyle = TOPO.forest
     ctx.beginPath()
-    for (const s of vec.forests) if (visible(s, v)) trace(ctx, s, v, true)
+    for (const s of vec.forests) if (visible(s, v, 3)) trace(ctx, s, v, true)
     ctx.fill()
 
     ctx.fillStyle = TOPO.runway
@@ -189,7 +191,7 @@ export function drawVector(
     ctx.strokeStyle = TOPO.contour
     ctx.beginPath()
     for (const c of vec.contours) {
-      if (c.elevation % every !== 0 || c.elevation % 50 === 0 || !visible(c, v)) continue
+      if (c.elevation % every !== 0 || c.elevation % 50 === 0 || !visible(c, v, 14)) continue
       trace(ctx, c, v, false)
     }
     ctx.stroke()
@@ -197,7 +199,7 @@ export function drawVector(
     ctx.strokeStyle = TOPO.contourMajor
     ctx.beginPath()
     for (const c of vec.contours) {
-      if (c.elevation % 50 !== 0 || c.elevation % every !== 0 || !visible(c, v)) continue
+      if (c.elevation % 50 !== 0 || c.elevation % every !== 0 || !visible(c, v, 14)) continue
       trace(ctx, c, v, false)
     }
     ctx.stroke()
@@ -235,7 +237,7 @@ export function drawVector(
     ctx.strokeStyle = topo ? TOPO.houseStroke : 'rgba(255,255,255,0.75)'
     ctx.lineWidth = 1
     ctx.beginPath()
-    for (const s of vec.houses) if (visible(s, v)) trace(ctx, s, v, true)
+    for (const s of vec.houses) if (visible(s, v, 2)) trace(ctx, s, v, true)
     ctx.fill()
     ctx.stroke()
   }
