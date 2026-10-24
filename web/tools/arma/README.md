@@ -46,15 +46,16 @@ node scripts/import-grad-meh.mjs --no-sat "D:/export/cam_lao_nam"
 Результат хуже настоящего спутника grad_meh (разрешение ~1,5 м/px, на карте остаются подписи и сетка),
 зато у карты появляется «фото» под зданиями и дорогами.
 
+0. **Создайте пустую папку `D:\gradphoto`** (скрипт сохраняет в неё; если диска D: нет, замените путь в начале файла `gradtopo_photos.sqf`). Без неё игра пишет в RPT «Saving of screenshot failed: E_FAIL».
 1. Запустите игру на нужной карте, как выше, и вставьте `web/tools/arma/gradtopo_photos.sqf` → **Local Exec**.
    Скрипт откроет полноэкранную карту, сам подберёт масштаб и сделает 100–150 скриншотов
    (`gradphoto_<карта>_<ряд>_<столбец>.png`) с паузами. Ничего не нажимайте и не сворачивайте игру.
    Когда в чате появится «GRADPHOTO: done», закройте игру.
-2. Скриншоты сохраняются игрозависимо: ищите `gradphoto_*.png` в `Документы\Arma 3\` и в папке игры.
+2. Скриншоты лежат в `D:\gradphoto`.
 3. Склейка (из папки `web/`), потом обычный импорт — теперь уже со спутниковым слоем:
 
 ```bash
-node scripts/import-photos.mjs "<путь к .rpt>" "D:/.../grad_meh/cam_lao_nam" --images "<папка со скриншотами>" --mpp 2
+node scripts/import-photos.mjs "<путь к .rpt>" "D:/.../grad_meh/cam_lao_nam" --images "D:/gradphoto" --mpp 2
 node scripts/import-grad-meh.mjs "D:/.../grad_meh/cam_lao_nam"
 ```
 
