@@ -36,8 +36,8 @@ import {
 import {
   addMarker,
   formatAge,
-  MARKER_COLORS,
-  MARKER_RGB,
+  markerRgb,
+  type PresetColor,
   markerOpacity,
   removeMarker,
   useMarkers,
@@ -58,6 +58,7 @@ import {
 } from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
+import { ColorField } from './ColorWheel'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { MapRequests } from './MapRequests'
 import { PickerDialog } from './PickerDialog'
@@ -139,7 +140,7 @@ const isDrawTool = (p: Placing) => p === 'pen' || p === 'draw-line' || p === 'er
 // Клик ближе — попадание в метку, пиксели
 const MARKER_HIT_PX = 14
 
-const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
+const COLOR_NAMES: Record<PresetColor, MessageKey> = {
   red: 'mapPicker.red',
   orange: 'mapPicker.orange',
   yellow: 'mapPicker.yellow',
@@ -150,7 +151,7 @@ const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
 }
 
 function markerTitle(marker: MapMarker): string {
-  const color = t(COLOR_NAMES[marker.color])
+  const color = colorName(marker.color)
   return marker.label || `${t('mapPicker.marker')} (${color})`
 }
 
@@ -677,7 +678,7 @@ export function MapPicker({
     ctx.lineWidth = 3
     for (const stroke of liveStroke ? [...strokes, liveStroke] : strokes) {
       if (stroke.points.length === 0) continue
-      ctx.strokeStyle = MARKER_RGB[stroke.color]
+      ctx.strokeStyle = markerRgb(stroke.color)
       ctx.beginPath()
       stroke.points.forEach((point, i) => {
         const p = toScreen(point)
@@ -697,7 +698,7 @@ export function MapPicker({
       const p = toScreen(marker)
       if (p.x < -40 || p.y < -40 || p.x > size.width + 40 || p.y > size.height + 40) continue
       ctx.globalAlpha = markerOpacity(now - marker.createdAt)
-      ctx.fillStyle = MARKER_RGB[marker.color]
+      ctx.fillStyle = markerRgb(marker.color)
       ctx.strokeStyle = ink.outline
       ctx.lineWidth = 2
       ctx.beginPath()
@@ -713,7 +714,7 @@ export function MapPicker({
       const width = ctx.measureText(text).width
       ctx.fillStyle = ink.plate
       ctx.fillRect(p.x + 11, p.y - 9, width + 8, 18)
-      ctx.fillStyle = MARKER_RGB[marker.color]
+      ctx.fillStyle = markerRgb(marker.color)
       ctx.fillRect(p.x + 11, p.y - 9, 2, 18)
       ctx.fillStyle = ink.text
       ctx.fillText(text, p.x + 16, p.y + 4)
@@ -749,7 +750,7 @@ export function MapPicker({
 
     if (draft) {
       const p = toScreen(draft.point)
-      ctx.strokeStyle = MARKER_RGB[draft.color]
+      ctx.strokeStyle = markerRgb(draft.color)
       ctx.lineWidth = 2
       ctx.setLineDash([3, 3])
       ctx.beginPath()
@@ -1443,22 +1444,7 @@ export function MapPicker({
                 <FieldIcon name={tool.icon} className="h-5 w-5" />
               </button>
             ))}
-            <button
-              type="button"
-              title={t('mapPicker.draw-colour')}
-              aria-label={t('mapPicker.draw-colour')}
-              onClick={() =>
-                setDrawColor(
-                  MARKER_COLORS[(MARKER_COLORS.indexOf(drawColor) + 1) % MARKER_COLORS.length]
-                )
-              }
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md hover:bg-white/15"
-            >
-              <span
-                className="h-5 w-5 rounded-full ring-2 ring-white/70"
-                style={{ backgroundColor: MARKER_RGB[drawColor] }}
-              />
-            </button>
+            <ColorField compact placement="bottom" value={drawColor} onChange={setDrawColor} names={colorName} />
             <button
               type="button"
               disabled={strokes.length === 0}
@@ -1494,22 +1480,6 @@ export function MapPicker({
 
           {/* Слева: цели журнала — выбор, экспорт и импорт */}
           <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
-          {vector && (
-            <button
-              type="button"
-              aria-pressed={mapStyle === 'topo'}
-              title={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
-              onClick={() => {
-                const next = mapStyle === 'topo' ? 'sat' : 'topo'
-                setMapStyle(next)
-                writeStored('mapStyle', next)
-              }}
-              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/70 px-2.5 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-sm hover:bg-black/80"
-            >
-              <FieldIcon name="map" className="h-5 w-5" />
-              {mapStyle === 'topo' ? t('mapPicker.style-topo-short') : t('mapPicker.style-sat-short')}
-            </button>
-          )}
           {targetActions && (
             <div className="flex flex-col items-start gap-1">
               <div className="flex gap-1">
@@ -1701,9 +1671,10 @@ export function MapPicker({
                 }}
                 className="field min-w-0 flex-1"
               />
-              <ColorPicker
+              <ColorField
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
+                names={colorName}
               />
               <button type="button" onClick={saveDraft} className="btn btn-primary">
                 {t('mapPicker.place')}
@@ -1715,8 +1686,30 @@ export function MapPicker({
           )}
 
 
+          {/* Справа снизу: слой карты (спутник / топо); значок — текущий режим */}
+          {vector && (
+            <button
+              type="button"
+              aria-pressed={mapStyle === 'topo'}
+              title={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
+              aria-label={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
+              onClick={() => {
+                const next = mapStyle === 'topo' ? 'sat' : 'topo'
+                setMapStyle(next)
+                writeStored('mapStyle', next)
+              }}
+              className="absolute right-2 bottom-2 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm transition-colors hover:bg-black/85"
+            >
+              <FieldIcon
+                key={mapStyle}
+                name={mapStyle === 'topo' ? 'topo' : 'satellite'}
+                className="theme-icon h-5 w-5"
+              />
+            </button>
+          )}
+
           {/* Снизу по центру: координаты орудия и цели */}
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
             <span className="flex items-center gap-2">
               <span className="block h-2 w-2 shrink-0 rounded-full bg-gun" />
               <span>
@@ -1938,6 +1931,11 @@ export function MapPicker({
   )
 }
 
+/** Название цвета для подписи; у своего цвета — «Цвет». */
+function colorName(color: MarkerColor): string {
+  return color.startsWith('#') ? t('mapPicker.colour') : t(COLOR_NAMES[color as PresetColor])
+}
+
 function lineWeaponName(id: LineWeapon["id"]): string {
   switch (id) {
     case 'mortar':
@@ -1949,39 +1947,6 @@ function lineWeaponName(id: LineWeapon["id"]): string {
     case 'rocket-wide':
       return t('mapPicker.rocket-wide')
   }
-}
-
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: MarkerColor
-  onChange: (color: MarkerColor) => void
-  
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={t('mapPicker.colour')}
-      className="flex gap-1"
-    >
-      {MARKER_COLORS.map((color) => (
-        <button
-          key={color}
-          type="button"
-          role="radio"
-          aria-checked={value === color}
-          aria-label={t(COLOR_NAMES[color])}
-          onClick={() => onChange(color)}
-          style={{ backgroundColor: MARKER_RGB[color] }}
-          className={[
-            'h-6 w-6 cursor-pointer rounded-full ring-offset-2 ring-offset-app-surface',
-            value === color ? 'ring-2 ring-accent' : '',
-          ].join(' ')}
-        />
-      ))}
-    </div>
-  )
 }
 
 function MarkerList({
@@ -2011,7 +1976,7 @@ function MarkerList({
         >
           <span
             className="h-3 w-3 shrink-0 rotate-45"
-            style={{ backgroundColor: MARKER_RGB[marker.color] }}
+            style={{ backgroundColor: markerRgb(marker.color) }}
           />
           <span className="min-w-0 flex-1 truncate text-app-text">
             {markerTitle(marker)}

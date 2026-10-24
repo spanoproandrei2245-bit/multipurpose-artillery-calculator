@@ -379,6 +379,21 @@ const paths = {
   ),
   // ластик
   eraser: <path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 20H7.5l-2-2a2 2 0 0 1 0-2.8z" />,
+  // спутник: тарелка антенны с лучами
+  satellite: (
+    <>
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" transform="rotate(45 12 12)" />
+      <path d="M5.5 5.5 8.5 8.5M15.5 15.5l3 3M4 10a6 6 0 0 1 6-6M2 10a8 8 0 0 1 8-8M14 20a6 6 0 0 0 6-6M14 22a8 8 0 0 0 8-8" />
+    </>
+  ),
+  // топографическая карта: горизонтали
+  topo: (
+    <>
+      <path d="M3 17c3-1 4-5 8-5s5 3 10 1" />
+      <path d="M5 21c3-1 4-3 7-3s5 1 8 0" />
+      <path d="M6 12c1-4 4-7 8-7s5 3 4 6" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

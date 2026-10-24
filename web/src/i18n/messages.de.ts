@@ -2,8 +2,8 @@ import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "Nur die guten Ladungen",
-  "settingsPage.adv-ballistics": "Erweiterte Ballistik",
-  "settingsPage.adv-ballistics-description": "Einschalten, wenn Luftwiderstand und erweiterte Ballistik im Spiel aktiv sind: Die Tabellen im Spiel sind dann anders. Geschütze ohne solche Tabellen nutzen die normalen.",
+  "settingsPage.weather-ballistics": "Wetter und erweiterte Ballistik",
+  "settingsPage.weather-ballistics-description": "Wind, Temperatur, Luftdruck und die Tabellen für Spiele mit Luftwiderstand (ACE advanced ballistics). Beides gehört zusammen: Mit Wetter im Spiel sind die Tabellen anders.",
   "artilleryCalculator.advanced-missing": "Für dieses Geschütz gibt es noch keine Tabellen der erweiterten Ballistik: Es gelten die normalen Tabellen, im Spiel sind Fehlschüsse möglich.",
   "settingsPage.only-good-description": "Es bleiben nur Ladungen, die in etwas herausragen: die beste, die schnellste oder die präziseste (und die gewählte).",
   "weatherSection.clear-weather": "Wetter zurücksetzen",
@@ -341,8 +341,9 @@ export const de: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "Letzten Strich rückgängig",
   "mapPicker.draw-clear": "Alles löschen (zweimal tippen)",
   "mapPicker.new-marker": "Neue Markierung",
-  "mapPicker.style-sat-short": "Satellit",
-  "mapPicker.style-topo-short": "Topo",
+  "mapPicker.hue": "Farbton",
+  "mapPicker.brightness": "Helligkeit",
+  "mapPicker.custom-colour": "Eigene Farbe",
   "mapPicker.style-sat": "Satellitenbild anzeigen",
   "mapPicker.style-topo": "Topografische Karte anzeigen",
   "markers.h": "{0} Std.",
@@ -460,7 +461,6 @@ export const de: Record<keyof typeof ru, string> = {
   "settingsPage.the-markers-panel-the-marker": "Das Markierungs-Panel, das Markierungswerkzeug und Markierungen von Richtschützen über die Verbindung.",
   "settingsPage.the-shell-flies-from-the": "Die Granate fliegt auf der Karte vom Geschütz zum Ziel. Sonst animiert nur der Timer-Streifen.",
   "settingsPage.turn-on-only-what-you": "Schalte nur ein, was du nutzt, damit der Hauptbildschirm übersichtlich bleibt.",
-  "settingsPage.wind-temperature-pressure-only-for": "Wind, Temperatur, Druck. Nur für Server mit erweiterter Ballistik.",
   "shellIcon.high-explosive": "Sprenggranate",
   "shellIcon.illumination": "Leuchtgranate",
   "shellIcon.smoke": "Nebel",
@@ -574,7 +574,6 @@ export const de: Record<keyof typeof ru, string> = {
   "weatherSection.right": "rechts",
   "weatherSection.speed-direction": "Tempo & Richtung",
   "weatherSection.tail": "Rücken",
-  "weatherSection.weather-corrections": "Wetterkorrekturen",
   "weatherSection.wind": "Wind",
   "weatherSection.wind-input": "Windeingabe",
 }

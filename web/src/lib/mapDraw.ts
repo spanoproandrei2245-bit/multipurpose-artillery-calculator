@@ -1,5 +1,5 @@
 import { readStoredText, writeStored } from './input'
-import { MARKER_COLORS, type MarkerColor } from './markers'
+import { isMarkerColor, type MarkerColor } from './markers'
 
 /** Рисунок на карте: штрих — ломаная в координатах мира одного цвета. */
 export interface DrawStroke {
@@ -23,7 +23,7 @@ export function readStrokes(world: string): DrawStroke[] {
           typeof s === 'object' &&
           s !== null &&
           typeof (s as DrawStroke).id === 'string' &&
-          MARKER_COLORS.includes((s as DrawStroke).color) &&
+          isMarkerColor((s as DrawStroke).color) &&
           Array.isArray((s as DrawStroke).points) &&
           (s as DrawStroke).points.every(
             (p) => typeof p?.x === 'number' && typeof p?.y === 'number'
