@@ -8,7 +8,10 @@
  * --images — где искать скриншоты gradphoto_*.png (можно несколько раз; по умолчанию
  *            Документы\Arma 3 и папка игры рядом с выгрузкой). Поиск рекурсивный.
  * --mpp    — метров на пиксель итоговой картинки (по умолчанию 2).
- * --crop   — сколько пикселей срезать с каждого края скриншота (рамки, подписи).
+ * --rect   — область карты на скриншоте: x,y,ширина,высота в пикселях или auto (по умолчанию):
+ *            карта в игре занимает прямоугольник, остальное — 3D-сцена; область находится
+ *            сравнением двух кадров (меняется только карта).
+ * --crop   — дополнительно срезать столько пикселей с каждого края области (рамки).
  *
  * После этого карта собирается как обычно (с тайлами спутника):
  *   node scripts/import-grad-meh.mjs "<папка-выгрузки>"
@@ -31,6 +34,7 @@ if (!rptFile || !outDir) {
 }
 const mpp = Number(flags('--mpp')[0] ?? 2)
 const crop = Number(flags('--crop')[0] ?? 0)
+const rectArg = flags('--rect')[0] ?? 'auto'
 const searchDirs = flags('--images')
 if (searchDirs.length === 0) {
   searchDirs.push(join(homedir(), 'Documents', 'Arma 3'), join(dirname(outDir), '..'), dirname(outDir), '.')
@@ -78,6 +82,43 @@ if (found.size === 0) {
   process.exit(1)
 }
 
+// ---- область карты на скриншоте ----
+async function rawPixels(path) {
+  const { data, info } = await sharp(path).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+  return { data, width: info.width, height: info.height }
+}
+
+async function detectRect(paths) {
+  // Сравниваем два далёких кадра: 3D-сцена вокруг карты одинакова, карта различается
+  const a = await rawPixels(paths[0])
+  const b = await rawPixels(paths[Math.floor(paths.length / 2)])
+  let minX = a.width, minY = a.height, maxX = -1, maxY = -1
+  for (let y = 0; y < a.height; y += 1) {
+    for (let x = 0; x < a.width; x += 1) {
+      const i = (y * a.width + x) * 3
+      const d = Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2])
+      if (d > 60) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  if (maxX < 0) return { left: 0, top: 0, width: a.width, height: a.height }
+  return { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
+}
+
+let rect
+if (rectArg === 'auto') {
+  rect = await detectRect([...found.values()])
+} else {
+  const [left, top, width, height] = rectArg.split(',').map(Number)
+  rect = { left, top, width, height }
+}
+rect = { left: rect.left + crop, top: rect.top + crop, width: rect.width - 2 * crop, height: rect.height - 2 * crop }
+console.log(`область карты на кадре: x=${rect.left} y=${rect.top} ${rect.width}×${rect.height}`)
+
 // ---- мозаика ----
 const n = Math.ceil(worldSize / (TILE_PX * mpp))
 const total = n * TILE_PX
@@ -91,21 +132,15 @@ for (const [name, path] of found) {
   const wm = s.x1 - s.x0
   const hm = s.y0 - s.y1
   if (wm <= 0 || hm <= 0) continue
-  const meta = await sharp(path).metadata()
-  const cut = Math.min(crop, Math.floor(Math.min(meta.width, meta.height) / 4))
-  // Отрезанные края сдвигают привязку
-  const pxW = meta.width
-  const pxH = meta.height
-  const mx = (wm / pxW) * cut
-  const my = (hm / pxH) * cut
-  const x0 = s.x0 + mx
-  const y0 = s.y0 - my
+  const x0 = s.x0
+  const y0 = s.y0
+  const mx = 0
+  const my = 0
   const widthPx = Math.max(1, Math.round((wm - 2 * mx) / m))
   const heightPx = Math.max(1, Math.round((hm - 2 * my) / m))
   let left = Math.round(x0 / m)
   let top = Math.round((worldSize - y0) / m)
-  let img = sharp(path)
-  if (cut > 0) img = img.extract({ left: cut, top: cut, width: pxW - 2 * cut, height: pxH - 2 * cut })
+  const img = sharp(path).extract(rect)
   let buf = await img.resize(widthPx, heightPx, { fit: 'fill' }).removeAlpha().png().toBuffer()
   // Обрезка по границам мозаики
   let w = widthPx
