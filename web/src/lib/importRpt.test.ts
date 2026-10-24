@@ -12,6 +12,7 @@ describe('scripts/import-rpt.mjs', () => {
     const n = 3
     const lines = [
       '12:00:00 шум до экспорта',
+      '12:00:01 "GRADTOPO|NOISE|в кавычках, как в настоящем RPT"',
       `GRADTOPO|META|testworld|40|20|${n}`,
       ...[0, 1, 2].map((j) => `GRADTOPO|H|${j}|0|${[10 * j, 20 * j + 5, 30 * j].join(',')}`),
       'GRADTOPO|B|0,0,10,0,10,5,0,5|6',

@@ -35,6 +35,17 @@
       "worldSize": 20480
     },
     {
+      "world": "cam_lao_nam",
+      "displayName": "Cam Lao Nam",
+      "author": "Bohemia Interactive",
+      "kind": "official",
+      "worldSize": 20480,
+      "names": {
+        "ru": "Кам Лао Нам",
+        "uk": "Кам Лао Нам"
+      }
+    },
+    {
       "world": "dogechnya",
       "displayName": "Dogechnya",
       "author": "Ghostovich and friends",

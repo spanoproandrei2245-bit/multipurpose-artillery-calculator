@@ -44,7 +44,8 @@ const lines = createInterface({ input: createReadStream(rptFile, 'utf8'), crlfDe
 for await (const raw of lines) {
   const at = raw.indexOf('GRADTOPO|')
   if (at < 0) continue
-  const parts = raw.slice(at + 9).trim().split('|')
+  // В RPT строка выглядит как: 18:11:40 "GRADTOPO|..." — кавычки убираем
+  const parts = raw.slice(at + 9).trim().replace(/"+$/, '').split('|')
   switch (parts[0]) {
     case 'META': {
       // Новый запуск скрипта в том же RPT начинает всё заново
