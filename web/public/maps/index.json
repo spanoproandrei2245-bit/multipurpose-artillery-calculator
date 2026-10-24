@@ -14,6 +14,20 @@
       }
     },
     {
+      "world": "archie",
+      "displayName": "Archie, Summer",
+      "author": "SSG - Kalle",
+      "kind": "community",
+      "worldSize": 12288
+    },
+    {
+      "world": "archie_w",
+      "displayName": "Archie, Winter",
+      "author": "SSG - Kalle",
+      "kind": "community",
+      "worldSize": 12288
+    },
+    {
       "world": "beketov",
       "displayName": "Beketov",
       "author": "Dead_Kennedy, SenChi",
@@ -28,6 +42,13 @@
       "worldSize": 10240
     },
     {
+      "world": "drakovac",
+      "displayName": "Drakovac",
+      "author": "SSG - Enfisk",
+      "kind": "community",
+      "worldSize": 12288
+    },
+    {
       "world": "farabad",
       "displayName": "Farabad",
       "author": "Jacko",
@@ -35,8 +56,22 @@
       "worldSize": 10752
     },
     {
+      "world": "go_map_fjord",
+      "displayName": "Fjord",
+      "author": "Jacko",
+      "kind": "community",
+      "worldSize": 14336
+    },
+    {
       "world": "hellanmaa",
       "displayName": "Hellanmaa",
+      "author": "Temppa",
+      "kind": "community",
+      "worldSize": 8192
+    },
+    {
+      "world": "hellanmaaw",
+      "displayName": "Hellanmaa winter",
       "author": "Temppa",
       "kind": "community",
       "worldSize": 8192
@@ -47,6 +82,20 @@
       "author": "Jacko",
       "kind": "community",
       "worldSize": 10240
+    },
+    {
+      "world": "vtf_korsac",
+      "displayName": "Korsac",
+      "author": "Vectif",
+      "kind": "community",
+      "worldSize": 8192
+    },
+    {
+      "world": "vtf_korsac_winter",
+      "displayName": "Korsac (Winter)",
+      "author": "Vectif & Thoreaufare",
+      "kind": "community",
+      "worldSize": 8192
     },
     {
       "world": "enoch",
@@ -62,6 +111,13 @@
       }
     },
     {
+      "world": "maksniemi",
+      "displayName": "Maksniemi",
+      "author": "Immonen",
+      "kind": "community",
+      "worldSize": 11264
+    },
+    {
       "world": "malden",
       "displayName": "Malden",
       "author": "Bohemia Interactive",
@@ -73,6 +129,13 @@
         "ja": "マルデン",
         "zh": "马尔登"
       }
+    },
+    {
+      "world": "northtakistan",
+      "displayName": "North Takistan",
+      "author": "Rezlind, Harrsion, Pa3k, and Sven",
+      "kind": "community",
+      "worldSize": 12288
     },
     {
       "world": "wl_rosche",
@@ -102,6 +165,20 @@
       }
     },
     {
+      "world": "stubbhult",
+      "displayName": "Stubbhult",
+      "author": "SSG - Enfisk",
+      "kind": "community",
+      "worldSize": 12288
+    },
+    {
+      "world": "brf_sumava",
+      "displayName": "Šumava",
+      "author": "Bref",
+      "kind": "community",
+      "worldSize": 12288
+    },
+    {
       "world": "tanoa",
       "displayName": "Tanoa",
       "author": "Bohemia Interactive",
@@ -113,6 +190,13 @@
         "ja": "タノア",
         "zh": "塔诺亚"
       }
+    },
+    {
+      "world": "vt7",
+      "displayName": "Virolahti",
+      "author": "Furean",
+      "kind": "community",
+      "worldSize": 17920
     },
     {
       "world": "vr",

@@ -67,7 +67,7 @@ describe('встроенные карты в public/maps', () => {
     }
   )
 
-  it('суммарный вес карт не раздувается (порог 60 МБ, с векторными слоями)', () => {
+  it('суммарный вес карт не раздувается (порог 120 МБ, с векторными слоями)', () => {
     function size(dir: string): number {
       return readdirSync(dir).reduce((sum, name) => {
         const p = join(dir, name)
@@ -75,6 +75,6 @@ describe('встроенные карты в public/maps', () => {
         return sum + (s.isDirectory() ? size(p) : s.size)
       }, 0)
     }
-    expect(size(ROOT) / 1024 / 1024).toBeLessThan(60)
+    expect(size(ROOT) / 1024 / 1024).toBeLessThan(120)
   })
 })

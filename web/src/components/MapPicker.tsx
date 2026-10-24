@@ -457,7 +457,19 @@ export function MapPicker({
   // Загруженные тайлы спутника; готовый тайл — повод перерисовать
   const tileCache = useRef(new Map<string, HTMLImageElement>())
   const [tileTick, setTileTick] = useState(0)
-  const baseCache = useRef<{ key: string; x0: number; y0: number; canvas: HTMLCanvasElement } | null>(null)
+  const baseCache = useRef<{ key: string; x0: number; y0: number; scale: number; canvas: HTMLCanvasElement } | null>(null)
+  // Пока крутится колесо, основа лишь масштабируется; через 140 мс после последнего шага — чёткая перерисовка
+  const [settleTick, setSettleTick] = useState(0)
+  const zoomingUntil = useRef(0)
+  const settleTimer = useRef<number | null>(null)
+  const markZoom = useCallback(() => {
+    zoomingUntil.current = performance.now() + 140
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current)
+    settleTimer.current = window.setTimeout(() => {
+      settleTimer.current = null
+      setSettleTick((v) => v + 1)
+    }, 160)
+  }, [])
   function tileImage(url: string): HTMLImageElement {
     let image = tileCache.current.get(url)
     if (!image) {
@@ -531,8 +543,25 @@ export function MapPicker({
       target.imageSmoothingEnabled = true
       if (!topo) {
         // Пиксель изображения i — узел x = i·step, покрывает ±step/2
-        const topLeft = toPx({ x: -half, y: extent + half })
-        target.drawImage(relief, topLeft.x, topLeft.y, (extent + map.step) * scale, (extent + map.step) * scale)
+        // Рисуем только видимый кусок рельефа: целиком он при сильном приближении огромен
+        const total = extent + map.step
+        const u0 = Math.max(0, bx0 + half)
+        const u1 = Math.min(total, bx0 + w / scale + half)
+        const v0 = Math.max(0, extent + half - by0)
+        const v1 = Math.min(total, extent + half - (by0 - h / scale))
+        if (u1 > u0 && v1 > v0) {
+          target.drawImage(
+            relief,
+            (u0 / total) * relief.width,
+            (v0 / total) * relief.height,
+            ((u1 - u0) / total) * relief.width,
+            ((v1 - v0) / total) * relief.height,
+            (u0 - half - bx0) * scale,
+            (by0 - (extent + half - v0)) * scale,
+            (u1 - u0) * scale,
+            (v1 - v0) * scale
+          )
+        }
       }
       // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
       if (tiles && !topo) {
@@ -558,18 +587,36 @@ export function MapPicker({
       }
     }
 
-    const cacheKey = [map.world, topo, scale, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0].join('|')
+    const cacheKey = [map.world, topo, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0].join('|')
     let cache = baseCache.current
     const w2 = size.width * 2
     const h2 = size.height * 2
+    const sameScene = cache !== null && cache.key === cacheKey
     const inside =
-      cache !== null &&
-      cache.key === cacheKey &&
-      x0 >= cache.x0 &&
-      x0 + size.width / scale <= cache.x0 + w2 / scale &&
-      y0 <= cache.y0 &&
-      y0 - size.height / scale >= cache.y0 - h2 / scale
-    if (!inside) {
+      sameScene &&
+      cache!.scale === scale &&
+      x0 >= cache!.x0 &&
+      x0 + size.width / scale <= cache!.x0 + w2 / scale &&
+      y0 <= cache!.y0 &&
+      y0 - size.height / scale >= cache!.y0 - h2 / scale
+    // Зум: пока колесо крутится, старая основа просто масштабируется (дёшево),
+    // а настоящая перерисовка — когда зум остановился
+    const zoomRatio = sameScene ? scale / cache!.scale : 1
+    const stretch =
+      sameScene && !inside && cache!.scale !== scale && zoomRatio > 0.55 && zoomRatio < 1.8 && performance.now() < zoomingUntil.current
+    if (stretch) {
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+      ctx.fillStyle = topo ? TOPO_PAPER : ink.bg
+      ctx.fillRect(0, 0, size.width, size.height)
+      // Точка кэша (cache.x0, cache.y0) после смены масштаба
+      ctx.drawImage(
+        cache!.canvas,
+        (cache!.x0 - x0) * scale,
+        (y0 - cache!.y0) * scale,
+        w2 * zoomRatio,
+        h2 * zoomRatio
+      )
+    } else if (!inside) {
       const surface = cache?.canvas ?? document.createElement('canvas')
       surface.width = Math.round(w2 * ratio)
       surface.height = Math.round(h2 * ratio)
@@ -579,9 +626,10 @@ export function MapPicker({
       const bx0 = x0 - size.width / 2 / scale
       const by0 = y0 + size.height / 2 / scale
       paintBase(sctx, bx0, by0, w2, h2)
-      cache = { key: cacheKey, x0: bx0, y0: by0, canvas: surface }
+      cache = { key: cacheKey, x0: bx0, y0: by0, scale, canvas: surface }
       baseCache.current = cache
     }
+    if (!stretch) {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
     ctx.drawImage(
       cache!.canvas,
@@ -590,6 +638,7 @@ export function MapPicker({
       w2,
       h2
     )
+    }
 
     // Сетка: 100 м / 1 км / 10 км — по масштабу
     const spacing =
@@ -830,7 +879,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke, vector, mapStyle])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke, vector, mapStyle, settleTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -869,6 +918,7 @@ export function MapPicker({
     const scale = Math.min(MAX_SCALE, Math.max(minScale, current.scale * factor))
     const wx = current.x0 + sx / current.scale
     const wy = current.y0 - sy / current.scale
+    markZoom()
     setView({ scale, x0: wx - sx / scale, y0: wy + sy / scale })
   }
 
