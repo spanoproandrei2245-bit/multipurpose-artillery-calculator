@@ -3,7 +3,6 @@
 closeDialog 0;
 uiSleep 0.5;
 
-private _folder = "D:\gradphoto\";
 private _size = worldSize;
 private _res = getResolution;
 private _resW = _res select 0;
@@ -62,8 +61,7 @@ for "_row" from 0 to (_rows - 1) do {
 		private _br = _map ctrlMapScreenToWorld [1, 1];
 		private _name = format ["gradphoto_%1_%2_%3.png", toLower worldName, _row, _col];
 		diag_log format ["GRADPHOTO|P|%1|%2|%3|%4|%5", _name, _tl select 0, _tl select 1, _br select 0, _br select 1];
-		screenshot (_folder + _name);
-		uiSleep 0.6;
+		uiSleep 0.9;
 	};
 	[format ["row %1 of %2", _row + 1, _rows]] call _say;
 };
