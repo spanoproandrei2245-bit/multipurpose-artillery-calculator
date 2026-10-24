@@ -48,3 +48,12 @@ describe('scripts/import-rpt.mjs', () => {
     expect(existsSync(join(out, 'geojson', 'locations', 'namevillage.geojson.gz'))).toBe(true)
   })
 })
+
+describe('tools/arma/gradtopo_export.sqf', () => {
+  it('годится для вставки в отладочную консоль: без комментариев и кириллицы', () => {
+    const code = readFileSync('tools/arma/gradtopo_export.sqf', 'utf8')
+    expect(code).not.toContain('/*')
+    expect(code).not.toMatch(/^\s*\/\//m)
+    expect(code).not.toMatch(/[А-Яа-яЁё]/)
+  })
+})

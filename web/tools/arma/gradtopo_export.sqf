@@ -1,32 +1,9 @@
-/*
- * Экспорт топографических данных карты из самой игры — для карт, которые
- * нельзя выгрузить через grad_meh (зашифрованные .ebo, например Cam Lao Nam).
- *
- * Как пользоваться (Arma 3 2.02 и новее):
- *   1. Запустите игру (лучше с -noPause -filePatching), откройте редактор на нужной карте
- *      (пустая миссия), нажмите «Играть».
- *   2. Esc → Debug Console → вставьте ВЕСЬ этот файл в поле кода → «Local Exec».
- *      (Или положите файл в папку миссии и выполните execVM "gradtopo_export.sqf".)
- *   3. Ждите: в чате идёт прогресс, на большой карте это 5–20 минут. Игру не сворачивайте.
- *      Когда в чате появится «GRADTOPO: done - you can close the game», закройте игру.
- *   4. Данные лежат в RPT-файле: %LOCALAPPDATA%\Arma 3\arma3_x64_<дата>.rpt.
- *      Дальше: node scripts/import-rpt.mjs <путь к .rpt> "<папка выгрузки>" --name "Cam Lao Nam" --author "SOG"
- *
- * Строки в RPT:
- *   GRADTOPO|META|<мир>|<размер>|<шаг>|<число узлов>
- *   GRADTOPO|H|<строка>|<с узла>|<высоты в дециметрах через запятую>   (с юга на север)
- *   GRADTOPO|B|<x1,y1,x2,y2,x3,y3,x4,y4>|<высота здания, м>
- *   GRADTOPO|R|<тип>|<ширина>|<x1,y1,x2,y2>
- *   GRADTOPO|L|<тип>|<название>|<x>|<y>
- *   GRADTOPO|END
- */
-
 [] spawn {
 
 private _size = worldSize;
-private _step = 20;                       // шаг сетки высот, м
+private _step = 20;
 private _n = floor (_size / _step) + 1;
-private _chunk = 150;                     // значений высот в одной строке RPT
+private _chunk = 150;
 
 private _say = {
 	params ["_text"];
@@ -36,7 +13,6 @@ private _say = {
 diag_log format ["GRADTOPO|META|%1|%2|%3|%4", toLower worldName, _size, _step, _n];
 ["heights..."] call _say;
 
-// ---- высоты: ASL, дециметры, строки с юга на север ----
 for "_j" from 0 to (_n - 1) do {
 	private _y = _j * _step;
 	for "_i0" from 0 to (_n - 1) step _chunk do {
@@ -52,9 +28,8 @@ for "_j" from 0 to (_n - 1) do {
 	};
 };
 
-// ---- здания, дороги: по плиткам 500 м ----
 private _tile = 500;
-private _radius = 360;                    // охватывает плитку целиком
+private _radius = 360;
 private _tiles = ceil (_size / _tile);
 private _seenB = createHashMap;
 private _seenR = createHashMap;
@@ -114,7 +89,6 @@ for "_tx" from 0 to (_tiles - 1) do {
 	uiSleep 0.01;
 };
 
-// ---- названия ----
 {
 	private _pos = locationPosition _x;
 	private _name = ((text _x) splitString "|") joinString " ";
