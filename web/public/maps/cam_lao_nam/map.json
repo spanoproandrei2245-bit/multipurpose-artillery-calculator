@@ -12,6 +12,11 @@
     "size": 1025,
     "scale": 0.1
   },
-  "topoOnly": true,
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 1706.6666666666667,
+    "ext": "webp"
+  },
   "vector": "vector.json"
 }
