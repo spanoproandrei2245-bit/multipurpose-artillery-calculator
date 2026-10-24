@@ -68,6 +68,7 @@ import { AnimatedNumber } from './AnimatedNumber'
 import { ConfirmClear } from './ConfirmClear'
 import { ChargeStrip } from './ChargeStrip'
 import { FieldIcon } from './FieldIcon'
+import { selectProfile } from '../lib/profileSelect'
 import { BallisticTableView } from './BallisticTableView'
 import { CombatScreen } from './CombatScreen'
 import { FireTimer, type FireTimerHandle } from './FireTimer'
@@ -237,10 +238,13 @@ export function ArtilleryCalculator({
   const selectedAmmo =
     ammunition.find((ammo) => ammo.id === ammoId) ?? ammunition[0]
 
-  const profile =
-    selectedAmmo?.profile !== undefined
-      ? reference.profiles?.[selectedAmmo.profile]
-      : undefined
+  // Погодные поправки и улучшенная баллистика — один переключатель: поправки
+  // имеют смысл только при игре с сопротивлением воздуха и погодой
+  const { profile, missingAdvanced } = selectProfile(
+    reference,
+    selectedAmmo,
+    showWeather
+  )
 
   const hasWeather = profile !== undefined && profileHasWeather(profile)
 
@@ -1091,6 +1095,12 @@ export function ArtilleryCalculator({
             {!profile && (
               <p className={`${alertClass} text-app-muted`}>
                 {t('artilleryCalculator.no-tables-for-this-ammunition')}
+              </p>
+            )}
+
+            {missingAdvanced && (
+              <p className={`${alertClass} text-warn`}>
+                {t('artilleryCalculator.advanced-missing')}
               </p>
             )}
 

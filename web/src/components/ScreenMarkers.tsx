@@ -8,7 +8,7 @@ import { readStoredText, writeStored } from '../lib/input'
 import {
   addMarker,
   getMarkers,
-  MARKER_RGB,
+  markerRgb,
   planScreenMerge,
   removeMarker,
   type DetectedMarker,
@@ -453,7 +453,7 @@ export function ScreenMarkers({ world, author, language }: Props) {
                   cy={blob.y}
                   r={Math.max(blob.width, blob.height) * 0.9 + 4}
                   fill="none"
-                  stroke={excluded.has(index) ? '#888' : MARKER_RGB[blob.color]}
+                  stroke={excluded.has(index) ? '#888' : markerRgb(blob.color)}
                   strokeWidth={Math.max(2, shot.image.width / 500)}
                   strokeDasharray={excluded.has(index) ? '4 4' : undefined}
                 />

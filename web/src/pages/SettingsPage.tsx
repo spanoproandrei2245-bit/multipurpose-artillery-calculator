@@ -227,10 +227,8 @@ export function SettingsPage({
               <Switch
                 checked={weather}
                 onChange={(v) => setFeature('weather', v)}
-                label={t('weatherSection.weather-corrections')}
-                description={
-                  t('settingsPage.wind-temperature-pressure-only-for')
-                }
+                label={t('settingsPage.weather-ballistics')}
+                description={t('settingsPage.weather-ballistics-description')}
               />
               </FeaturePreview>
               <FeaturePreview id="tot">

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "tables:import": "node scripts/import-tables.mjs --all",
     "tables:check": "node scripts/import-tables.mjs --all --check",
+    "tables:ingest": "node scripts/ingest-tables.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "desktop:dev": "tauri dev",

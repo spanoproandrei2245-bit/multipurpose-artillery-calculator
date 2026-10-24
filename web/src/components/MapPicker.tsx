@@ -20,6 +20,13 @@ import {
 import { parseGrid } from '../lib/grid'
 import { readStoredText, writeStored } from '../lib/input'
 import {
+  drawVector,
+  loadVector,
+  TOPO_PAPER,
+  type MapStyle,
+  type MapVector,
+} from '../lib/mapVector'
+import {
   distanceToStroke,
   readStrokes,
   simplify,
@@ -29,8 +36,8 @@ import {
 import {
   addMarker,
   formatAge,
-  MARKER_COLORS,
-  MARKER_RGB,
+  markerRgb,
+  type PresetColor,
   markerOpacity,
   removeMarker,
   useMarkers,
@@ -51,6 +58,7 @@ import {
 } from '../lib/builtinMaps'
 import { themeColor, useIsDark } from '../lib/useTheme'
 import type { Language } from '../types/settings'
+import { ColorField } from './ColorWheel'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { MapRequests } from './MapRequests'
 import { PickerDialog } from './PickerDialog'
@@ -132,7 +140,7 @@ const isDrawTool = (p: Placing) => p === 'pen' || p === 'draw-line' || p === 'er
 // Клик ближе — попадание в метку, пиксели
 const MARKER_HIT_PX = 14
 
-const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
+const COLOR_NAMES: Record<PresetColor, MessageKey> = {
   red: 'mapPicker.red',
   orange: 'mapPicker.orange',
   yellow: 'mapPicker.yellow',
@@ -143,7 +151,7 @@ const COLOR_NAMES: Record<MarkerColor, MessageKey> = {
 }
 
 function markerTitle(marker: MapMarker): string {
-  const color = t(COLOR_NAMES[marker.color])
+  const color = colorName(marker.color)
   return marker.label || `${t('mapPicker.marker')} (${color})`
 }
 
@@ -241,6 +249,11 @@ export function MapPicker({
   // Встроенные карты (спутник + высоты) и тайлы открытой карты
   const [builtin, setBuiltin] = useState<BuiltinMapEntry[]>([])
   const [tiles, setTiles] = useState<MapTiles | null>(null)
+  // Векторный слой (здания, дороги, горизонтали) и стиль карты
+  const [vector, setVector] = useState<MapVector | null>(null)
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() =>
+    readStoredText('mapStyle') === 'topo' ? 'topo' : 'sat'
+  )
   // Какой пункт списка открыт: «builtin:stratis» или «local:altis»
   const [mapKey, setMapKey] = useState('')
   const [map, setMap] = useState<Heightmap | null>(null)
@@ -329,6 +342,7 @@ export function MapPicker({
   const [liveStroke, setLiveStroke] = useState<DrawStroke | null>(null)
   const [drawColor, setDrawColor] = useState<MarkerColor>('red')
   const [clearArmed, setClearArmed] = useState(false)
+  const [drawOpen, setDrawOpen] = useState(false)
   const drawSeq = useRef(0)
   const drawRef = useRef<{ stroke: DrawStroke; erasing: boolean } | null>(null)
   useEffect(() => {
@@ -377,7 +391,9 @@ export function MapPicker({
     // Старые версии хранили «local:…» и просто имя мира: берём только имя
     const world = key.includes(':') ? key.split(':', 2)[1] : key
     const load = loadBuiltinMap(world).then((result) =>
-      result ? { heightmap: result.heightmap, tiles: result.tiles } : null
+      result
+        ? { heightmap: result.heightmap, tiles: result.tiles, vectorUrl: result.vectorUrl }
+        : null
     )
     load
       .then((loaded) => {
@@ -386,6 +402,8 @@ export function MapPicker({
         setMapKey(`builtin:${world}`)
         setMap(loaded.heightmap)
         setTiles(loaded.tiles)
+        setVector(null)
+        if (loaded.vectorUrl) void loadVector(loaded.vectorUrl).then(setVector)
         setGun(readGun(world))
         setGunLocked(readStoredText(`mapGunLocked:${world}`) === 'on')
         setLinePoints(readLine(world))
@@ -440,6 +458,19 @@ export function MapPicker({
   // Загруженные тайлы спутника; готовый тайл — повод перерисовать
   const tileCache = useRef(new Map<string, HTMLImageElement>())
   const [tileTick, setTileTick] = useState(0)
+  const baseCache = useRef<{ key: string; x0: number; y0: number; scale: number; canvas: HTMLCanvasElement } | null>(null)
+  // Пока крутится колесо, основа лишь масштабируется; через 140 мс после последнего шага — чёткая перерисовка
+  const [settleTick, setSettleTick] = useState(0)
+  const zoomingUntil = useRef(0)
+  const settleTimer = useRef<number | null>(null)
+  const markZoom = useCallback(() => {
+    zoomingUntil.current = performance.now() + 140
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current)
+    settleTimer.current = window.setTimeout(() => {
+      settleTimer.current = null
+      setSettleTick((v) => v + 1)
+    }, 160)
+  }, [])
   function tileImage(url: string): HTMLImageElement {
     let image = tileCache.current.get(url)
     if (!image) {
@@ -493,40 +524,122 @@ export function MapPicker({
     const sans = "'Inter Variable', system-ui, sans-serif"
     const mono = sans
 
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
-    ctx.fillStyle = ink.bg
-    ctx.fillRect(0, 0, size.width, size.height)
+    // Нет спутника — только топо
+    const topo = (mapStyle === 'topo' || tiles === null) && vector !== null
+    if (topo) {
+      ink.grid = 'rgba(0,0,0,0.14)'
+      ink.gridKm = 'rgba(0,0,0,0.34)'
+      ink.gridText = 'rgba(0,0,0,0.6)'
+    }
 
-    // Пиксель изображения i — узел x = i·step, покрывает ±step/2
+    // Основа (фон, рельеф, спутник, векторный слой) рисуется один раз на холст
+    // вдвое больше экрана и при перетаскивании только сдвигается: так карта не
+    // перерисовывается заново на каждое движение мыши
     const extent = mapExtent(map)
     const half = map.step / 2
-    const topLeft = toScreen({ x: -half, y: extent + half })
-    ctx.imageSmoothingEnabled = true
-    ctx.drawImage(
-      relief,
-      topLeft.x,
-      topLeft.y,
-      (extent + map.step) * scale,
-      (extent + map.step) * scale
-    )
-
-    // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
-    if (tiles) {
-      const z = tileLevel(tiles, scale * ratio)
-      const visible = visibleTiles(tiles, z, {
-        minX: x0,
-        maxX: x0 + size.width / scale,
-        minY: y0 - size.height / scale,
-        maxY: y0,
-      })
-      for (const tile of visible) {
-        const image = tileImage(tile.url)
-        if (!image.complete || image.naturalWidth === 0) continue
-        const p = toScreen({ x: tile.x, y: tile.y })
-        // +0.5 px — без щелей между тайлами при дробном масштабе
-        const side = tile.meters * scale + 0.5
-        ctx.drawImage(image, p.x, p.y, side, side)
+    const paintBase = (target: CanvasRenderingContext2D, bx0: number, by0: number, w: number, h: number) => {
+      const toPx = (p: MapPoint) => ({ x: (p.x - bx0) * scale, y: (by0 - p.y) * scale })
+      target.setTransform(ratio, 0, 0, ratio, 0, 0)
+      target.fillStyle = topo ? TOPO_PAPER : ink.bg
+      target.fillRect(0, 0, w, h)
+      target.imageSmoothingEnabled = true
+      if (!topo) {
+        // Пиксель изображения i — узел x = i·step, покрывает ±step/2
+        // Рисуем только видимый кусок рельефа: целиком он при сильном приближении огромен
+        const total = extent + map.step
+        const u0 = Math.max(0, bx0 + half)
+        const u1 = Math.min(total, bx0 + w / scale + half)
+        const v0 = Math.max(0, extent + half - by0)
+        const v1 = Math.min(total, extent + half - (by0 - h / scale))
+        if (u1 > u0 && v1 > v0) {
+          target.drawImage(
+            relief,
+            (u0 / total) * relief.width,
+            (v0 / total) * relief.height,
+            ((u1 - u0) / total) * relief.width,
+            ((v1 - v0) / total) * relief.height,
+            (u0 - half - bx0) * scale,
+            (by0 - (extent + half - v0)) * scale,
+            (u1 - u0) * scale,
+            (v1 - v0) * scale
+          )
+        }
       }
+      // Спутниковый снимок поверх рельефа: пока тайл грузится, виден рельеф
+      if (tiles && !topo) {
+        const z = tileLevel(tiles, scale * ratio)
+        const visible = visibleTiles(tiles, z, {
+          minX: bx0,
+          maxX: bx0 + w / scale,
+          minY: by0 - h / scale,
+          maxY: by0,
+        })
+        for (const tile of visible) {
+          const image = tileImage(tile.url)
+          if (!image.complete || image.naturalWidth === 0) continue
+          const p = toPx({ x: tile.x, y: tile.y })
+          // +0.5 px — без щелей между тайлами при дробном масштабе
+          const side = tile.meters * scale + 0.5
+          target.drawImage(image, p.x, p.y, side, side)
+        }
+      }
+      // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
+      if (vector) {
+        drawVector(target, vector, { x0: bx0, y0: by0, scale, width: w, height: h }, topo ? 'topo' : 'sat', sans)
+      }
+    }
+
+    const cacheKey = [map.world, topo, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0].join('|')
+    let cache = baseCache.current
+    const w2 = size.width * 2
+    const h2 = size.height * 2
+    const sameScene = cache !== null && cache.key === cacheKey
+    const inside =
+      sameScene &&
+      cache!.scale === scale &&
+      x0 >= cache!.x0 &&
+      x0 + size.width / scale <= cache!.x0 + w2 / scale &&
+      y0 <= cache!.y0 &&
+      y0 - size.height / scale >= cache!.y0 - h2 / scale
+    // Зум: пока колесо крутится, старая основа просто масштабируется (дёшево),
+    // а настоящая перерисовка — когда зум остановился
+    const zoomRatio = sameScene ? scale / cache!.scale : 1
+    const stretch =
+      sameScene && !inside && cache!.scale !== scale && zoomRatio > 0.55 && zoomRatio < 1.8 && performance.now() < zoomingUntil.current
+    if (stretch) {
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+      ctx.fillStyle = topo ? TOPO_PAPER : ink.bg
+      ctx.fillRect(0, 0, size.width, size.height)
+      // Точка кэша (cache.x0, cache.y0) после смены масштаба
+      ctx.drawImage(
+        cache!.canvas,
+        (cache!.x0 - x0) * scale,
+        (y0 - cache!.y0) * scale,
+        w2 * zoomRatio,
+        h2 * zoomRatio
+      )
+    } else if (!inside) {
+      const surface = cache?.canvas ?? document.createElement('canvas')
+      surface.width = Math.round(w2 * ratio)
+      surface.height = Math.round(h2 * ratio)
+      const sctx = surface.getContext('2d')
+      if (!sctx) return
+      // Экран лежит в середине холста основы
+      const bx0 = x0 - size.width / 2 / scale
+      const by0 = y0 + size.height / 2 / scale
+      paintBase(sctx, bx0, by0, w2, h2)
+      cache = { key: cacheKey, x0: bx0, y0: by0, scale, canvas: surface }
+      baseCache.current = cache
+    }
+    if (!stretch) {
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+    ctx.drawImage(
+      cache!.canvas,
+      Math.round((cache!.x0 - x0) * scale * ratio) / ratio,
+      Math.round((y0 - cache!.y0) * scale * ratio) / ratio,
+      w2,
+      h2
+    )
     }
 
     // Сетка: 100 м / 1 км / 10 км — по масштабу
@@ -566,7 +679,7 @@ export function MapPicker({
     ctx.lineWidth = 3
     for (const stroke of liveStroke ? [...strokes, liveStroke] : strokes) {
       if (stroke.points.length === 0) continue
-      ctx.strokeStyle = MARKER_RGB[stroke.color]
+      ctx.strokeStyle = markerRgb(stroke.color)
       ctx.beginPath()
       stroke.points.forEach((point, i) => {
         const p = toScreen(point)
@@ -586,7 +699,7 @@ export function MapPicker({
       const p = toScreen(marker)
       if (p.x < -40 || p.y < -40 || p.x > size.width + 40 || p.y > size.height + 40) continue
       ctx.globalAlpha = markerOpacity(now - marker.createdAt)
-      ctx.fillStyle = MARKER_RGB[marker.color]
+      ctx.fillStyle = markerRgb(marker.color)
       ctx.strokeStyle = ink.outline
       ctx.lineWidth = 2
       ctx.beginPath()
@@ -602,7 +715,7 @@ export function MapPicker({
       const width = ctx.measureText(text).width
       ctx.fillStyle = ink.plate
       ctx.fillRect(p.x + 11, p.y - 9, width + 8, 18)
-      ctx.fillStyle = MARKER_RGB[marker.color]
+      ctx.fillStyle = markerRgb(marker.color)
       ctx.fillRect(p.x + 11, p.y - 9, 2, 18)
       ctx.fillStyle = ink.text
       ctx.fillText(text, p.x + 16, p.y + 4)
@@ -638,7 +751,7 @@ export function MapPicker({
 
     if (draft) {
       const p = toScreen(draft.point)
-      ctx.strokeStyle = MARKER_RGB[draft.color]
+      ctx.strokeStyle = markerRgb(draft.color)
       ctx.lineWidth = 2
       ctx.setLineDash([3, 3])
       ctx.beginPath()
@@ -768,7 +881,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke, vector, mapStyle, settleTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -807,6 +920,7 @@ export function MapPicker({
     const scale = Math.min(MAX_SCALE, Math.max(minScale, current.scale * factor))
     const wx = current.x0 + sx / current.scale
     const wy = current.y0 - sy / current.scale
+    markZoom()
     setView({ scale, x0: wx - sx / scale, y0: wy + sy / scale })
   }
 
@@ -879,6 +993,9 @@ export function MapPicker({
     strokesRef.current = strokes
   })
 
+  const panRef = useRef<View | null>(null)
+  const panFrame = useRef<number | null>(null)
+
   function onPointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
     const drawing = drawRef.current
     if (drawing && activeView) {
@@ -908,11 +1025,18 @@ export function MapPicker({
     const dy = event.clientY - drag.y
     if (!drag.moved && Math.hypot(dx, dy) < 4) return
     drag.moved = true
-    setView({
+    // Не чаще одного обновления на кадр: мышь шлёт события чаще экрана
+    panRef.current = {
       scale: drag.view.scale,
       x0: drag.view.x0 - dx / drag.view.scale,
       y0: drag.view.y0 + dy / drag.view.scale,
-    })
+    }
+    if (panFrame.current === null) {
+      panFrame.current = requestAnimationFrame(() => {
+        panFrame.current = null
+        if (panRef.current) setView(panRef.current)
+      })
+    }
   }
 
   /** Подставить орудие и цель в расчёт — сразу, без кнопки. */
@@ -1275,9 +1399,28 @@ export function MapPicker({
           <div
             role="toolbar"
             aria-label={t('mapPicker.draw-tools')}
-            aria-orientation="vertical"
-            className="flex flex-col gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
+            className="flex flex-row-reverse gap-1 rounded-lg bg-black/70 p-1 shadow-lg backdrop-blur-sm"
           >
+            <button
+              type="button"
+              aria-expanded={drawOpen}
+              title={t('mapPicker.draw-tools')}
+              aria-label={t('mapPicker.draw-tools')}
+              onClick={() => {
+                if (drawOpen && isDrawTool(placing)) setPlacing('target')
+                setDrawOpen(!drawOpen)
+              }}
+              className={[
+                'inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors',
+                drawOpen || isDrawTool(placing)
+                  ? 'bg-white/20 text-white'
+                  : 'text-white/80 hover:bg-white/15',
+              ].join(' ')}
+            >
+              <FieldIcon name={drawOpen ? 'close' : 'pen'} className="h-5 w-5" />
+            </button>
+            {drawOpen && (
+              <div className="flex gap-1">
             {(
               [
                 { id: 'pen', icon: 'pen', label: 'mapPicker.draw-pen' },
@@ -1302,22 +1445,7 @@ export function MapPicker({
                 <FieldIcon name={tool.icon} className="h-5 w-5" />
               </button>
             ))}
-            <button
-              type="button"
-              title={t('mapPicker.draw-colour')}
-              aria-label={t('mapPicker.draw-colour')}
-              onClick={() =>
-                setDrawColor(
-                  MARKER_COLORS[(MARKER_COLORS.indexOf(drawColor) + 1) % MARKER_COLORS.length]
-                )
-              }
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md hover:bg-white/15"
-            >
-              <span
-                className="h-5 w-5 rounded-full ring-2 ring-white/70"
-                style={{ backgroundColor: MARKER_RGB[drawColor] }}
-              />
-            </button>
+            <ColorField compact placement="bottom" value={drawColor} onChange={setDrawColor} names={colorName} />
             <button
               type="button"
               disabled={strokes.length === 0}
@@ -1346,6 +1474,8 @@ export function MapPicker({
             >
               <FieldIcon name="trash" className="h-5 w-5" />
             </button>
+              </div>
+            )}
           </div>
           </div>
 
@@ -1542,9 +1672,10 @@ export function MapPicker({
                 }}
                 className="field min-w-0 flex-1"
               />
-              <ColorPicker
+              <ColorField
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
+                names={colorName}
               />
               <button type="button" onClick={saveDraft} className="btn btn-primary">
                 {t('mapPicker.place')}
@@ -1556,8 +1687,30 @@ export function MapPicker({
           )}
 
 
+          {/* Справа снизу: слой карты (спутник / топо); значок — текущий режим */}
+          {vector && tiles && (
+            <button
+              type="button"
+              aria-pressed={mapStyle === 'topo'}
+              title={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
+              aria-label={mapStyle === 'topo' ? t('mapPicker.style-sat') : t('mapPicker.style-topo')}
+              onClick={() => {
+                const next = mapStyle === 'topo' ? 'sat' : 'topo'
+                setMapStyle(next)
+                writeStored('mapStyle', next)
+              }}
+              className="absolute right-2 bottom-2 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-black/70 text-white/90 shadow-lg backdrop-blur-sm transition-colors hover:bg-black/85"
+            >
+              <FieldIcon
+                key={mapStyle}
+                name={mapStyle === 'topo' ? 'topo' : 'satellite'}
+                className="theme-icon h-5 w-5"
+              />
+            </button>
+          )}
+
           {/* Снизу по центру: координаты орудия и цели */}
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-black/70 px-3 py-2 text-[12.5px] leading-none whitespace-nowrap text-white/90 tabular-nums shadow-lg backdrop-blur-sm">
             <span className="flex items-center gap-2">
               <span className="block h-2 w-2 shrink-0 rounded-full bg-gun" />
               <span>
@@ -1779,6 +1932,11 @@ export function MapPicker({
   )
 }
 
+/** Название цвета для подписи; у своего цвета — «Цвет». */
+function colorName(color: MarkerColor): string {
+  return color.startsWith('#') ? t('mapPicker.colour') : t(COLOR_NAMES[color as PresetColor])
+}
+
 function lineWeaponName(id: LineWeapon["id"]): string {
   switch (id) {
     case 'mortar':
@@ -1790,39 +1948,6 @@ function lineWeaponName(id: LineWeapon["id"]): string {
     case 'rocket-wide':
       return t('mapPicker.rocket-wide')
   }
-}
-
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: MarkerColor
-  onChange: (color: MarkerColor) => void
-  
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={t('mapPicker.colour')}
-      className="flex gap-1"
-    >
-      {MARKER_COLORS.map((color) => (
-        <button
-          key={color}
-          type="button"
-          role="radio"
-          aria-checked={value === color}
-          aria-label={t(COLOR_NAMES[color])}
-          onClick={() => onChange(color)}
-          style={{ backgroundColor: MARKER_RGB[color] }}
-          className={[
-            'h-6 w-6 cursor-pointer rounded-full ring-offset-2 ring-offset-app-surface',
-            value === color ? 'ring-2 ring-accent' : '',
-          ].join(' ')}
-        />
-      ))}
-    </div>
-  )
 }
 
 function MarkerList({
@@ -1852,7 +1977,7 @@ function MarkerList({
         >
           <span
             className="h-3 w-3 shrink-0 rotate-45"
-            style={{ backgroundColor: MARKER_RGB[marker.color] }}
+            style={{ backgroundColor: markerRgb(marker.color) }}
           />
           <span className="min-w-0 flex-1 truncate text-app-text">
             {markerTitle(marker)}

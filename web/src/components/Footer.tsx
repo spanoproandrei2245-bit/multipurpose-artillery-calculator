@@ -121,9 +121,11 @@ const FLAGS: Record<Language, () => JSX.Element> = {
 function LanguageSelect({
   language,
   onChange,
+  className = '',
 }: {
   language: Language
   onChange: (language: Language) => void
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -139,16 +141,17 @@ function LanguageSelect({
   }, [open])
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="btn pr-2.5"
+        aria-label={current.name}
+        className="btn pr-2.5 max-sm:h-11"
       >
         <Flag id={current.id} />
-        {current.name}
+        <span className="max-sm:hidden">{current.name}</span>
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-app-muted" aria-hidden="true">
           <path
             d="m7 15 5 5 5-5M7 9l5-5 5 5"
@@ -318,11 +321,13 @@ export function Footer({
 }: Props) {
   const sync = useSync()
 
+  // Телефон: сверху «О программе», обучение и язык; ниже связка, тема, настройки.
+  // Компьютер: всё в одну строку, справа от «О программе».
   return (
-    <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-2 px-4 py-5 sm:px-6">
+    <footer className="mx-auto grid w-full max-w-[1240px] grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-4 py-4 sm:flex sm:flex-wrap sm:px-6 sm:py-5">
       <AboutButton />
 
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      <div className="col-start-2 row-start-1 justify-self-start sm:ml-auto">
         <Dropdown
           up
           variant="ghost"
@@ -352,6 +357,7 @@ export function Footer({
             },
           ]}
         />
+      </div>
 
         <button
           type="button"
@@ -369,7 +375,7 @@ export function Footer({
             target="_blank"
             rel="noreferrer"
             title={t('footer.overlay-on-top-of-the')}
-            className="btn btn-ghost"
+            className="btn btn-ghost max-sm:hidden"
           >
             <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
             {t('footer.desktop-app')}
@@ -381,7 +387,10 @@ export function Footer({
           onClick={() => onViewChange(view === 'sync' ? 'dashboard' : 'sync')}
           data-tour="link"
           aria-pressed={view === 'sync'}
-          className={['btn', view === 'sync' ? 'bg-app-raised-hover text-app-text' : ''].join(' ')}
+          className={[
+            'btn col-span-2 col-start-1 row-start-2 justify-center max-sm:h-11',
+            view === 'sync' ? 'bg-app-raised-hover text-app-text' : '',
+          ].join(' ')}
         >
           <span
             className={`h-2 w-2 rounded-full ${syncStatusColor(sync.enabled ? sync.status : 'off')}`}
@@ -406,7 +415,7 @@ export function Footer({
               ? t('footer.light-theme')
               : t('footer.dark-theme')
           }
-          className="btn px-2.5"
+          className="btn col-start-3 row-start-2 px-2.5 max-sm:h-11 max-sm:w-11 max-sm:justify-center"
         >
           <FieldIcon
             key={theme}
@@ -425,7 +434,7 @@ export function Footer({
           aria-label={t('app.settings')}
           title={t('app.settings')}
           className={[
-            'btn px-2.5',
+            'btn col-start-4 row-start-2 px-2.5 max-sm:h-11 max-sm:w-11 max-sm:justify-center',
             view === 'settings' ? 'bg-app-raised-hover text-app-text' : '',
           ].join(' ')}
         >
@@ -434,8 +443,11 @@ export function Footer({
           </svg>
         </button>
 
-        <LanguageSelect language={language} onChange={onLanguageChange} />
-      </div>
+        <LanguageSelect
+          language={language}
+          onChange={onLanguageChange}
+          className="col-span-2 col-start-3 row-start-1 justify-self-end"
+        />
     </footer>
   )
 }

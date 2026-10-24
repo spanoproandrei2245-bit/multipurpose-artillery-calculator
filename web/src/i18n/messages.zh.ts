@@ -2,6 +2,9 @@ import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
   "settingsPage.only-good": "只保留优质装药",
+  "settingsPage.weather-ballistics": "天气与高级弹道",
+  "settingsPage.weather-ballistics-description": "风、温度、气压以及启用空气阻力（ACE 高级弹道）时的射表。两者相互关联：游戏中有天气时射表会不同。",
+  "artilleryCalculator.advanced-missing": "这门火炮暂无高级弹道射表：使用普通射表计算，游戏中可能会打偏。",
   "settingsPage.only-good-description": "只保留在某方面表现突出的装药：最佳、最快或最精确的（以及当前选中的）。",
   "weatherSection.clear-weather": "清除天气",
   "settingsPage.motion-fire": "开火：后坐与闪光",
@@ -445,7 +448,6 @@ export const zh: Record<keyof typeof ru, string> = {
   "settingsPage.the-markers-panel-the-marker": "标记面板、标记工具，以及联机时来自炮手的标记。",
   "settingsPage.the-shell-flies-from-the": "炮弹在地图上从火炮飞向目标。否则只有计时条带动画。",
   "settingsPage.turn-on-only-what-you": "只开启你会用到的内容，让主界面保持简洁。",
-  "settingsPage.wind-temperature-pressure-only-for": "风、温度、气压。仅适用于启用高级弹道的服务器。",
   "shellIcon.high-explosive": "高爆弹",
   "shellIcon.illumination": "照明弹",
   "shellIcon.smoke": "烟幕弹",
@@ -559,7 +561,6 @@ export const zh: Record<keyof typeof ru, string> = {
   "weatherSection.right": "右",
   "weatherSection.speed-direction": "风速与风向",
   "weatherSection.tail": "顺",
-  "weatherSection.weather-corrections": "天气修正",
   "weatherSection.wind": "风",
   "weatherSection.wind-input": "风输入",
   "mapPicker.draw-tools": "绘图",
@@ -570,4 +571,9 @@ export const zh: Record<keyof typeof ru, string> = {
   "mapPicker.draw-undo": "撤销上一笔",
   "mapPicker.draw-clear": "全部擦除（点按两次）",
   "mapPicker.new-marker": "新标记",
+  "mapPicker.hue": "色相",
+  "mapPicker.brightness": "亮度",
+  "mapPicker.custom-colour": "自定义颜色",
+  "mapPicker.style-sat": "显示卫星图像",
+  "mapPicker.style-topo": "显示地形图",
 }

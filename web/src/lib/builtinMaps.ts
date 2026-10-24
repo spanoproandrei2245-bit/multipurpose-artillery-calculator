@@ -49,7 +49,10 @@ export interface MapDescription {
   worldSize: number
   background: string
   heights: { file: string; step: number; size: number; scale: number }
-  tiles: { size: number; levels: number; metersPerTile: number; ext: string }
+  // vector.json: здания, дороги, горизонтали (есть не у всех карт)
+  vector?: string
+  // Нет у карт без спутникового снимка (только топо)
+  tiles: { size: number; levels: number; metersPerTile: number; ext: string } | null
 }
 
 const isNumber = (value: unknown): value is number =>
@@ -76,13 +79,14 @@ export function parseMapDescription(value: unknown): MapDescription | null {
     !isNumber(h.step) ||
     !isNumber(h.size) ||
     !isNumber(h.scale) ||
-    typeof t !== 'object' ||
-    t === null ||
-    !isNumber(t.size) ||
-    !isNumber(t.levels) ||
-    !isNumber(t.metersPerTile) ||
-    !isString(t.ext) ||
-    !/^\w+$/.test(t.ext)
+    (v.topoOnly !== true &&
+      (typeof t !== 'object' ||
+        t === null ||
+        !isNumber(t.size) ||
+        !isNumber(t.levels) ||
+        !isNumber(t.metersPerTile) ||
+        !isString(t.ext) ||
+        !/^\w+$/.test(t.ext)))
   ) {
     return null
   }
@@ -92,18 +96,22 @@ export function parseMapDescription(value: unknown): MapDescription | null {
     author: isString(v.author) ? v.author : '',
     worldSize: v.worldSize,
     background: isString(v.background) ? v.background : '#4b555f',
+    vector: isString(v.vector) && /^[\w.-]+$/.test(v.vector) ? v.vector : undefined,
     heights: {
       file: h.file,
       step: h.step,
       size: Math.round(h.size),
       scale: h.scale,
     },
-    tiles: {
-      size: Math.round(t.size),
-      levels: Math.round(t.levels),
-      metersPerTile: t.metersPerTile,
-      ext: t.ext,
-    },
+    tiles:
+      v.topoOnly === true || !t
+        ? null
+        : {
+            size: Math.round(t.size as number),
+            levels: Math.round(t.levels as number),
+            metersPerTile: t.metersPerTile as number,
+            ext: t.ext as string,
+          },
   }
 }
 
@@ -148,7 +156,12 @@ export async function listBuiltinMaps(): Promise<BuiltinMapEntry[]> {
 
 export async function loadBuiltinMap(
   world: string
-): Promise<{ heightmap: Heightmap; tiles: MapTiles; displayName: string } | null> {
+): Promise<{
+  heightmap: Heightmap
+  tiles: MapTiles | null
+  displayName: string
+  vectorUrl: string | null
+} | null> {
   const base = `${MAPS_BASE}${world}/`
   const description = parseMapDescription(
     await (await fetch(`${base}map.json`)).json()
@@ -160,12 +173,15 @@ export async function loadBuiltinMap(
   return {
     heightmap,
     displayName: description.displayName,
-    tiles: {
-      ...description.tiles,
-      base: `${base}tiles/`,
-      background: description.background,
-      worldSize: description.worldSize,
-    },
+    vectorUrl: description.vector ? `${base}${description.vector}` : null,
+    tiles: description.tiles
+      ? {
+          ...description.tiles,
+          base: `${base}tiles/`,
+          background: description.background,
+          worldSize: description.worldSize,
+        }
+      : null,
   }
 }
 

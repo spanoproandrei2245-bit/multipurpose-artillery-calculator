@@ -127,7 +127,13 @@ export function parseReference(
   const profileRefsOk =
     !Array.isArray(data.ammunition) ||
     data.ammunition.every(
-      (item: { profile?: string; charges?: number[] }) => {
+      (item: { profile?: string; advancedProfile?: string; charges?: number[] }) => {
+        if (
+          item.advancedProfile !== undefined &&
+          !(isObject(data.profiles) && item.advancedProfile in data.profiles)
+        ) {
+          return false
+        }
         if (item.profile === undefined) return true
         if (!isObject(data.profiles)) return false
 

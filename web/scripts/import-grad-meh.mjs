@@ -12,13 +12,19 @@
  *   tiles/<z>/<x>_<y>.webp — пирамида тайлов 512 px (z = 0 — вся карта одним тайлом);
  *   heights.bin            — высоты, Int16 в дециметрах, строки с юга на север;
  *   map.json               — описание карты для приложения.
+ * Если есть geojson/ — ещё vector.json (здания, дороги, леса, горизонтали, названия).
  * И общий список web/public/maps/index.json.
+ *
+ * Флаг --no-sat: карта без спутника (выгрузка из tools/arma/gradtopo_export.sqf через
+ * scripts/import-rpt.mjs): только высоты и vector.json, в приложении — режим «Топо».
+ * Флаг --vector-only: пересобрать только vector.json у уже импортированных карт.
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import sharp from 'sharp'
+import { buildVector } from './build-vector.mjs'
 import { makePreview } from './make-map-previews.mjs'
 
 const TILE = 512
@@ -158,6 +164,38 @@ function buildHeights(source, outFile) {
 
 // ---- одна карта ----
 
+const noSat = process.argv.includes('--no-sat')
+
+/** Превью карты без спутника: бумажный фон. */
+async function makePaperPreview(file) {
+  await sharp({ create: { width: 192, height: 192, channels: 3, background: '#f4f2ea' } })
+    .webp({ quality: 70 })
+    .toFile(fileURLToPath(file))
+}
+
+async function importVectorOnly(source) {
+  // У ванильных карт (Altis, Stratis, Tanoa) в выгрузке нет meta.json — имя папки
+  const metaFile = join(source, 'meta.json')
+  const world = existsSync(metaFile)
+    ? String(JSON.parse(readFileSync(metaFile, 'utf8')).worldName).toLowerCase()
+    : basename(source).toLowerCase()
+  const outDir = new URL(`./${world}/`, OUT_ROOT)
+  const mapFile = new URL('map.json', outDir)
+  if (!existsSync(mapFile)) {
+    console.log(`${world}: карта ещё не импортирована, пропуск`)
+    return
+  }
+  const vector = buildVector(source, new URL('vector.json', outDir), fileURLToPath(outDir))
+  if (!vector) {
+    console.log(`${world}: нет geojson/, пропуск`)
+    return
+  }
+  const map = JSON.parse(readFileSync(mapFile, 'utf8'))
+  map.vector = vector.file
+  writeFileSync(mapFile, JSON.stringify(map, null, 2) + '\n')
+  console.log(`${world}: vector.json ${Math.round(vector.bytes / 1024)} КБ`, JSON.stringify(vector.counts))
+}
+
 async function importMap(source) {
   const meta = JSON.parse(readFileSync(join(source, 'meta.json'), 'utf8'))
   const world = String(meta.worldName).toLowerCase()
@@ -169,8 +207,14 @@ async function importMap(source) {
   console.log(`${world}: ${meta.displayName}, ${worldSize} m`)
   const heights = buildHeights(source, new URL('heights.bin', outDir))
   console.log(`  heights: ${heights.size}×${heights.size}, step ${heights.step} m`)
-  const tiles = await buildTiles(source, fileURLToPath(new URL('tiles', outDir)), worldSize, background)
-  console.log(`  tiles: ${tiles.levels} levels, ${tiles.metersPerTile.toFixed(1)} m per top tile`)
+  const tiles = noSat
+    ? null
+    : await buildTiles(source, fileURLToPath(new URL('tiles', outDir)), worldSize, background)
+  if (tiles) console.log(`  tiles: ${tiles.levels} levels, ${tiles.metersPerTile.toFixed(1)} m per top tile`)
+  else console.log('  без спутника (только топо)')
+
+  const vector = buildVector(source, new URL('vector.json', outDir))
+  if (vector) console.log(`  vector: ${Math.round(vector.bytes / 1024)} КБ`, JSON.stringify(vector.counts))
 
   const map = {
     format: 'arma-map',
@@ -181,11 +225,13 @@ async function importMap(source) {
     worldSize,
     background,
     heights,
-    tiles,
+    ...(tiles ? { tiles } : { topoOnly: true }),
+    ...(vector ? { vector: vector.file } : {}),
   }
   writeFileSync(new URL('map.json', outDir), JSON.stringify(map, null, 2) + '\n')
   // Превью для списков карт
-  await makePreview(world)
+  if (noSat) await makePaperPreview(new URL('preview.webp', outDir))
+  else await makePreview(world)
   // Официальные карты — от Bohemia Interactive, остальные — от сообщества
   const kind = /bohemia/i.test(map.author) ? 'official' : 'community'
   return { world, displayName: map.displayName, author: map.author, kind, worldSize }
@@ -193,7 +239,12 @@ async function importMap(source) {
 
 // ---- список карт ----
 
-const sources = process.argv.slice(2)
+const vectorOnly = process.argv.includes('--vector-only')
+const sources = process.argv.slice(2).filter((a) => !a.startsWith('--'))
+if (vectorOnly) {
+  for (const source of sources) await importVectorOnly(source)
+  process.exit(0)
+}
 if (sources.length === 0) {
   console.error('usage: node scripts/import-grad-meh.mjs <grad_meh map folder>...')
   process.exit(1)
