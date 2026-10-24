@@ -200,6 +200,37 @@ function readHeightsBin(mapDir) {
   return { grid, size: heights.size, step: heights.step }
 }
 
+/** Вершины: локальные максимумы сетки высот, не ближе 300 м друг к другу. */
+function peaks({ grid, size, step }) {
+  const found = []
+  const at = (i, j) => grid[j * size + i]
+  for (let j = 1; j < size - 1; j += 1) {
+    for (let i = 1; i < size - 1; i += 1) {
+      const h = at(i, j)
+      if (h < 20) continue
+      let top = true
+      for (let dj = -2; dj <= 2 && top; dj += 1) {
+        for (let di = -2; di <= 2; di += 1) {
+          const ii = i + di
+          const jj = j + dj
+          if ((di || dj) && ii >= 0 && jj >= 0 && ii < size && jj < size && at(ii, jj) >= h) {
+            top = false
+            break
+          }
+        }
+      }
+      if (top) found.push([Math.round(i * step), Math.round(j * step), Math.round(h)])
+    }
+  }
+  found.sort((a, b) => b[2] - a[2])
+  const kept = []
+  for (const p of found) {
+    if (kept.length >= 600) break
+    if (kept.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) >= 300)) kept.push(p)
+  }
+  return kept
+}
+
 export function buildVector(source, outFile, mapDir = null) {
   const dir = join(source, 'geojson')
   if (!existsSync(dir)) return null
@@ -261,10 +292,13 @@ export function buildVector(source, outFile, mapDir = null) {
   }
 
   let contours = []
-  if (existsSync(join(source, 'dem.asc.gz'))) contours = contourLines(readDem(source))
-  else if (mapDir) {
-    const dem = readHeightsBin(mapDir)
-    if (dem) contours = contourLines(dem)
+  let dem = null
+  if (existsSync(join(source, 'dem.asc.gz'))) dem = readDem(source)
+  else if (mapDir) dem = readHeightsBin(mapDir)
+  if (dem) contours = contourLines(dem)
+  // В выгрузке из игры нет mounts: вершины ищем по высотам
+  if (dem && spots.size === 0) {
+    for (const p of peaks(dem)) spots.set(`${p[0]},${p[1]}`, p)
   }
 
   const vector = {

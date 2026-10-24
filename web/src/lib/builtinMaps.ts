@@ -51,7 +51,8 @@ export interface MapDescription {
   heights: { file: string; step: number; size: number; scale: number }
   // vector.json: здания, дороги, горизонтали (есть не у всех карт)
   vector?: string
-  tiles: { size: number; levels: number; metersPerTile: number; ext: string }
+  // Нет у карт без спутникового снимка (только топо)
+  tiles: { size: number; levels: number; metersPerTile: number; ext: string } | null
 }
 
 const isNumber = (value: unknown): value is number =>
@@ -78,13 +79,14 @@ export function parseMapDescription(value: unknown): MapDescription | null {
     !isNumber(h.step) ||
     !isNumber(h.size) ||
     !isNumber(h.scale) ||
-    typeof t !== 'object' ||
-    t === null ||
-    !isNumber(t.size) ||
-    !isNumber(t.levels) ||
-    !isNumber(t.metersPerTile) ||
-    !isString(t.ext) ||
-    !/^\w+$/.test(t.ext)
+    (v.topoOnly !== true &&
+      (typeof t !== 'object' ||
+        t === null ||
+        !isNumber(t.size) ||
+        !isNumber(t.levels) ||
+        !isNumber(t.metersPerTile) ||
+        !isString(t.ext) ||
+        !/^\w+$/.test(t.ext)))
   ) {
     return null
   }
@@ -101,12 +103,15 @@ export function parseMapDescription(value: unknown): MapDescription | null {
       size: Math.round(h.size),
       scale: h.scale,
     },
-    tiles: {
-      size: Math.round(t.size),
-      levels: Math.round(t.levels),
-      metersPerTile: t.metersPerTile,
-      ext: t.ext,
-    },
+    tiles:
+      v.topoOnly === true || !t
+        ? null
+        : {
+            size: Math.round(t.size as number),
+            levels: Math.round(t.levels as number),
+            metersPerTile: t.metersPerTile as number,
+            ext: t.ext as string,
+          },
   }
 }
 
@@ -153,7 +158,7 @@ export async function loadBuiltinMap(
   world: string
 ): Promise<{
   heightmap: Heightmap
-  tiles: MapTiles
+  tiles: MapTiles | null
   displayName: string
   vectorUrl: string | null
 } | null> {
@@ -169,12 +174,14 @@ export async function loadBuiltinMap(
     heightmap,
     displayName: description.displayName,
     vectorUrl: description.vector ? `${base}${description.vector}` : null,
-    tiles: {
-      ...description.tiles,
-      base: `${base}tiles/`,
-      background: description.background,
-      worldSize: description.worldSize,
-    },
+    tiles: description.tiles
+      ? {
+          ...description.tiles,
+          base: `${base}tiles/`,
+          background: description.background,
+          worldSize: description.worldSize,
+        }
+      : null,
   }
 }
 
