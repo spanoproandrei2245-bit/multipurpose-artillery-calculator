@@ -11,6 +11,7 @@
  * --rect   — область карты на скриншоте: x,y,ширина,высота в пикселях или auto (по умолчанию):
  *            карта в игре занимает прямоугольник, остальное — 3D-сцена; область находится
  *            сравнением двух кадров (меняется только карта).
+ * --degrid — убрать линии сетки игры (по умолчанию включено; --degrid off выключает).
  * --crop   — дополнительно срезать столько пикселей с каждого края области (рамки).
  *
  * После этого карта собирается как обычно (с тайлами спутника):
@@ -35,6 +36,7 @@ if (!rptFile || !outDir) {
 const mpp = Number(flags('--mpp')[0] ?? 2)
 const crop = Number(flags('--crop')[0] ?? 0)
 const rectArg = flags('--rect')[0] ?? 'auto'
+const degridOn = (flags('--degrid')[0] ?? 'on') !== 'off'
 const searchDirs = flags('--images')
 if (searchDirs.length === 0) {
   searchDirs.push(join(homedir(), 'Documents', 'Arma 3'), join(dirname(outDir), '..'), dirname(outDir), '.')
@@ -82,6 +84,64 @@ if (found.size === 0) {
   process.exit(1)
 }
 
+// ---- убрать сетку игры ----
+// Линии сетки — тонкие тёмные линии через весь кадр. Столбец (или строка), где яркость
+// заметно отличается от соседей по всей длине, считается линией и заменяется
+// интерполяцией между чистыми соседями.
+function lineScores(data, width, height, vertical) {
+  const along = vertical ? height : width
+  const across = vertical ? width : height
+  const lum = (x, y) => {
+    const i = (y * width + x) * 3
+    return data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11
+  }
+  const scores = new Float32Array(across)
+  for (let c = 3; c < across - 3; c += 1) {
+    let sum = 0
+    for (let t = 0; t < along; t += 1) {
+      const at = (k) => (vertical ? lum(k, t) : lum(t, k))
+      const side = (at(c - 3) + at(c + 3)) / 2
+      sum += side - at(c)
+    }
+    scores[c] = sum / along
+  }
+  return scores
+}
+
+function degrid(data, width, height) {
+  const out = Buffer.from(data)
+  for (const vertical of [true, false]) {
+    const across = vertical ? width : height
+    const along = vertical ? height : width
+    const scores = lineScores(data, width, height, vertical)
+    const mark = new Uint8Array(across)
+    for (let c = 3; c < across - 3; c += 1) if (scores[c] > 3) mark[c] = 1
+    // Края линии: соседи слабее, но заметно тёмные
+    for (let c = 3; c < across - 3; c += 1) {
+      if (!mark[c] && scores[c] > 1.5 && (mark[c - 1] || mark[c + 1])) mark[c] = 2
+    }
+    let c = 0
+    while (c < across) {
+      if (!mark[c]) { c += 1; continue }
+      let e = c
+      while (e + 1 < across && mark[e + 1]) e += 1
+      const a = Math.max(0, c - 2)
+      const b = Math.min(across - 1, e + 2)
+      for (let k = c; k <= e; k += 1) {
+        const t = (k - a) / Math.max(1, b - a)
+        for (let u = 0; u < along; u += 1) {
+          const ia = (vertical ? u * width + a : a * width + u) * 3
+          const ib = (vertical ? u * width + b : b * width + u) * 3
+          const io = (vertical ? u * width + k : k * width + u) * 3
+          for (let ch = 0; ch < 3; ch += 1) out[io + ch] = Math.round(data[ia + ch] * (1 - t) + data[ib + ch] * t)
+        }
+      }
+      c = e + 1
+    }
+  }
+  return out
+}
+
 // ---- область карты на скриншоте ----
 async function rawPixels(path) {
   const { data, info } = await sharp(path).removeAlpha().raw().toBuffer({ resolveWithObject: true })
@@ -116,6 +176,7 @@ if (rectArg === 'auto') {
   const [left, top, width, height] = rectArg.split(',').map(Number)
   rect = { left, top, width, height }
 }
+const baseRect = rect
 rect = { left: rect.left + crop, top: rect.top + crop, width: rect.width - 2 * crop, height: rect.height - 2 * crop }
 console.log(`область карты на кадре: x=${rect.left} y=${rect.top} ${rect.width}×${rect.height}`)
 
@@ -132,16 +193,21 @@ for (const [name, path] of found) {
   const wm = s.x1 - s.x0
   const hm = s.y0 - s.y1
   if (wm <= 0 || hm <= 0) continue
-  const x0 = s.x0
-  const y0 = s.y0
-  const mx = 0
-  const my = 0
+  // Логированные углы относятся к исходной области; срез --crop сдвигает привязку
+  const mx = (wm / baseRect.width) * crop
+  const my = (hm / baseRect.height) * crop
+  const x0 = s.x0 + mx
+  const y0 = s.y0 - my
   const widthPx = Math.max(1, Math.round((wm - 2 * mx) / m))
   const heightPx = Math.max(1, Math.round((hm - 2 * my) / m))
   let left = Math.round(x0 / m)
   let top = Math.round((worldSize - y0) / m)
-  const img = sharp(path).extract(rect)
-  let buf = await img.resize(widthPx, heightPx, { fit: 'fill' }).removeAlpha().png().toBuffer()
+  let source = sharp(path).extract(rect).removeAlpha()
+  if (degridOn) {
+    const { data, info } = await source.raw().toBuffer({ resolveWithObject: true })
+    source = sharp(degrid(data, info.width, info.height), { raw: { width: info.width, height: info.height, channels: 3 } })
+  }
+  let buf = await source.resize(widthPx, heightPx, { fit: 'fill' }).png().toBuffer()
   // Обрезка по границам мозаики
   let w = widthPx
   let h = heightPx

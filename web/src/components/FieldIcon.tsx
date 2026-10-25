@@ -394,6 +394,20 @@ const paths = {
       <path d="M6 12c1-4 4-7 8-7s5 3 4 6" />
     </>
   ),
+  // предупреждение: треугольник с восклицательным знаком
+  warning: (
+    <>
+      <path d="M12 3.5 2.5 20h19z" />
+      <path d="M12 10v4.5M12 17.5h.01" />
+    </>
+  ),
+  // проверено: щит с галочкой
+  shieldCheck: (
+    <>
+      <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6z" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

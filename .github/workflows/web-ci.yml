@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   validate:
+    # Имя совпадает с обязательной проверкой в защите ветки main — не переименовывать
     name: Lint and Build
     runs-on: ubuntu-latest
 
@@ -25,14 +26,27 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+
+      - name: Checkout maps (branch maps)
+        uses: actions/checkout@v7
+        with:
+          ref: maps
+          path: maps-branch
+
+      - name: Put maps into public/maps
+        run: |
+          mkdir -p public/maps
+          cp -r ../maps-branch/. public/maps/
+          rm -rf public/maps/.git
+          test -f public/maps/index.json
 
       - name: Install dependencies
         run: npm ci
@@ -48,3 +62,17 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Install browser for smoke tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke tests of the built site
+        run: npm run test:e2e
+
+      - name: Upload smoke test traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: web/test-results
+          retention-days: 7

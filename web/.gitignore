@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+test-results
+playwright-report
+
+# Карты — в ветке maps (npm run maps:pull / maps:publish)
+public/maps

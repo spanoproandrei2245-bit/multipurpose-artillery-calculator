@@ -13,15 +13,20 @@
     "tables:ingest": "node scripts/ingest-tables.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "build:desktop": "npm run build && node scripts/strip-maps.mjs",
-    "maps:import": "node scripts/import-grad-meh.mjs"
+    "maps:import": "node scripts/import-grad-meh.mjs",
+    "maps:pull": "node scripts/maps-branch.mjs pull",
+    "maps:publish": "node scripts/maps-branch.mjs publish"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.0",
     "mqtt": "^5.16.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
@@ -30,6 +35,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.56.1",
     "@tauri-apps/cli": "^2.12.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

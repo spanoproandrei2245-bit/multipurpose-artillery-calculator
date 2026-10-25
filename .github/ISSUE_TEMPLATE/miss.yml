@@ -1,0 +1,52 @@
+name: Промах в игре / Miss in game
+description: Расчёт не попал в цель в игре / The solution missed the target in game
+labels: [miss]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо! По таким отчётам таблицы получают статус «проверено в игре».
+        Thanks! These reports are how tables become "verified in game".
+  - type: input
+    id: weapon
+    attributes:
+      label: Орудие и снаряд / Weapon and shell
+      placeholder: M101 (105 mm), HE
+    validations:
+      required: true
+  - type: input
+    id: map
+    attributes:
+      label: Карта / Map
+      placeholder: Altis
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Вводные / Inputs
+      description: Дистанция, азимут, высоты, заряд, траектория / Distance, azimuth, heights, charge, trajectory
+      placeholder: "Distance 2350 m, gun height 120 m, target height 85 m, charge 2, HIGH"
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Что получилось / What happened
+      description: Перелёт или недолёт и на сколько метров / Over or short, by how many metres
+      placeholder: "Short by ~80 m"
+    validations:
+      required: true
+  - type: dropdown
+    id: drag
+    attributes:
+      label: Сопротивление воздуха в игре / Air drag in game (ACE advanced ballistics)
+      options:
+        - Выключено / Off
+        - Включено / On
+        - Не знаю / Don't know
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия приложения / App version
+      placeholder: 0.14.0

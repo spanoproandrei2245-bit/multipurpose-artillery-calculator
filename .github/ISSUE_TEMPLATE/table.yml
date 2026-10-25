@@ -1,0 +1,25 @@
+name: Ошибка в таблице / Table error
+description: Значение в таблице приложения не совпадает с игрой / A value differs from the in-game table
+labels: [table]
+body:
+  - type: input
+    id: weapon
+    attributes:
+      label: Орудие, режим, заряд / Weapon, mode, charge
+      placeholder: Seara, HIGH, charge 6
+    validations:
+      required: true
+  - type: textarea
+    id: rows
+    attributes:
+      label: Строки, которые отличаются / Rows that differ
+      description: Как в игре и как в приложении / In game vs in the app
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Скриншот таблицы из игры / Screenshot of the in-game table
+      description: Перетащите картинку сюда / Drag the image here
+    validations:
+      required: true

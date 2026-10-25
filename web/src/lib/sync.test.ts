@@ -10,6 +10,8 @@ import {
   isValidRoomCode,
   normalizeRoomCode,
   packetToText,
+  ReplayGuard,
+  MAX_EVENT_AGE_MS,
   parseMessage,
   readInvite,
   textToPacket,
@@ -177,5 +179,34 @@ describe('transport helpers', () => {
       'https://example.github.io/calc/?room=K7P4-QX9A&server=emqx'
     )
     expect(readInvite(new URL(link).search)?.code).toBe('K7P4-QX9A')
+  })
+})
+
+describe('ReplayGuard', () => {
+  const now = 1_700_000_000_000
+
+  it('пропускает новое сообщение и отбрасывает его повтор', () => {
+    const guard = new ReplayGuard()
+    const shot = { kind: 'shot' as const, from: 'a', sentAt: now - 1000 }
+    expect(guard.accept(shot, now)).toBe(true)
+    expect(guard.accept({ ...shot }, now + 500)).toBe(false)
+  })
+
+  it('старый выстрел и старый «я в сети» не принимаются', () => {
+    const guard = new ReplayGuard()
+    expect(guard.accept({ kind: 'shot', from: 'a', sentAt: now - MAX_EVENT_AGE_MS - 1 }, now)).toBe(false)
+    expect(guard.accept({ kind: 'hello', from: 'a', sentAt: now - MAX_EVENT_AGE_MS - 1, role: 'gunner' }, now)).toBe(false)
+    expect(guard.accept({ kind: 'hello', from: 'a', sentAt: now - 5000, role: 'gunner' }, now)).toBe(true)
+  })
+
+  it('решение старее уже показанного не заменяет его', () => {
+    const guard = new ReplayGuard()
+    const solution = (sentAt: number) => ({ kind: 'solution' as const, from: 'fdc', sentAt, solution: null })
+    expect(guard.accept(solution(now - 60_000), now)).toBe(true)
+    expect(guard.accept(solution(now - 10_000), now)).toBe(true)
+    // Перехваченное раньше решение, присланное снова, — отброшено
+    expect(guard.accept(solution(now - 30_000), now)).toBe(false)
+    // Сохранённое на брокере решение может быть старым — принимается, если новее показанного
+    expect(guard.accept(solution(now - 1000), now)).toBe(true)
   })
 })
