@@ -80,6 +80,8 @@ import { MrsiPanel } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
+import { CrashProbe, ErrorBoundary } from './ErrorBoundary'
+import { DataStatusBadge } from './DataStatusBadge'
 import { WeatherRows } from './WeatherRows'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -777,6 +779,8 @@ export function ArtilleryCalculator({
         {(mapInput || gridInput) && (
           <div className="min-w-0">
             {mapInput && (
+              <ErrorBoundary area="map" variant="inline">
+                <CrashProbe area="map" />
               <Suspense
                 fallback={
                   <div className="flex aspect-square items-center justify-center rounded-lg bg-app-surface">
@@ -816,6 +820,7 @@ export function ArtilleryCalculator({
                   }}
                 />
               </Suspense>
+              </ErrorBoundary>
             )}
 
             {gridInput && (
@@ -1023,7 +1028,16 @@ export function ArtilleryCalculator({
           <div className="my-3 h-px bg-app-border" />
 
           <dl>
-            <Row icon="weapon" control="full" label={t('artilleryCalculator.weapon')}>
+            <Row
+              icon="weapon"
+              control="full"
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  {t('artilleryCalculator.weapon')}
+                  <DataStatusBadge status={reference.source.status} compact />
+                </span>
+              }
+            >
               {modelSelector}
             </Row>
             <Row icon="shell" control="full" label={t('ammunitionSelector.shell')}>

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 
+import { artilleryRegistry } from '../data/artillery/registry'
 import { categoryLabels } from '../data/categories'
 import { models, type ModelId } from '../data/models'
 import { t } from '../i18n'
 import { useFavorites } from '../lib/favorites'
 import { ArtilleryIcon } from './ArtilleryIcon'
+import { dataStatusLabel } from '../lib/dataStatus'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon } from './FieldIcon'
 import { MapRequests } from './MapRequests'
@@ -21,6 +23,10 @@ const modelIds = Object.keys(models) as ModelId[]
 const isVanilla = (id: ModelId) => models[id].mod.startsWith('Arma 3')
 
 const MODS = '__mods__'
+
+/** Мод и проверка таблиц: «Arma 3 · проверено в игре». */
+const describe = (id: ModelId) =>
+  `${models[id].mod} · ${dataStatusLabel(artilleryRegistry[id].source.status)}`
 
 /**
  * Выбор орудия: значок класса отдельно от списка. В списке — ванильные
@@ -44,7 +50,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
     ...listed.map((id) => ({
       value: id as string,
       label: models[id].name,
-      description: models[id].mod,
+      description: describe(id),
       group: isFav(id)
         ? t('picker.favourites')
         : isVanilla(id)
@@ -107,7 +113,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
           items={modelIds.map((id) => ({
             id,
             title: models[id].name,
-            subtitle: `${models[id].mod} · ${t(categoryLabels[models[id].category])}`,
+            subtitle: `${describe(id)} · ${t(categoryLabels[models[id].category])}`,
             group: isVanilla(id) ? t('picker.vanilla') : models[id].mod,
             keywords: models[id].notes,
             icon: <ArtilleryIcon category={models[id].category} size="md" />,
