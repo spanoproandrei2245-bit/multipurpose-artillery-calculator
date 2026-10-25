@@ -22,10 +22,17 @@ async function open(page: Page, path = '/', storage: Record<string, string> = {}
 }
 
 test('главная открывается без ошибок', async ({ page }) => {
+  // MQTT (~330 КБ) нужен только для связки — при обычном открытии не грузится
+  const scripts: string[] = []
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scripts.push(request.url())
+  })
   const errors = await open(page)
   await expect(page.getByText('Elevation', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Fire/ }).first()).toBeVisible()
   await expect(page.locator('#calc-distance')).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  expect(scripts.filter((url) => /mqtt/i.test(url))).toEqual([])
   expect(errors).toEqual([])
 })
 
