@@ -341,6 +341,10 @@ export function Footer({
             </span>
           }
           onChange={(value) => {
+            if (value === 'help') {
+              setPanel('help', true)
+              return
+            }
             onViewChange('dashboard')
             setPanel(value === 'advanced' ? 'tourAdvanced' : 'tour', true)
           }}
@@ -354,6 +358,12 @@ export function Footer({
               value: 'advanced',
               label: t('footer.advanced-tutorial'),
               description: t('footer.maps-line-link-details'),
+            },
+            {
+              value: 'help',
+              label: t('footer.help'),
+              description: t('footer.help-description'),
+              divider: true,
             },
           ]}
         />

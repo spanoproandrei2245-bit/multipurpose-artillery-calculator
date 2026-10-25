@@ -9,6 +9,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 
 import { Footer, type View } from './components/Footer'
+import { HelpDialog } from './components/HelpDialog'
 import { HotkeysDialog } from './components/HotkeysDialog'
 import { Tour } from './components/Tour'
 import { DashboardPage } from './pages/DashboardPage'
@@ -222,6 +223,7 @@ function App() {
       </main>
 
       <HotkeysDialog />
+      <HelpDialog />
       {view === 'dashboard' && <Tour />}
 
       <Footer

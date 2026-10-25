@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
  * Окна, которые открываются из футера и по горячим клавишам:
  * справка по клавишам и обучение. Состояние общее для всего приложения.
  */
-export type PanelId = 'hotkeys' | 'tour' | 'tourAdvanced'
+export type PanelId = 'hotkeys' | 'tour' | 'tourAdvanced' | 'help'
 
 const open = new Set<PanelId>()
 const listeners = new Set<() => void>()
