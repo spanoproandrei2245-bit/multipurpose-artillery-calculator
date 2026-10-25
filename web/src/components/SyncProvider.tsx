@@ -10,6 +10,7 @@ import {
 } from '../lib/markers'
 import {
   decryptMessage,
+  ReplayGuard,
   deriveRoom,
   encryptMessage,
   formatRoomCode,
@@ -189,6 +190,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false
     let client: MqttClient | null = null
+    // Повторы перехваченных пакетов отбрасываются (на каждое подключение — своя)
+    const guard = new ReplayGuard()
 
     async function handle(message: SyncMessage) {
       const received = Date.now()
@@ -274,7 +277,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                 }
                 return
               }
-              if (message.from !== clientId) void handle(message)
+              if (message.from !== clientId && guard.accept(message, Date.now())) {
+                void handle(message)
+              }
             }
           )
         })

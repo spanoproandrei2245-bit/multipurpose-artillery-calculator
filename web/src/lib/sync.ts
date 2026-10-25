@@ -264,3 +264,34 @@ export function parseMessage(value: unknown): SyncMessage | null {
       return null
   }
 }
+
+/** Насколько старым может прийти «выстрел» или «я в сети» (часы устройств немного расходятся). */
+export const MAX_EVENT_AGE_MS = 120_000
+
+/**
+ * Защита от повтора: подделать шифр нельзя, но перехваченный пакет можно
+ * переслать в канал ещё раз. Повтор того же сообщения, старые выстрелы и
+ * решение старее уже показанного отбрасываются.
+ */
+export class ReplayGuard {
+  private seen = new Set<string>()
+  private lastSolutionAt = 0
+
+  accept(message: SyncMessage, now: number): boolean {
+    if (
+      (message.kind === 'shot' || message.kind === 'hello') &&
+      Math.abs(now - message.sentAt) > MAX_EVENT_AGE_MS
+    ) {
+      return false
+    }
+    const key = `${message.kind}|${message.from}|${message.sentAt}`
+    if (this.seen.has(key)) return false
+    if (message.kind === 'solution') {
+      if (message.sentAt < this.lastSolutionAt) return false
+      this.lastSolutionAt = message.sentAt
+    }
+    if (this.seen.size > 1000) this.seen.clear()
+    this.seen.add(key)
+    return true
+  }
+}

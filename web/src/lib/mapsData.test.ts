@@ -8,7 +8,10 @@ import { mapKind, parseMapDescription } from './builtinMaps'
 
 const ROOT = fileURLToPath(new URL('../../public/maps/', import.meta.url))
 
-const index = JSON.parse(readFileSync(join(ROOT, 'index.json'), 'utf8')) as {
+// Карты лежат в ветке maps (npm run maps:pull); без них проверка карт пропускается, в CI они есть всегда
+const HAS_MAPS = existsSync(join(ROOT, 'index.json'))
+
+const index = (HAS_MAPS ? JSON.parse(readFileSync(join(ROOT, 'index.json'), 'utf8')) : { maps: [] }) as {
   maps: { world: string; displayName: string; author: string; kind?: 'official' | 'community'; worldSize: number }[]
 }
 
@@ -23,7 +26,7 @@ describe('mapKind', () => {
   })
 })
 
-describe('встроенные карты в public/maps', () => {
+describe.skipIf(!HAS_MAPS)('встроенные карты в public/maps', () => {
   it('в списке есть карты и нет повторов', () => {
     expect(index.maps.length).toBeGreaterThan(0)
     const worlds = index.maps.map((m) => m.world)

@@ -29,10 +29,13 @@ The Windows installer is on the [Releases](../../releases) page. To get it on a 
 ```bash
 cd web
 npm install
+npm run maps:pull
 npm run dev
 ```
 
-`npm test` runs the tests, `npm run build` builds the site, `npm run desktop:build` builds the Windows app (needs [Rust](https://rustup.rs) and Visual Studio C++ Build Tools).
+Maps (~100 MB) are not in the main history: they live in the `maps` branch (a single commit that is replaced on every update). `npm run maps:pull` downloads them into `web/public/maps`, `npm run maps:publish` replaces the branch with your local maps.
+
+`npm test` runs the tests, `npm run test:e2e` runs browser smoke tests against the built site (`npm run build` first; `npx playwright install chromium` once), `npm run build` builds the site, `npm run desktop:build` builds the Windows app (needs [Rust](https://rustup.rs) and Visual Studio C++ Build Tools).
 
 ## Adding a weapon
 
@@ -40,7 +43,7 @@ Range tables are copied by hand from screenshots of the ACE tables in game into 
 
 ## Adding a map
 
-Export the terrain with the [grad_meh](https://github.com/gruppe-adler/grad_meh) mod, then run `npm run maps:import "<Arma 3>/grad_meh/<map>"` in `web/`. It writes satellite tiles and heights to `web/public/maps/<map>/`. Map imagery © its authors, used with permission.
+Export the terrain with the [grad_meh](https://github.com/gruppe-adler/grad_meh) mod, then run `npm run maps:import "<Arma 3>/grad_meh/<map>"` in `web/`. It writes satellite tiles, heights and the vector layer to `web/public/maps/<map>/`; publish with `npm run maps:publish`. Map imagery © its authors, used with permission.
 
 ## License
 
