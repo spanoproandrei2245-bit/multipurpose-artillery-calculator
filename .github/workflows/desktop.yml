@@ -64,10 +64,12 @@ jobs:
       - name: Build desktop app
         shell: bash
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+          # Переменные подписи — только при заданном ключе: пустые сборщик принял бы за ключ
+          if [ -n "$SIGNING_KEY" ]; then
+            export TAURI_SIGNING_PRIVATE_KEY="$SIGNING_KEY"
+            export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""
             npm run desktop:build -- --config '{"bundle":{"createUpdaterArtifacts":true}}'
           else
             echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without update files"
