@@ -16,7 +16,8 @@ permissions:
 
 jobs:
   validate:
-    name: Lint, Build and Smoke tests
+    # Имя совпадает с обязательной проверкой в защите ветки main — не переименовывать
+    name: Lint and Build
     runs-on: ubuntu-latest
 
     defaults:
