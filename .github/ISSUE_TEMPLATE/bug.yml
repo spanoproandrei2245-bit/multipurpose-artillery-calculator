@@ -1,0 +1,26 @@
+name: Ошибка приложения / App bug
+description: Что-то не работает или приложение упало / Something does not work or the app crashed
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось / What happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить / Steps to reproduce
+      placeholder: "1. Open the map Stratis\n2. ..."
+  - type: textarea
+    id: report
+    attributes:
+      label: Отчёт об ошибке / Error report
+      description: Если появился экран ошибки — нажмите «Скопировать отчёт» и вставьте сюда / If the error screen appeared, press "Copy report" and paste it here
+      render: text
+  - type: input
+    id: device
+    attributes:
+      label: Устройство и браузер / Device and browser
+      placeholder: "Windows 10, Chrome 130 / Android, desktop app 0.14.0"

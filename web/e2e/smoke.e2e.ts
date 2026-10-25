@@ -98,3 +98,26 @@ test('у орудия виден статус проверки таблиц', as
   await expect(badge).toHaveAttribute('aria-label', /verified in game/)
   expect(errors).toEqual([])
 })
+
+test('панель рисования и слой карты на месте', async ({ page }) => {
+  const errors = await open(page)
+  await expect(page.locator('canvas').first()).toBeVisible({ timeout: 20_000 })
+  await page.getByRole('button', { name: 'Drawing' }).click()
+  await expect(page.getByRole('button', { name: 'Pencil' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Straight line' })).toBeVisible()
+  await page.getByRole('button', { name: 'Show the topographic map' }).click()
+  await expect(page.getByRole('button', { name: 'Show the satellite image' })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('справка открывается из меню «Обучение»', async ({ page }) => {
+  const errors = await open(page)
+  await page.getByRole('button', { name: /Tutorial/ }).click()
+  await page.getByRole('option', { name: /Help and FAQ/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Help' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toContainText('Why did the shell miss?')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  expect(errors).toEqual([])
+})
