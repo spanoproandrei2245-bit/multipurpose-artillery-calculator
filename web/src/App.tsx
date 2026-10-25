@@ -18,6 +18,7 @@ import { onHotkey, toggleOverlay } from './lib/desktop'
 import { readInvite } from './lib/sync'
 import { usePersistentState } from './lib/usePersistentState'
 import { useWakeLock } from './lib/useWakeLock'
+import { CrashProbe } from './components/ErrorBoundary'
 import type { Language, Theme } from './types/settings'
 
 // Связка и настройки грузятся по требованию: главный экран
@@ -168,6 +169,7 @@ function App() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <CrashProbe area="app" />
       <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 pt-6 pb-4 sm:px-6 lg:pt-14">
         {view === 'dashboard' && (
           <DashboardPage

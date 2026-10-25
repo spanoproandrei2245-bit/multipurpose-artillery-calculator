@@ -1,4 +1,6 @@
 import { applyMotion } from './lib/motion'
+import { installGlobalErrorLog } from './lib/errorLog'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -28,15 +30,25 @@ if (!isOverlayWindow) void loadCustomSounds()
 // Поверх игры — всегда тёмная тема, независимо от настроек основного окна.
 if (isOverlayWindow) document.documentElement.classList.add('overlay', 'dark')
 
+// Тема — до первой отрисовки: без мигания светлым и на экране ошибки тоже
+try {
+  document.documentElement.classList.toggle('dark', localStorage.getItem('theme') !== 'light')
+} catch {
+  document.documentElement.classList.add('dark')
+}
+
 applyMotion()
+installGlobalErrorLog()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isOverlayWindow ? (
-      <OverlayApp />
-    ) : (
-      <SyncProvider>
-        <App />
-      </SyncProvider>
-    )}
+    <ErrorBoundary area={isOverlayWindow ? 'overlay' : 'app'}>
+      {isOverlayWindow ? (
+        <OverlayApp />
+      ) : (
+        <SyncProvider>
+          <App />
+        </SyncProvider>
+      )}
+    </ErrorBoundary>
   </StrictMode>,
 )
