@@ -57,6 +57,14 @@ export const models = {
     modes: ['HIGH', 'LOW'],
     notes: 'S.O.G. Prairie Fire 85mm divisional gun.',
   },
+
+  h12: {
+    name: 'H-12 (107 mm)',
+    mod: 'S.O.G. Prairie Fire (Vietnam DLC)',
+    category: 'mlrs',
+    modes: ['HIGH', 'LOW'],
+    notes: 'S.O.G. Prairie Fire 107mm multiple rocket launcher (Type 63).',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models

@@ -6,6 +6,7 @@ import m2Data from './m2_sog.json'
 import m101Data from './m101_sog.json'
 import searaData from './seara.json'
 import d44Data from './d44_sog.json'
+import h12Data from './h12_sog.json'
 
 import type { ArtilleryReference } from '../../types/artillery'
 
@@ -183,4 +184,5 @@ export const artilleryCatalog = {
   m101_sog: parseReference(m101Data, 'm101_sog'),
   seara: parseReference(searaData, 'seara'),
   d44_sog: parseReference(d44Data, 'd44_sog'),
+  h12_sog: parseReference(h12Data, 'h12_sog'),
 }
