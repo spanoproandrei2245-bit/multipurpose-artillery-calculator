@@ -105,6 +105,14 @@ export const models = {
     modes: ['HIGH', 'LOW'],
     notes: 'Vanilla M4 Scorcher 155mm self-propelled howitzer (ACE realistic name: Sholef).',
   },
+
+  sochor: {
+    name: '2S9 Sochor (155 mm)',
+    mod: 'Arma 3 · 2S9 Sochor',
+    category: 'spg',
+    modes: ['HIGH', 'LOW'],
+    notes: 'Vanilla 2S9 Sochor 155mm self-propelled howitzer.',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models

@@ -12,6 +12,7 @@ import m109a6Data from './m109a6_rhsusaf.json'
 import m119a2Data from './m119a2_rhsusaf.json'
 import m777Data from './m777_sod.json'
 import sholefData from './sholef.json'
+import sochorData from './sochor.json'
 
 import type { ArtilleryReference } from '../../types/artillery'
 
@@ -195,4 +196,5 @@ export const artilleryCatalog = {
   m119a2_rhsusaf: parseReference(m119a2Data, 'm119a2_rhsusaf'),
   m777_sod: parseReference(m777Data, 'm777_sod'),
   sholef: parseReference(sholefData, 'sholef'),
+  sochor: parseReference(sochorData, 'sochor'),
 }
