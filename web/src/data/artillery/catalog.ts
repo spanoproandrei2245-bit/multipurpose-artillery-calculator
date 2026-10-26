@@ -9,6 +9,7 @@ import d44Data from './d44_sog.json'
 import h12Data from './h12_sog.json'
 import kamazData from './kamaz_mrl.json'
 import m109a6Data from './m109a6_rhsusaf.json'
+import m119a2Data from './m119a2_rhsusaf.json'
 
 import type { ArtilleryReference } from '../../types/artillery'
 
@@ -189,4 +190,5 @@ export const artilleryCatalog = {
   h12_sog: parseReference(h12Data, 'h12_sog'),
   kamaz_mrl: parseReference(kamazData, 'kamaz_mrl'),
   m109a6_rhsusaf: parseReference(m109a6Data, 'm109a6_rhsusaf'),
+  m119a2_rhsusaf: parseReference(m119a2Data, 'm119a2_rhsusaf'),
 }
