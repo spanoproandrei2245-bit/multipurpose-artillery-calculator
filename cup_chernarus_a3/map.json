@@ -1,0 +1,22 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "cup_chernarus_a3",
+  "displayName": "Chernarus 2020",
+  "author": "CUP",
+  "worldSize": 15360,
+  "background": "#4d545e",
+  "heights": {
+    "file": "heights.bin",
+    "step": 18.75,
+    "size": 820,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 1280,
+    "ext": "webp"
+  },
+  "vector": "vector.json"
+}

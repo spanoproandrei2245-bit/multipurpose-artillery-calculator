@@ -1,0 +1,22 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "drakovac",
+  "displayName": "Drakovac",
+  "author": "SSG - Enfisk",
+  "worldSize": 12288,
+  "background": "#4d545e",
+  "heights": {
+    "file": "heights.bin",
+    "step": 18,
+    "size": 683,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 1024,
+    "ext": "webp"
+  },
+  "vector": "vector.json"
+}

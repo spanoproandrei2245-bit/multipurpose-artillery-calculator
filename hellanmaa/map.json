@@ -1,0 +1,22 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "hellanmaa",
+  "displayName": "Hellanmaa",
+  "author": "Temppa",
+  "worldSize": 8192,
+  "background": "#006e0d",
+  "heights": {
+    "file": "heights.bin",
+    "step": 20,
+    "size": 410,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 4,
+    "metersPerTile": 1024,
+    "ext": "webp"
+  },
+  "vector": "vector.json"
+}

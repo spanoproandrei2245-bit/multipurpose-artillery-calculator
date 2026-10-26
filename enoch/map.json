@@ -1,0 +1,22 @@
+{
+  "format": "arma-map",
+  "version": 1,
+  "world": "enoch",
+  "displayName": "Livonia",
+  "author": "Bohemia Interactive",
+  "worldSize": 12800,
+  "background": "#3a4662",
+  "heights": {
+    "file": "heights.bin",
+    "step": 18.75,
+    "size": 683,
+    "scale": 0.1
+  },
+  "tiles": {
+    "size": 512,
+    "levels": 5,
+    "metersPerTile": 1066.6666666666667,
+    "ext": "webp"
+  },
+  "vector": "vector.json"
+}
