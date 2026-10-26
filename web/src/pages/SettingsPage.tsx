@@ -50,7 +50,7 @@ function Card({
         <h3 className="text-[17px] font-semibold text-app-text">{title}</h3>
       </div>
       {description && <p className="mt-2 text-[13.5px] leading-relaxed text-app-muted">{description}</p>}
-      <div className="mt-3 divide-y divide-app-line [&>*]:py-3.5 [&>*:first-child]:pt-1 [&>*:last-child]:pb-0">
+      <div className="mt-3 divide-y divide-app-border [&>*]:py-3.5 [&>*:first-child]:pt-1 [&>*:last-child]:pb-0">
         {children}
       </div>
     </section>

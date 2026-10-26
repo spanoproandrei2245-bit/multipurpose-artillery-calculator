@@ -37,6 +37,8 @@ interface DropdownProps<T extends string> {
   fullWidth?: boolean
   // Список раскрывается вверх (у нижнего края страницы)
   up?: boolean
+  // Дополнительные классы кнопки (размер, фон на телефоне)
+  buttonClassName?: string
 }
 
 /**
@@ -57,6 +59,7 @@ export function Dropdown<T extends string>({
   fullWidth = false,
   up: upProp = false,
   tourId,
+  buttonClassName = '',
 }: DropdownProps<T>) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -185,6 +188,7 @@ export function Dropdown<T extends string>({
             : variant === 'icon'
               ? 'btn px-2.5'
               : 'field min-h-9 h-auto py-1 pr-2',
+          buttonClassName,
         ].join(' ')}
       >
         <span className="min-w-0 flex-1 leading-tight break-words whitespace-normal">

@@ -298,7 +298,8 @@ export function Row({
   htmlFor?: string
   icon?: FieldIconName
   // Единая ширина контролов справа: full — на всю ширину, unit — поле
-  // с единицей справа (единицы выровнены в одну колонку)
+  // с единицей справа (единицы выровнены в одну колонку). На телефоне
+  // контролы уже, чтобы подписи слева (~9 rem) помещались в одну строку.
   control?: 'full' | 'unit'
   unit?: string
   // Для обучения: подсвечиваемая строка
@@ -320,14 +321,14 @@ export function Row({
               className={[
                 'flex min-w-0 items-center gap-2',
                 control === 'unit'
-                  ? 'w-[13.5rem] max-w-[calc(60vw-2.25rem)]'
-                  : 'w-[15.75rem] max-w-[60vw]',
+                  ? 'w-[13.5rem] max-w-[calc(100vw-14.25rem)]'
+                  : 'w-[16rem] max-w-[calc(100vw-11.75rem)]',
               ].join(' ')}
             >
               {children}
             </div>
             {control === 'unit' && (
-              <span className="w-7 text-left text-app-muted">{unit}</span>
+              <span className="w-8 shrink-0 text-left whitespace-nowrap text-app-muted">{unit}</span>
             )}
           </>
         ) : (

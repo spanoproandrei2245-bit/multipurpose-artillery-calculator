@@ -82,7 +82,6 @@ import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
 import { CrashProbe, ErrorBoundary } from './ErrorBoundary'
 import { readCalcDraft, readModelDraft, writeCalcDraft, writeModelDraft } from '../lib/calcDraft'
-import { DataStatusBadge } from './DataStatusBadge'
 import { WeatherRows } from './WeatherRows'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -367,6 +366,24 @@ export function ArtilleryCalculator({
 
   const solution = activeResult?.solution ?? null
   const range = overallRange(results)
+
+  // Огонь по линии: та же траектория и, пока достаёт, тот же заряд, что и в
+  // основном расчёте; иначе — заряд по приоритету
+  const solveLinePoint = (lineDistance: number, lineHeightDiff: number) => {
+    if (!profile) return null
+    const lineResults = solveAllCharges(
+      profile,
+      mode,
+      selectedAmmo?.charges,
+      lineDistance + rangeAdjust,
+      lineHeightDiff,
+      weatherInputs.weather
+    )
+    const result =
+      lineResults.find((r) => r.charge === activeResult?.charge && r.solution !== null) ??
+      pickCharge(lineResults, chargePreference)
+    return result?.solution ? { elevation: result.solution.elevation, charge: result.charge } : null
+  }
   const w = solution?.weather
 
   // Доворот: боковой ветер + корректировка по направлению, мил.
@@ -829,6 +846,7 @@ export function ArtilleryCalculator({
                   category={category}
                   shellType={selectedAmmo?.type}
                   onGunLockChange={handleGunLock}
+                  solveLine={solveLinePoint}
                   showMarkers={showMarkers}
                   showScreenMarkers={showScreenMarkers}
                   onPickJournalTarget={onLoadEntry}
@@ -1059,12 +1077,7 @@ export function ArtilleryCalculator({
             <Row
               icon="weapon"
               control="full"
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  {t('artilleryCalculator.weapon')}
-                  <DataStatusBadge status={reference.source.status} compact />
-                </span>
-              }
+              label={t('artilleryCalculator.weapon')}
             >
               {modelSelector}
             </Row>

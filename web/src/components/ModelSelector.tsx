@@ -91,7 +91,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <ArtilleryIcon category={current.category} />
+      <ArtilleryIcon category={current.category} status={artilleryRegistry[value].source.status} />
       <Dropdown
         fullWidth
         className="min-w-0 flex-1"
