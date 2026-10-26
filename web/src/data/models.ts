@@ -97,6 +97,14 @@ export const models = {
     modes: ['HIGH', 'LOW'],
     notes: 'SOD M777 155mm towed howitzer (Steam Workshop 3820553505).',
   },
+
+  sholef: {
+    name: 'Sholef (155 mm)',
+    mod: 'Arma 3 · M4 Scorcher',
+    category: 'spg',
+    modes: ['HIGH', 'LOW'],
+    notes: 'Vanilla M4 Scorcher 155mm self-propelled howitzer (ACE realistic name: Sholef).',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
