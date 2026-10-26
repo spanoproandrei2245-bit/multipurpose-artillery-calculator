@@ -77,6 +77,8 @@ import type { JournalActions } from '../lib/journalIO'
 import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
 import { MrsiPanel, MrsiUnavailable } from './MrsiPanel'
+import { TerrainWarning } from './TerrainWarning'
+import { clearance, isBlocked, isTight, type Clearance, type TerrainProfile } from '../lib/terrainClearance'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
@@ -204,6 +206,8 @@ export function ArtilleryCalculator({
   )
   // Точка цели на карте, если цель ставили на карте; ручная правка
   // дистанции или азимута её сбрасывает.
+  // Рельеф между орудием и целью с карты (если она открыта)
+  const [terrain, setTerrain] = useState<TerrainProfile | null>(null)
   const [mapTarget, setMapTarget] = useState<MapTarget | null>(
     initial ? (initial.target ?? null) : (draft?.mapTarget ?? null)
   )
@@ -348,25 +352,65 @@ export function ArtilleryCalculator({
         }))
       : []
 
+  // ---- рельеф по пути снаряда ----
+  // Профиль берётся с карты, только если дистанция в поле совпадает с картой
+  // (её не правили руками): иначе он не про этот выстрел.
+  const terrainActive =
+    terrain !== null && validDistance && Math.abs(terrain.distance - distanceValue) <= Math.max(25, distanceValue * 0.01)
+      ? terrain
+      : null
+  const terrainChecks = new Map<string, Clearance | null>()
+  for (const group of modeResults) {
+    for (const result of group.results) {
+      if (terrainActive && result.solution) {
+        terrainChecks.set(`${group.mode}:${result.charge}`, clearance(terrainActive, result.solution.elevation))
+      }
+    }
+  }
+  const terrainOf = (m: ArtilleryMode, charge: number) => terrainChecks.get(`${m}:${charge}`) ?? null
+  // Выбор по приоритету — среди способов, которые не упираются в рельеф (если такие есть)
+  const clearGroups = modeResults.map((group) => ({
+    ...group,
+    results: group.results.filter((r) => !isBlocked(terrainOf(group.mode, r.charge))),
+  }))
+  const anyClear = clearGroups.some((group) => group.results.some((r) => r.solution !== null))
+  const pickGroups = anyClear ? clearGroups : modeResults
+
   // «Авто»: лучший способ по приоритету среди всех траекторий
   const autoBest =
-    modeChoice === 'auto' ? pickBest(modeResults, chargePreference) : undefined
+    modeChoice === 'auto' ? pickBest(pickGroups, chargePreference) : undefined
   const mode: ArtilleryMode =
     modeChoice === 'auto'
       ? (autoBest?.group.mode ?? profileModes[0] ?? reference.availableModes[0])
       : modeChoice
 
   const results = modeResults.find((group) => group.mode === mode)?.results ?? []
+  const clearResults = pickGroups.find((group) => group.mode === mode)?.results ?? []
 
   const applicable = results.filter((r) => r.solution !== null)
 
   // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
     applicable.find((r) => r.charge === chosenCharge) ??
-    (modeChoice === 'auto' ? autoBest?.result : pickCharge(results, chargePreference))
+    (modeChoice === 'auto'
+      ? autoBest?.result
+      : (pickCharge(clearResults, chargePreference) ?? pickCharge(results, chargePreference)))
 
   const solution = activeResult?.solution ?? null
   const range = overallRange(results)
+
+  // Рельеф у выбранного способа и чем стрелять вместо, если он упирается
+  const activeTerrain = activeResult ? terrainOf(mode, activeResult.charge) : null
+  const terrainAlternative = (() => {
+    if (!isBlocked(activeTerrain) || !anyClear) return null
+    const best = pickBest(clearGroups, chargePreference)
+    if (!best) return null
+    const label =
+      best.group.mode === 'HIGH'
+        ? t('artilleryCalculator.high-trajectory')
+        : t('artilleryCalculator.low-trajectory')
+    return `${label.toLowerCase()}, ${t('mrsiPanel.charge')} ${best.result.charge}`
+  })()
 
   // Огонь по линии: та же траектория и, пока достаёт, тот же заряд, что и в
   // основном расчёте; иначе — заряд по приоритету
@@ -848,6 +892,7 @@ export function ArtilleryCalculator({
                   shellType={selectedAmmo?.type}
                   onGunLockChange={handleGunLock}
                   solveLine={solveLinePoint}
+                  onTerrainProfile={setTerrain}
                   showMarkers={showMarkers}
                   showScreenMarkers={showScreenMarkers}
                   onPickJournalTarget={onLoadEntry}
@@ -1012,6 +1057,7 @@ export function ArtilleryCalculator({
                       : t('artilleryCalculator.low-trajectory'),
                 }))}
                 activeMode={mode}
+                terrainOf={terrainOf}
                 hideUnfit={hideUnfit}
                 onlyGood={onlyGood}
                 activeCharge={activeResult?.charge ?? null}
@@ -1170,6 +1216,15 @@ export function ArtilleryCalculator({
               <p className={`${alertClass} text-danger`}>
                 {t('artilleryCalculator.some-values-were-not-recognised')}
               </p>
+            )}
+
+            {solution && activeTerrain && (isBlocked(activeTerrain) || isTight(activeTerrain)) && terrainActive && (
+              <TerrainWarning
+                terrain={terrainActive}
+                hit={activeTerrain}
+                elevationMil={solution.elevation}
+                alternative={terrainAlternative}
+              />
             )}
 
             {solution && activeResult && w && (

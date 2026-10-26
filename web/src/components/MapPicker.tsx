@@ -18,6 +18,7 @@ import {
   type FireDensity,
 } from '../lib/fireLine'
 import { readStoredText, writeStored } from '../lib/input'
+import { sampleProfile, type TerrainProfile } from '../lib/terrainClearance'
 import {
   drawVector,
   loadVector,
@@ -118,6 +119,8 @@ interface Props {
   flight?: readonly FlightShot[]
   category?: ArtilleryCategory
   shellType?: string
+  // Рельеф по прямой от орудия к цели: для проверки, не упрётся ли снаряд в гору
+  onTerrainProfile?: (profile: TerrainProfile | null) => void
   // Огонь по линии: возвышение в точку при этой дальности и разнице высот
   // (цель минус орудие) тем же способом, что и основной расчёт
   solveLine?: (distance: number, heightDiff: number) => { elevation: number; charge: number } | null
@@ -229,6 +232,7 @@ export function MapPicker({
   shellType = 'HE',
   onGunLockChange,
   solveLine,
+  onTerrainProfile,
 }: Props) {
   const ru = language === 'ru'
   const unitM = t('unit.m')
@@ -1164,6 +1168,20 @@ export function MapPicker({
   // Заряд показывается, только если по линии он меняется
   const lineMixedCharges =
     new Set(lineRows.flatMap((row) => (row.solved ? [row.solved.charge] : []))).size > 1
+
+  // Профиль рельефа для калькулятора; при закрытии карты — пусто
+  const terrainProfile = useMemo(
+    () => (map && gun && target ? sampleProfile(map, gun, target) : null),
+    [map, gun, target]
+  )
+  const onTerrainProfileRef = useRef(onTerrainProfile)
+  useEffect(() => {
+    onTerrainProfileRef.current = onTerrainProfile
+  })
+  useEffect(() => {
+    onTerrainProfileRef.current?.(terrainProfile)
+  }, [terrainProfile])
+  useEffect(() => () => onTerrainProfileRef.current?.(null), [])
 
   const gunHeight = map && gun ? heightAt(map, gun) : null
   const targetHeight = map && target ? heightAt(map, target) : null
