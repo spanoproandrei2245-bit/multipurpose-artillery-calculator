@@ -89,6 +89,14 @@ export const models = {
     modes: ['HIGH', 'LOW'],
     notes: 'RHSUSAF 105mm towed howitzer.',
   },
+
+  m777: {
+    name: 'M777 (155 mm)',
+    mod: 'SOD M777 155mm Howitzer',
+    category: 'towed',
+    modes: ['HIGH', 'LOW'],
+    notes: 'SOD M777 155mm towed howitzer (Steam Workshop 3820553505).',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
