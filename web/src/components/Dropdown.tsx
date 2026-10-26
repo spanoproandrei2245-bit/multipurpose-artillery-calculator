@@ -37,6 +37,8 @@ interface DropdownProps<T extends string> {
   fullWidth?: boolean
   // Список раскрывается вверх (у нижнего края страницы)
   up?: boolean
+  // Дополнительные классы кнопки (размер, фон на телефоне)
+  buttonClassName?: string
 }
 
 /**
@@ -48,7 +50,7 @@ export function Dropdown<T extends string>({
   options,
   onChange,
   label,
-  placeholder = '—',
+  placeholder = '-',
   disabled = false,
   alignLeft = false,
   buttonLabel,
@@ -57,6 +59,7 @@ export function Dropdown<T extends string>({
   fullWidth = false,
   up: upProp = false,
   tourId,
+  buttonClassName = '',
 }: DropdownProps<T>) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -181,13 +184,14 @@ export function Dropdown<T extends string>({
             ? 'flex w-full cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50'
             : 'flex w-auto max-w-[16rem] cursor-pointer items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50',
           variant === 'ghost'
-            ? 'h-9 rounded-md pr-1.5 pl-2 text-app-text transition-colors hover:bg-app-raised-hover'
+            ? 'min-h-9 rounded-md py-1 pr-1.5 pl-2 text-app-text transition-colors hover:bg-app-raised-hover'
             : variant === 'icon'
               ? 'btn px-2.5'
-              : 'field h-9 py-0 pr-2',
+              : 'field min-h-9 h-auto py-1 pr-2',
+          buttonClassName,
         ].join(' ')}
       >
-        <span className="min-w-0 flex-1 truncate">
+        <span className="min-w-0 flex-1 leading-tight break-words whitespace-normal">
           {buttonLabel ?? current?.label ?? placeholder}
         </span>
         {variant !== 'icon' && (
@@ -259,7 +263,7 @@ export function Dropdown<T extends string>({
                   <span className="min-w-0 flex-1">
                     <span
                       className={[
-                        'block truncate',
+                        'block leading-snug break-words',
                         selected
                           ? 'font-semibold text-app-text'
                           : 'text-app-text-2',
@@ -268,7 +272,7 @@ export function Dropdown<T extends string>({
                       {option.label}
                     </span>
                     {option.description && (
-                      <span className="block truncate text-[12.5px] text-app-muted">
+                      <span className="block text-[12.5px] leading-snug break-words text-app-muted">
                         {option.description}
                       </span>
                     )}

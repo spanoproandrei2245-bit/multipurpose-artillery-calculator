@@ -1,7 +1,8 @@
 import { t, type MessageKey } from '../i18n'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { useFeature } from '../lib/features'
+import { FieldIcon } from './FieldIcon'
 
 export type PreviewId =
   | 'map'
@@ -11,6 +12,7 @@ export type PreviewId =
   | 'adjust'
   | 'weather'
   | 'tot'
+  | 'mrsi'
   | 'journal'
   | 'table'
   | 'keepAwake'
@@ -192,6 +194,47 @@ function Demo({ id }: { id: PreviewId }) {
           <text x="124" y="118" fontSize="9.5" fill={INK}>{t('featurePreview.countdown-5-4-3-2')}</text>
         </>
       )
+    case 'mrsi': {
+      // Вылет: высокая дуга первой, низкая последней; разрыв у всех в 0.8 цикла
+      const arcs = [
+        { d: 'M28 116 Q120 -36 212 116', from: 0 },
+        { d: 'M28 116 Q120 14 212 116', from: 0.2 },
+        { d: 'M28 116 Q120 64 212 116', from: 0.38 },
+      ]
+      return (
+        <>
+          <path d="M14 118H226" stroke={INK} strokeOpacity=".4" />
+          {arcs.map((arc) => (
+            <g key={arc.d}>
+              <path d={arc.d} fill="none" stroke={INK} strokeOpacity=".35" strokeDasharray="3 4" />
+              <circle r="3.5" fill="var(--color-text)">
+                <animateMotion
+                  path={arc.d}
+                  dur={LOOP}
+                  repeatCount="indefinite"
+                  calcMode="linear"
+                  keyPoints="0;0;1;1"
+                  keyTimes={`0;${arc.from};0.8;1`}
+                />
+                <animate
+                  attributeName="opacity"
+                  dur={LOOP}
+                  repeatCount="indefinite"
+                  keyTimes={`0;${arc.from};${arc.from + 0.01};0.8;0.81;1`}
+                  values="0;0;1;1;0;0"
+                />
+              </circle>
+            </g>
+          ))}
+          <Dot x={28} y={116} color={GUN} />
+          <Dot x={212} y={116} color={TARGET} />
+          <circle cx="212" cy="116" r="0" fill="none" stroke="#ffb020" strokeWidth="3">
+            <animate attributeName="r" dur={LOOP} repeatCount="indefinite" keyTimes="0;0.8;0.95;1" values="0;0;18;18" />
+            <animate attributeName="opacity" dur={LOOP} repeatCount="indefinite" keyTimes="0;0.8;0.95;1" values="0;1;0;0" />
+          </circle>
+        </>
+      )
+    }
     case 'journal':
       return (
         <>
@@ -256,71 +299,47 @@ const CAPTIONS: Record<PreviewId, MessageKey> = {
   adjust: 'featurePreview.the-observer-reports-short-over',
   weather: 'featurePreview.wind-temperature-and-pressure-adjust',
   tot: 'featurePreview.set-the-impact-time-the',
+  mrsi: 'featurePreview.mrsi',
   journal: 'featurePreview.save-targets-and-switch-between',
   table: 'featurePreview.the-in-game-elevation-table',
   keepAwake: 'featurePreview.the-phone-screen-stays-on',
 }
 
 /**
- * Демонстрация функции при наведении (или фокусе, или долгом нажатии):
- * короткая зацикленная анимация и подпись, что это и как пользоваться.
+ * Строка настройки с примером: под ней кнопка «Показать пример», по нажатию
+ * открывается короткая анимация и подпись. Без наведения и долгого нажатия:
+ * на телефоне так удобнее, и анимация не рисуется, пока её не открыли.
  */
 export function FeaturePreview({
   id,
   children,
 }: {
   id: PreviewId
-  
   children: ReactNode
 }) {
   const hints = useFeature('hints')
-  const [openRaw, setOpen] = useState(false)
-  const open = openRaw && hints
-  const timer = useRef<number | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current)
-    },
-    []
-  )
-
-  function show(delay: number) {
-    if (timer.current !== null) window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setOpen(true), delay)
-  }
-  function hide() {
-    if (timer.current !== null) window.clearTimeout(timer.current)
-    timer.current = null
-    setOpen(false)
-  }
+  const [open, setOpen] = useState(false)
 
   return (
-    <div
-      className="relative"
-      onPointerEnter={(e) => e.pointerType === 'mouse' && show(250)}
-      onPointerLeave={(e) => e.pointerType === 'mouse' && hide()}
-      onPointerDown={(e) => e.pointerType !== 'mouse' && show(450)}
-      onPointerUp={(e) => e.pointerType !== 'mouse' && hide()}
-      onFocus={() => show(0)}
-      onBlur={hide}
-    >
+    <div>
       {children}
-      {open && (
-        <div
-          role="tooltip"
-          className="pointer-events-none absolute top-full left-0 z-40 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-lg bg-app-raised p-3 shadow-xl shadow-black/50"
+      {hints && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="mt-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md text-[13px] font-medium text-accent hover:underline"
         >
-          <svg
-            viewBox="0 0 240 140"
-            className="block w-full rounded-md bg-app-surface"
-            aria-hidden="true"
-          >
+          <FieldIcon name={open ? 'close' : 'play'} className="h-3.5 w-3.5" />
+          {open ? t('featurePreview.hide') : t('featurePreview.show')}
+        </button>
+      )}
+      {hints && open && (
+        <div className="appear mt-2 max-w-sm rounded-lg bg-app-raised p-3">
+          <svg viewBox="0 0 240 140" className="block w-full rounded-md bg-app-surface" aria-hidden="true">
             <Demo id={id} />
           </svg>
-          <p className="mt-2 text-[13px] leading-snug text-app-text-2">
-            {t(CAPTIONS[id])}
-          </p>
+          <p className="mt-2 text-[13px] leading-snug text-app-text-2">{t(CAPTIONS[id])}</p>
         </div>
       )}
     </div>

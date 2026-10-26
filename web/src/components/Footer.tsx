@@ -148,11 +148,11 @@ function LanguageSelect({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         aria-label={current.name}
-        className="btn pr-2.5 max-sm:h-11"
+        className="btn pr-2.5 max-sm:h-11 max-sm:w-11 max-sm:px-0"
       >
         <Flag id={current.id} />
         <span className="max-sm:hidden">{current.name}</span>
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-app-muted" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-app-muted max-sm:hidden" aria-hidden="true">
           <path
             d="m7 15 5 5 5-5M7 9l5-5 5 5"
             fill="none"
@@ -227,7 +227,7 @@ function AboutButton() {
         aria-label={t('footer.about')}
         title={t('footer.about')}
         onClick={() => setOpen((v) => !v)}
-        className="btn btn-ghost px-2 text-app-faint"
+        className="btn btn-ghost px-2 text-app-faint max-sm:h-11 max-sm:w-11 max-sm:bg-app-raised"
       >
         <FieldIcon name="info" className="h-5 w-5" />
       </button>
@@ -243,8 +243,8 @@ function AboutButton() {
               <FieldIcon name="user" className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-app-text">Heis</span>
-              <span className="block truncate text-[12px] text-app-muted">
+              <span className="block break-words text-app-text">Heis</span>
+              <span className="block break-words text-[12px] text-app-muted">
                 {t('footer.author-on-github')}
               </span>
             </span>
@@ -297,8 +297,8 @@ function AboutButton() {
                 {item.icon}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-app-text">{item.title}</span>
-                <span className="block truncate text-[12px] text-app-muted">{item.text}</span>
+                <span className="block break-words text-app-text">{item.title}</span>
+                <span className="block break-words text-[12px] text-app-muted">{item.text}</span>
               </span>
             </a>
           ))}
@@ -321,16 +321,19 @@ export function Footer({
 }: Props) {
   const sync = useSync()
 
-  // Телефон: сверху «О программе», обучение и язык; ниже связка, тема, настройки.
+  // Телефон: сверху «О программе», обучение (тянется) и настройки шириной
+  // в две кнопки; ниже связка (тянется), тема и язык. Пустых мест нет.
   // Компьютер: всё в одну строку, справа от «О программе».
   return (
-    <footer className="mx-auto grid w-full max-w-[1240px] grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-4 py-4 sm:flex sm:flex-wrap sm:px-6 sm:py-5">
+    <footer className="mx-auto grid w-full max-w-[1240px] grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-4 py-4 sm:flex sm:flex-nowrap sm:px-6 sm:py-5">
       <AboutButton />
 
-      <div className="col-start-2 row-start-1 justify-self-start sm:ml-auto">
+      <div className="col-start-2 row-start-1 min-w-0">
         <Dropdown
           up
           variant="ghost"
+          className="max-sm:w-full"
+          buttonClassName="max-sm:h-11 max-sm:w-full max-sm:max-w-none max-sm:bg-app-raised max-sm:px-3"
           tourId="help"
           label={t('footer.tutorial')}
           value=""
@@ -373,10 +376,13 @@ export function Footer({
           type="button"
           onClick={() => togglePanel('hotkeys')}
           data-tour="hotkeys"
+          title={t('footer.keyboard-shortcuts')}
+          aria-label={t('footer.keyboard-shortcuts')}
           className="btn btn-ghost hidden sm:inline-flex"
         >
           <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
-          {t('footer.keyboard-shortcuts')}
+          {/* На средней ширине — только значок, подпись в подсказке */}
+          <span className="hidden xl:inline">{t('footer.keyboard-shortcuts')}</span>
         </button>
 
         {!isDesktop && (
@@ -385,10 +391,11 @@ export function Footer({
             target="_blank"
             rel="noreferrer"
             title={t('footer.overlay-on-top-of-the')}
+            aria-label={t('footer.desktop-app')}
             className="btn btn-ghost max-sm:hidden"
           >
             <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
-            {t('footer.desktop-app')}
+            <span className="hidden lg:inline">{t('footer.desktop-app')}</span>
           </a>
         )}
 
@@ -398,7 +405,7 @@ export function Footer({
           data-tour="link"
           aria-pressed={view === 'sync'}
           className={[
-            'btn col-span-2 col-start-1 row-start-2 justify-center max-sm:h-11',
+            'btn col-span-2 col-start-1 row-start-2 justify-center max-sm:h-11 sm:ml-auto',
             view === 'sync' ? 'bg-app-raised-hover text-app-text' : '',
           ].join(' ')}
         >
@@ -444,7 +451,7 @@ export function Footer({
           aria-label={t('app.settings')}
           title={t('app.settings')}
           className={[
-            'btn col-start-4 row-start-2 px-2.5 max-sm:h-11 max-sm:w-11 max-sm:justify-center',
+            'btn col-span-2 col-start-3 row-start-1 px-2.5 max-sm:h-11 max-sm:justify-center',
             view === 'settings' ? 'bg-app-raised-hover text-app-text' : '',
           ].join(' ')}
         >
@@ -456,7 +463,7 @@ export function Footer({
         <LanguageSelect
           language={language}
           onChange={onLanguageChange}
-          className="col-span-2 col-start-3 row-start-1 justify-self-end"
+          className="col-start-4 row-start-2"
         />
     </footer>
   )

@@ -76,12 +76,14 @@ import type { FlightShot } from './FlightCanvas'
 import type { JournalActions } from '../lib/journalIO'
 import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
-import { MrsiPanel } from './MrsiPanel'
+import { MrsiPanel, MrsiUnavailable } from './MrsiPanel'
+import { TerrainWarning } from './TerrainWarning'
+import { clearance, isBlocked, isTight, type Clearance, type TerrainProfile } from '../lib/terrainClearance'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
 import { CrashProbe, ErrorBoundary } from './ErrorBoundary'
-import { DataStatusBadge } from './DataStatusBadge'
+import { readCalcDraft, readModelDraft, writeCalcDraft, writeModelDraft } from '../lib/calcDraft'
 import { WeatherRows } from './WeatherRows'
 
 const MODES: readonly ArtilleryMode[] = ['HIGH', 'LOW']
@@ -139,6 +141,7 @@ export function ArtilleryCalculator({
   const showAdjust = useFeature('adjust')
   const showWeather = useFeature('weather')
   const showTot = useFeature('tot')
+  const showMrsi = useFeature('mrsi')
   const showJournal = useFeature('journal')
   const showTable = useFeature('table')
   const showHints = useFeature('hints')
@@ -147,21 +150,35 @@ export function ArtilleryCalculator({
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
+  // Черновик: введённое ранее (другим орудием, до перезагрузки). Запись
+  // журнала, если её загрузили, важнее черновика.
+  const [draft] = useState(() => (initial ? null : readCalcDraft()))
+  const [modelDraft] = useState(() => (initial ? {} : readModelDraft(modelId)))
+
   // Режим из загруженной записи журнала, если модель его поддерживает
   // Траектория: выбранная вручную или «авто» — лучшая по приоритету заряда
   const [modeChoice, setModeChoice] = useState<ArtilleryMode | 'auto'>(() =>
     initial?.mode && reference.availableModes.includes(initial.mode)
       ? initial.mode
-      : reference.availableModes.length > 1
-        ? 'auto'
-        : reference.availableModes[0]
+      : modelDraft.modeChoice &&
+          (modelDraft.modeChoice === 'auto'
+            ? reference.availableModes.length > 1
+            : reference.availableModes.includes(modelDraft.modeChoice))
+        ? modelDraft.modeChoice
+        : reference.availableModes.length > 1
+          ? 'auto'
+          : reference.availableModes[0]
   )
   const [ammoId, setAmmoId] = useState(
     initial && ammunition.some((a) => a.id === initial.ammoId)
       ? initial.ammoId
-      : (ammunition[0]?.id ?? '')
+      : modelDraft.ammoId && ammunition.some((a) => a.id === modelDraft.ammoId)
+        ? modelDraft.ammoId
+        : (ammunition[0]?.id ?? '')
   )
-  const [distance, setDistance] = useState(numberToField(initial?.distance))
+  const [distance, setDistance] = useState(
+    initial ? numberToField(initial.distance) : (draft?.distance ?? '')
+  )
   // Высота орудия: блокировка сохраняет значение между запусками и
   // защищает его от карты, журнала и «Сброса».
   const [heightLocked, setHeightLocked] = useState(
@@ -170,7 +187,9 @@ export function ArtilleryCalculator({
   const [ownHeight, setOwnHeightRaw] = useState(() =>
     readStored<'on' | 'off'>('ownHeightLocked', ['on', 'off'], 'off') === 'on'
       ? readStoredText('ownHeightValue')
-      : numberToField(initial?.ownHeight)
+      : initial
+        ? numberToField(initial.ownHeight)
+        : (draft?.ownHeight ?? '')
   )
   const setOwnHeight = (value: string) => {
     if (!heightLocked) setOwnHeightRaw(value)
@@ -180,13 +199,17 @@ export function ArtilleryCalculator({
     if (heightLocked) writeStored('ownHeightValue', ownHeight)
   }, [heightLocked, ownHeight])
   const [targetHeight, setTargetHeight] = useState(
-    numberToField(initial?.targetHeight)
+    initial ? numberToField(initial.targetHeight) : (draft?.targetHeight ?? '')
   )
-  const [azimuth, setAzimuth] = useState(numberToField(initial?.azimuth))
+  const [azimuth, setAzimuth] = useState(
+    initial ? numberToField(initial.azimuth) : (draft?.azimuth ?? '')
+  )
   // Точка цели на карте, если цель ставили на карте; ручная правка
   // дистанции или азимута её сбрасывает.
+  // Рельеф между орудием и целью с карты (если она открыта)
+  const [terrain, setTerrain] = useState<TerrainProfile | null>(null)
   const [mapTarget, setMapTarget] = useState<MapTarget | null>(
-    initial?.target ?? null
+    initial ? (initial.target ?? null) : (draft?.mapTarget ?? null)
   )
   const [azimuthUnit, setAzimuthUnit] = useState<AngleUnit>(
     () =>
@@ -198,8 +221,9 @@ export function ArtilleryCalculator({
   // он становится одной записью истории.
   const [adjustHistory, setAdjustHistory] = useState<AdjustmentEntry[]>(
     () => {
-      const range = initial?.rangeCorrection ?? 0
-      const lateral = initial?.lateralCorrection ?? 0
+      if (!initial) return draft?.adjust ?? []
+      const range = initial.rangeCorrection ?? 0
+      const lateral = initial.lateralCorrection ?? 0
       return range !== 0 || lateral !== 0
         ? [{ range, lateral, label: t('artilleryCalculator.from-journal') }]
         : []
@@ -212,8 +236,16 @@ export function ArtilleryCalculator({
   const [totAt, setTotAt] = useState<number | null>(null)
 
   const [chosenCharge, setChosenCharge] = useState<number | null>(
-    initial?.charge ?? null
+    initial ? (initial.charge ?? null) : (modelDraft.charge ?? null)
   )
+
+  // Всё введённое сохраняется сразу: смена орудия, настройки, перезагрузка
+  useEffect(() => {
+    writeCalcDraft({ distance, ownHeight, targetHeight, azimuth, mapTarget, adjust: adjustHistory })
+  }, [distance, ownHeight, targetHeight, azimuth, mapTarget, adjustHistory])
+  useEffect(() => {
+    writeModelDraft(modelId, { ammoId, modeChoice, charge: chosenCharge })
+  }, [modelId, ammoId, modeChoice, chosenCharge])
   const [saveName, setSaveName] = useState('')
   const [justSaved, setJustSaved] = useState<'saved' | 'updated' | null>(
     null
@@ -320,25 +352,83 @@ export function ArtilleryCalculator({
         }))
       : []
 
+  // ---- рельеф по пути снаряда ----
+  // Профиль берётся с карты, только если дистанция в поле совпадает с картой
+  // (её не правили руками): иначе он не про этот выстрел.
+  const terrainActive =
+    terrain !== null && validDistance && Math.abs(terrain.distance - distanceValue) <= Math.max(25, distanceValue * 0.01)
+      ? terrain
+      : null
+  const terrainChecks = new Map<string, Clearance | null>()
+  for (const group of modeResults) {
+    for (const result of group.results) {
+      if (terrainActive && result.solution) {
+        terrainChecks.set(`${group.mode}:${result.charge}`, clearance(terrainActive, result.solution.elevation))
+      }
+    }
+  }
+  const terrainOf = (m: ArtilleryMode, charge: number) => terrainChecks.get(`${m}:${charge}`) ?? null
+  // Выбор по приоритету — среди способов, которые не упираются в рельеф (если такие есть)
+  const clearGroups = modeResults.map((group) => ({
+    ...group,
+    results: group.results.filter((r) => !isBlocked(terrainOf(group.mode, r.charge))),
+  }))
+  const anyClear = clearGroups.some((group) => group.results.some((r) => r.solution !== null))
+  const pickGroups = anyClear ? clearGroups : modeResults
+
   // «Авто»: лучший способ по приоритету среди всех траекторий
   const autoBest =
-    modeChoice === 'auto' ? pickBest(modeResults, chargePreference) : undefined
+    modeChoice === 'auto' ? pickBest(pickGroups, chargePreference) : undefined
   const mode: ArtilleryMode =
     modeChoice === 'auto'
       ? (autoBest?.group.mode ?? profileModes[0] ?? reference.availableModes[0])
       : modeChoice
 
   const results = modeResults.find((group) => group.mode === mode)?.results ?? []
+  const clearResults = pickGroups.find((group) => group.mode === mode)?.results ?? []
 
   const applicable = results.filter((r) => r.solution !== null)
 
   // Явно выбранный заряд важнее предпочтения по умолчанию.
   const activeResult =
     applicable.find((r) => r.charge === chosenCharge) ??
-    (modeChoice === 'auto' ? autoBest?.result : pickCharge(results, chargePreference))
+    (modeChoice === 'auto'
+      ? autoBest?.result
+      : (pickCharge(clearResults, chargePreference) ?? pickCharge(results, chargePreference)))
 
   const solution = activeResult?.solution ?? null
   const range = overallRange(results)
+
+  // Рельеф у выбранного способа и чем стрелять вместо, если он упирается
+  const activeTerrain = activeResult ? terrainOf(mode, activeResult.charge) : null
+  const terrainAlternative = (() => {
+    if (!isBlocked(activeTerrain) || !anyClear) return null
+    const best = pickBest(clearGroups, chargePreference)
+    if (!best) return null
+    const label =
+      best.group.mode === 'HIGH'
+        ? t('artilleryCalculator.high-trajectory')
+        : t('artilleryCalculator.low-trajectory')
+    return `${label.toLowerCase()}, ${t('mrsiPanel.charge')} ${best.result.charge}`
+  })()
+
+  // Огонь по линии: та же траектория и, пока достаёт, тот же заряд, что и в
+  // основном расчёте; иначе — заряд по приоритету
+  const solveLinePoint = (lineDistance: number, lineHeightDiff: number) => {
+    if (!profile) return null
+    const lineResults = solveAllCharges(
+      profile,
+      mode,
+      selectedAmmo?.charges,
+      lineDistance + rangeAdjust,
+      lineHeightDiff,
+      weatherInputs.weather
+    )
+    const result =
+      lineResults.find((r) => r.charge === activeResult?.charge && r.solution !== null) ??
+      pickCharge(lineResults, chargePreference)
+    return result?.solution ? { elevation: result.solution.elevation, charge: result.charge } : null
+  }
   const w = solution?.weather
 
   // Доворот: боковой ветер + корректировка по направлению, мил.
@@ -801,6 +891,8 @@ export function ArtilleryCalculator({
                   category={category}
                   shellType={selectedAmmo?.type}
                   onGunLockChange={handleGunLock}
+                  solveLine={solveLinePoint}
+                  onTerrainProfile={setTerrain}
                   showMarkers={showMarkers}
                   showScreenMarkers={showScreenMarkers}
                   onPickJournalTarget={onLoadEntry}
@@ -965,6 +1057,7 @@ export function ArtilleryCalculator({
                       : t('artilleryCalculator.low-trajectory'),
                 }))}
                 activeMode={mode}
+                terrainOf={terrainOf}
                 hideUnfit={hideUnfit}
                 onlyGood={onlyGood}
                 activeCharge={activeResult?.charge ?? null}
@@ -1031,12 +1124,7 @@ export function ArtilleryCalculator({
             <Row
               icon="weapon"
               control="full"
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  {t('artilleryCalculator.weapon')}
-                  <DataStatusBadge status={reference.source.status} compact />
-                </span>
-              }
+              label={t('artilleryCalculator.weapon')}
             >
               {modelSelector}
             </Row>
@@ -1130,6 +1218,15 @@ export function ArtilleryCalculator({
               </p>
             )}
 
+            {solution && activeTerrain && (isBlocked(activeTerrain) || isTight(activeTerrain)) && terrainActive && (
+              <TerrainWarning
+                terrain={terrainActive}
+                hit={activeTerrain}
+                elevationMil={solution.elevation}
+                alternative={terrainAlternative}
+              />
+            )}
+
             {solution && activeResult && w && (
               <>
                 {w.missing && (
@@ -1207,7 +1304,7 @@ export function ArtilleryCalculator({
                   <button
                     type="button"
                     onClick={handleUpdate}
-                    className="btn flex-1 truncate"
+                    className="btn flex-1 text-center leading-tight whitespace-normal"
                   >
                     {justSaved === 'updated'
                       ? t('artilleryCalculator.updated')
@@ -1301,12 +1398,12 @@ export function ArtilleryCalculator({
         </div>
 
         <div className="min-w-0 space-y-3">
-          {mrsiAllowed && (
-            <MrsiPanel
-              options={mrsiOptions}
-              showMode={profileModes.length > 1}
-            />
-          )}
+          {showMrsi &&
+            (mrsiAllowed ? (
+              solution && <MrsiPanel options={mrsiOptions} showMode={profileModes.length > 1} />
+            ) : (
+              <MrsiUnavailable />
+            ))}
 
           {profile && showTable && (
             <BallisticTableView

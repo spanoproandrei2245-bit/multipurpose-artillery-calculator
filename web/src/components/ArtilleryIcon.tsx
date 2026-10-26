@@ -1,5 +1,7 @@
 import type { ArtilleryCategory } from '../types/gameModel'
+import type { DataStatus } from '../types/artillery'
 import { t } from '../i18n'
+import { DataStatusBadge } from './DataStatusBadge'
 import { categoryLabels, categoryMarks } from '../data/categories'
 
 
@@ -53,9 +55,11 @@ interface Props {
   category: ArtilleryCategory
   // xs — на кнопке выбора, sm — в списке, md — в карточках
   size?: 'xs' | 'sm' | 'md'
+  // Проверка таблиц: значок в правом нижнем углу (на кнопке выбора орудия)
+  status?: DataStatus
 }
 
-export function ArtilleryIcon({ category, size = 'sm', }: Props) {
+export function ArtilleryIcon({ category, size = 'sm', status }: Props) {
   return (
     <span
       title={t(categoryLabels[category])}
@@ -80,6 +84,7 @@ export function ArtilleryIcon({ category, size = 'sm', }: Props) {
       >
         <Glyph category={category} />
       </svg>
+      {status && <DataStatusBadge status={status} corner />}
     </span>
   )
 }

@@ -6,7 +6,6 @@ import { models, type ModelId } from '../data/models'
 import { t } from '../i18n'
 import { useFavorites } from '../lib/favorites'
 import { ArtilleryIcon } from './ArtilleryIcon'
-import { dataStatusLabel } from '../lib/dataStatus'
 import { Dropdown, type DropdownOption } from './Dropdown'
 import { FieldIcon } from './FieldIcon'
 import { MapRequests } from './MapRequests'
@@ -24,9 +23,8 @@ const isVanilla = (id: ModelId) => models[id].mod.startsWith('Arma 3')
 
 const MODS = '__mods__'
 
-/** Мод и проверка таблиц: «Arma 3 · проверено в игре». */
-const describe = (id: ModelId) =>
-  `${models[id].mod} · ${dataStatusLabel(artilleryRegistry[id].source.status)}`
+// Проверка таблиц в игре: значок в углу плитки орудия (подробности в подсказке)
+const statusOf = (id: ModelId) => artilleryRegistry[id].source.status
 
 /**
  * Выбор орудия: значок класса отдельно от списка. В списке — ванильные
@@ -50,13 +48,13 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
     ...listed.map((id) => ({
       value: id as string,
       label: models[id].name,
-      description: describe(id),
+      description: models[id].mod,
       group: isFav(id)
         ? t('picker.favourites')
         : isVanilla(id)
           ? t('picker.vanilla')
           : t('picker.current'),
-      icon: <ArtilleryIcon category={models[id].category} />,
+      icon: <ArtilleryIcon category={models[id].category} status={statusOf(id)} />,
       trailing: (
         <button
           type="button"
@@ -91,7 +89,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <ArtilleryIcon category={current.category} />
+      <ArtilleryIcon category={current.category} status={statusOf(value)} />
       <Dropdown
         fullWidth
         className="min-w-0 flex-1"
@@ -113,10 +111,11 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
           items={modelIds.map((id) => ({
             id,
             title: models[id].name,
-            subtitle: `${describe(id)} · ${t(categoryLabels[models[id].category])}`,
+            subtitle: `${models[id].mod} · ${t(categoryLabels[models[id].category])}`,
             group: isVanilla(id) ? t('picker.vanilla') : models[id].mod,
+            source: isVanilla(id) ? undefined : /\bDLC\b/i.test(models[id].mod) ? ('dlc' as const) : ('mod' as const),
             keywords: models[id].notes,
-            icon: <ArtilleryIcon category={models[id].category} size="md" />,
+            icon: <ArtilleryIcon category={models[id].category} size="md" status={statusOf(id)} />,
           }))}
           onPick={(id) => {
             setPicking(false)

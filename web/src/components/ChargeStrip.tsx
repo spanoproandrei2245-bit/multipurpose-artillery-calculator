@@ -1,5 +1,6 @@
 import { t } from '../i18n'
 import { pickCharge, type ChargeResult } from '../lib/ballistics'
+import { isBlocked, type Clearance } from '../lib/terrainClearance'
 import type { ArtilleryMode } from '../types/artillery'
 import { FieldIcon } from './FieldIcon'
 
@@ -19,6 +20,8 @@ interface Props {
   hideUnfit?: boolean
   // Только заряды, чем-то хорошие: лучший, самый быстрый, самый точный (и выбранный)
   onlyGood?: boolean
+  // Рельеф по пути: где снаряд упрётся (нет данных — null)
+  terrainOf?: (mode: ArtilleryMode, charge: number) => Clearance | null
 }
 
 /**
@@ -33,6 +36,7 @@ export function ChargeStrip({
   onPick,
   hideUnfit = false,
   onlyGood = false,
+  terrainOf,
 }: Props) {
   const unitMil = t('unit.mil')
   const unitS = t('unit.s')
@@ -40,9 +44,16 @@ export function ChargeStrip({
   return (
     <div className="space-y-2.5" aria-label={t('chargeStrip.ways-to-fire')}>
       {groups.map((group) => {
-        const fastestCharge = pickCharge(group.results, 'fastest')?.charge
-        const preciseCharge = pickCharge(group.results, 'precise')?.charge
-        const bestCharge = pickCharge(group.results, 'best')?.charge
+        const blockedAt = (charge: number) => {
+          const hit = terrainOf?.(group.mode, charge) ?? null
+          return isBlocked(hit) ? hit : null
+        }
+        // Лучший, быстрый и точный — среди тех, что не упираются в рельеф
+        const clear = group.results.filter((r) => blockedAt(r.charge) === null)
+        const ranked = clear.some((r) => r.solution !== null) ? clear : group.results
+        const fastestCharge = pickCharge(ranked, 'fastest')?.charge
+        const preciseCharge = pickCharge(ranked, 'precise')?.charge
+        const bestCharge = pickCharge(ranked, 'best')?.charge
         const usableOnly = hideUnfit || onlyGood
         const visible = group.results.filter((r) => {
           if (usableOnly && r.solution === null) return false
@@ -57,10 +68,10 @@ export function ChargeStrip({
         })
         // Траектория, по которой до цели не достать, при скрытии пропадает целиком
         if (visible.length === 0) return null
-        const best = pickCharge(group.results, 'best')?.charge
-        const fastest = pickCharge(group.results, 'fastest')?.charge
-        const precise = pickCharge(group.results, 'precise')?.charge
-        const several = group.results.filter((r) => r.solution !== null).length > 1
+        const best = bestCharge
+        const fastest = fastestCharge
+        const precise = preciseCharge
+        const several = ranked.filter((r) => r.solution !== null).length > 1
         return (
           <div key={group.mode}>
             {groups.length > 1 && (
@@ -78,6 +89,7 @@ export function ChargeStrip({
                 const usable = solution !== null
                 const active =
                   usable && group.mode === activeMode && result.charge === activeCharge
+                const hit = usable ? blockedAt(result.charge) : null
                 return (
                   <button
                     key={result.charge}
@@ -86,7 +98,9 @@ export function ChargeStrip({
                     aria-pressed={active}
                     onClick={() => onPick(group.mode, result.charge)}
                     title={
-                      usable
+                      hit
+                        ? t('terrain.card-blocked', `${Math.round(hit.at)} ${t('unit.m')}`)
+                        : usable
                         ? result.metersPerMil !== null
                           ? `1 ${unitMil} ≈ ${result.metersPerMil.toFixed(1)} ${t('unit.m')}`
                           : undefined
@@ -95,7 +109,9 @@ export function ChargeStrip({
                     className={[
                       'relative flex flex-col items-start rounded-lg px-2.5 py-1.5 text-left transition-all duration-200',
                       active
-                        ? 'bg-accent-soft ring-1 ring-accent'
+                        ? hit
+                          ? 'bg-danger-soft ring-1 ring-danger'
+                          : 'bg-accent-soft ring-1 ring-accent'
                         : 'bg-app-raised',
                       usable
                         ? 'cursor-pointer hover:bg-app-raised-hover'
@@ -106,23 +122,30 @@ export function ChargeStrip({
                       <b className="text-lg leading-none text-app-text tabular-nums">
                         {result.charge}
                       </b>
-                      {usable && several && result.charge === best && (
+                      {hit && (
+                        <span className="text-danger">
+                          <FieldIcon name="mountain" className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      {usable && !hit && several && result.charge === best && (
                         <span title={t('chargeStrip.best-charge')} className="text-accent">
                           <FieldIcon name="balance" className="h-3.5 w-3.5" />
                         </span>
                       )}
-                      {usable && several && result.charge === fastest && (
+                      {usable && !hit && several && result.charge === fastest && (
                         <span title={t('chargeStrip.fastest')} className="text-warn">
                           <FieldIcon name="fire" className="h-3.5 w-3.5" />
                         </span>
                       )}
-                      {usable && several && result.charge === precise && (
+                      {usable && !hit && several && result.charge === precise && (
                         <span title={t('chargeStrip.most-precise')} className="text-info">
                           <FieldIcon name="correction" className="h-3.5 w-3.5" />
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 text-[12px] whitespace-nowrap text-app-muted tabular-nums">
+                    <span
+                      className={`mt-0.5 text-[12px] whitespace-nowrap tabular-nums ${hit ? 'text-danger line-through' : 'text-app-muted'}`}
+                    >
                       {usable
                         ? `${Math.round(solution.elevation)} ${unitMil} · ${solution.tof.toFixed(1)} ${unitS}`
                         : `${result.minRange}–${result.maxRange} ${t('unit.m')}`}

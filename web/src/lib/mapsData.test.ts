@@ -44,7 +44,7 @@ describe.skipIf(!HAS_MAPS)('встроенные карты в public/maps', () 
       const d = description!
       expect(d.world).toBe(world)
       expect(d.worldSize).toBe(entry.worldSize)
-      expect(['official', 'community']).toContain(entry.kind ?? mapKind(entry))
+      expect(['official', 'dlc', 'community']).toContain(entry.kind ?? mapKind(entry))
 
       // Высоты: Int16 на каждую точку сетки
       const heights = statSync(join(dir, d.heights.file))

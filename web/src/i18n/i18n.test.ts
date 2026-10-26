@@ -33,7 +33,7 @@ describe('словари', () => {
   it('в английских текстах нет кириллицы, в русских она есть (кроме обозначений)', () => {
     const inEn = keys.filter((k) => cyrillic.test(en[k as keyof typeof ru]))
     expect(inEn).toEqual([])
-    const ALLOWED_SAME = new Set(['unit.hpa', 'picker.vanilla'])
+    const ALLOWED_SAME = new Set(['unit.hpa', 'picker.vanilla', 'picker.dlc', 'picker.filter-dlc'])
     const notTranslated = keys.filter(
       (k) =>
         !ALLOWED_SAME.has(k) &&

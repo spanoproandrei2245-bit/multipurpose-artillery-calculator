@@ -63,11 +63,11 @@ export function CombatScreen({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-xl font-semibold text-app-text sm:text-2xl">
+          <p className="break-words text-xl font-semibold text-app-text sm:text-2xl">
             {targetName ?? title}
           </p>
           {targetName && (
-            <p className="mt-0.5 truncate text-[15px] text-app-muted">{title}</p>
+            <p className="mt-0.5 break-words text-[15px] text-app-muted">{title}</p>
           )}
         </div>
 
@@ -98,7 +98,7 @@ export function CombatScreen({
               azimuth === null ? 'text-app-faint' : '',
             ].join(' ')}
           >
-            {azimuth ?? '—'}
+            {azimuth ?? '-'}
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export function CombatScreen({
       </div>
 
       <p className="label mt-3 hidden text-center sm:block">
-        F — {t('combatScreen.fire')} · Esc — {t('combatScreen.close-2')}
+        F: {t('combatScreen.fire')} · Esc: {t('combatScreen.close-2')}
       </p>
     </div>,
     document.body

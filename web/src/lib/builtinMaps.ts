@@ -18,13 +18,17 @@ export interface BuiltinMapEntry {
   // Названия на других языках (ключ — код языка), если отличаются от displayName
   names?: Partial<Record<string, string>>
   author: string
-  // official — Bohemia Interactive, community — карты сообщества
-  kind?: 'official' | 'community'
+  // official — базовая игра, dlc — дополнения Bohemia и Creator DLC, community — карты сообщества
+  kind?: MapKind
+  // low — карта снята из игры без grad_meh: высоты грубее, фон — снимок карты игры
+  quality?: 'low'
   worldSize: number
 }
 
+export type MapKind = 'official' | 'dlc' | 'community'
+
 /** Происхождение карты; у старых записей index.json kind нет — смотрим на автора. */
-export function mapKind(entry: Pick<BuiltinMapEntry, 'kind' | 'author'>): 'official' | 'community' {
+export function mapKind(entry: Pick<BuiltinMapEntry, 'kind' | 'author'>): MapKind {
   if (entry.kind) return entry.kind
   return /bohemia/i.test(entry.author) ? 'official' : 'community'
 }

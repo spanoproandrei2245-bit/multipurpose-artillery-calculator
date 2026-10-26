@@ -1,3 +1,4 @@
+import type { ArtilleryCategory } from '../types/gameModel'
 import type { MapPoint } from './heightmap'
 
 /**
@@ -6,21 +7,35 @@ import type { MapPoint } from './heightmap'
  * поражения соседних разрывов перекрывали всю длину.
  */
 
-export interface LineWeapon {
-  id: 'mortar' | 'artillery' | 'rocket' | 'rocket-wide'
-  // Радиус поражения от точки падения, м
+export interface FireDensity {
+  id: 'dense' | 'medium' | 'sparse' | 'very-sparse'
+  // Радиус поражения одного разрыва, м: точки прицеливания не дальше двух радиусов
   radius: number
 }
 
-// Радиусы по опыту игры: миномёт ±15 м, артиллерия ±50 м, РСЗО 75–100 м
-export const LINE_WEAPONS: readonly LineWeapon[] = [
-  { id: 'mortar', radius: 15 },
-  { id: 'artillery', radius: 50 },
-  { id: 'rocket', radius: 75 },
-  { id: 'rocket-wide', radius: 100 },
+// Плотность огня: чем плотнее, тем чаще точки прицеливания вдоль линии
+export const FIRE_DENSITIES: readonly FireDensity[] = [
+  { id: 'dense', radius: 15 },
+  { id: 'medium', radius: 50 },
+  { id: 'sparse', radius: 75 },
+  { id: 'very-sparse', radius: 100 },
 ]
 
-export const DEFAULT_LINE_WEAPON: LineWeapon['id'] = 'mortar'
+/**
+ * Плотность под орудие по радиусу его разрыва (по опыту игры): миномёт ±15 м,
+ * артиллерия ±50 м, РСЗО ±75 м.
+ */
+export function recommendedDensity(category: ArtilleryCategory): FireDensity['id'] {
+  switch (category) {
+    case 'towed':
+    case 'spg':
+      return 'medium'
+    case 'mlrs':
+      return 'sparse'
+    default:
+      return 'dense'
+  }
+}
 
 /** Длина ломаной, м. */
 export function polylineLength(points: readonly MapPoint[]): number {

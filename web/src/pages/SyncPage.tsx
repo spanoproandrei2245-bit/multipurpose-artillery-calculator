@@ -479,7 +479,7 @@ function GunnerView({ language }: Props) {
               solution.azimuth === null ? 'text-app-faint' : '',
             ].join(' ')}
           >
-            {solution.azimuth ?? '—'}
+            {solution.azimuth ?? '-'}
           </p>
         </div>
       </div>

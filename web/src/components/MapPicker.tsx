@@ -12,12 +12,13 @@ import {
 } from '../lib/heightmap'
 import {
   aimPoints,
-  DEFAULT_LINE_WEAPON,
-  LINE_WEAPONS,
+  FIRE_DENSITIES,
   polylineLength,
-  type LineWeapon,
+  recommendedDensity,
+  type FireDensity,
 } from '../lib/fireLine'
 import { readStoredText, writeStored } from '../lib/input'
+import { sampleProfile, type TerrainProfile } from '../lib/terrainClearance'
 import {
   drawVector,
   loadVector,
@@ -70,9 +71,9 @@ import { ScreenMarkers } from './ScreenMarkers'
 import { CoordinatePlate } from './map/CoordinatePlate'
 import { DrawToolbar, type DrawTool } from './map/DrawToolbar'
 import { MapGlyph } from './map/MapGlyph'
+import { MapQualityBadge } from './map/MapQualityBadge'
 import { colorName, markerTitle } from './map/mapLabels'
-import { MarkersPanel } from './map/MarkersPanel'
-import { TargetsPanel } from './map/TargetsPanel'
+import { MapPointsPanel } from './map/MapPointsPanel'
 
 export interface MapSelection {
   distance: number
@@ -118,6 +119,11 @@ interface Props {
   flight?: readonly FlightShot[]
   category?: ArtilleryCategory
   shellType?: string
+  // Рельеф по прямой от орудия к цели: для проверки, не упрётся ли снаряд в гору
+  onTerrainProfile?: (profile: TerrainProfile | null) => void
+  // Огонь по линии: возвышение в точку при этой дальности и разнице высот
+  // (цель минус орудие) тем же способом, что и основной расчёт
+  solveLine?: (distance: number, heightDiff: number) => { elevation: number; charge: number } | null
   // Орудие закреплено на карте (true) или освобождено (false); высота —
   // высота орудия в точке, м, если известна
   onGunLockChange?: (locked: boolean, height: number | null) => void
@@ -225,6 +231,8 @@ export function MapPicker({
   category = 'mortar',
   shellType = 'HE',
   onGunLockChange,
+  solveLine,
+  onTerrainProfile,
 }: Props) {
   const ru = language === 'ru'
   const unitM = t('unit.m')
@@ -256,19 +264,20 @@ export function MapPicker({
   // Орудие закреплено на карте: касания его не двигают
   const [gunLocked, setGunLocked] = useState(false)
 
-  // Линия огня: ломаная из точек, оружие (радиус поражения) и номер
-  // точки прицеливания, по которой стреляют сейчас
+  // Линия огня: ломаная из точек, плотность огня (радиус разрыва) и номер
+  // точки прицеливания, по которой стреляют сейчас. Плотность по умолчанию —
+  // рекомендуемая для орудия; выбранная вручную запоминается.
   const [linePoints, setLinePoints] = useState<MapPoint[]>([])
-  const [lineWeaponId, setLineWeaponId] = useState<LineWeapon['id']>(() =>
-    LINE_WEAPONS.find((w) => w.id === readStoredText('lineWeapon'))?.id ??
-    DEFAULT_LINE_WEAPON
+  const [densityChoice, setDensityChoice] = useState<FireDensity['id'] | null>(
+    () => FIRE_DENSITIES.find((d) => d.id === readStoredText('lineDensity'))?.id ?? null
   )
-  const lineWeapon =
-    LINE_WEAPONS.find((w) => w.id === lineWeaponId) ?? LINE_WEAPONS[0]
+  const recommendedId = recommendedDensity(category)
+  const lineDensity =
+    FIRE_DENSITIES.find((d) => d.id === (densityChoice ?? recommendedId)) ?? FIRE_DENSITIES[0]
   const [lineIndex, setLineIndex] = useState<number | null>(null)
   const lineAim = useMemo(
-    () => aimPoints(linePoints, lineWeapon.radius),
-    [linePoints, lineWeapon.radius]
+    () => aimPoints(linePoints, lineDensity.radius),
+    [linePoints, lineDensity.radius]
   )
 
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -732,7 +741,7 @@ export function MapPicker({
       if (pts.length > 1) {
         // Полоса шириной в зону поражения
         ctx.strokeStyle = 'rgba(255,176,32,0.22)'
-        ctx.lineWidth = Math.max(4, lineWeapon.radius * 2 * scale)
+        ctx.lineWidth = Math.max(4, lineDensity.radius * 2 * scale)
         ctx.beginPath()
         pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
         ctx.stroke()
@@ -844,7 +853,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineWeapon, reach, strokes, liveStroke, vector, mapStyle, settleTick])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineDensity, reach, strokes, liveStroke, vector, mapStyle, settleTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -1146,6 +1155,34 @@ export function MapPicker({
     placeTarget(hit ? { x: hit.x, y: hit.y } : point)
   }
 
+  // Огонь по линии: возвышение и азимут в каждую точку прицеливания
+  const lineRows = useMemo(() => {
+    if (!map || !gun) return []
+    const own = heightAt(map, gun) ?? 0
+    return lineAim.map((point) => {
+      const line = bearing(gun, point)
+      const height = heightAt(map, point) ?? own
+      return { azimuthMil: line.azimuthMil, solved: solveLine?.(line.distance, height - own) ?? null }
+    })
+  }, [map, gun, lineAim, solveLine])
+  // Заряд показывается, только если по линии он меняется
+  const lineMixedCharges =
+    new Set(lineRows.flatMap((row) => (row.solved ? [row.solved.charge] : []))).size > 1
+
+  // Профиль рельефа для калькулятора; при закрытии карты — пусто
+  const terrainProfile = useMemo(
+    () => (map && gun && target ? sampleProfile(map, gun, target) : null),
+    [map, gun, target]
+  )
+  const onTerrainProfileRef = useRef(onTerrainProfile)
+  useEffect(() => {
+    onTerrainProfileRef.current = onTerrainProfile
+  })
+  useEffect(() => {
+    onTerrainProfileRef.current?.(terrainProfile)
+  }, [terrainProfile])
+  useEffect(() => () => onTerrainProfileRef.current?.(null), [])
+
   const gunHeight = map && gun ? heightAt(map, gun) : null
   const targetHeight = map && target ? heightAt(map, target) : null
 
@@ -1158,11 +1195,14 @@ export function MapPicker({
     key: `builtin:${m.world}`,
     name: m.names?.[language] ?? m.displayName,
     author: m.author,
+    kind: mapKind(m),
     official: mapKind(m) === 'official',
+    lowQuality: m.quality === 'low',
     preview: `${MAPS_BASE}${m.world}/preview.webp`,
   }))
+  const current = mapEntries.find((e) => e.key === mapKey)
   function mapLabel(key: string): string {
-    return mapEntries.find((e) => e.key === key)?.name ?? '—'
+    return mapEntries.find((e) => e.key === key)?.name ?? '-'
   }
   const isFavorite = (key: string) => favorites.includes(key)
   const listed = mapEntries.filter(
@@ -1188,6 +1228,14 @@ export function MapPicker({
     icon: <MapGlyph />,
     trailing: (
       <span className="flex shrink-0 items-center gap-1.5">
+        {e.lowQuality && <MapQualityBadge />}
+        {mapOptionTrailing(e)}
+      </span>
+    ),
+  }))
+  function mapOptionTrailing(e: (typeof mapEntries)[number]) {
+    return (
+      <span className="flex shrink-0 items-center gap-1.5">
         <img src={e.preview} alt="" loading="lazy" className="h-9 w-9 rounded object-cover" />
         <button
           type="button"
@@ -1206,8 +1254,8 @@ export function MapPicker({
           <FieldIcon name={isFavorite(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
         </button>
       </span>
-    ),
-  }))
+    )
+  }
   const actionIcon = (name: FieldIconName) => (
     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
       <FieldIcon name={name} className="h-4 w-4" />
@@ -1372,38 +1420,45 @@ export function MapPicker({
           />
           </div>
 
-          {/* Слева: цели журнала — выбор, экспорт и импорт */}
-          <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
-          {targetActions && (
-            <TargetsPanel
-              targets={quickTargets}
-              actions={targetActions}
-              onPick={onPickJournalTarget}
-              onNotice={setNotice}
-            />
+          {/* Слева: один список «Метки» (сохранённые цели и метки) */}
+          {(targetActions || showMarkers) && (
+            <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
+              <MapPointsPanel
+                targets={quickTargets}
+                actions={targetActions}
+                onPickTarget={onPickJournalTarget}
+                markers={showMarkers ? markers : null}
+                now={now}
+                onTargetMarker={(marker) => placeTarget({ x: marker.x, y: marker.y })}
+                onAddByGrid={(point) => setDraft({ point, label: '', color: markerColor })}
+                onNotice={setNotice}
+                shared={sync.enabled}
+              />
+            </div>
           )}
-
-          {showMarkers && (
-            <MarkersPanel
-              markers={markers}
-              now={now}
-              onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
-              onAddByGrid={(point) => setDraft({ point, label: '', color: markerColor })}
-            />
-          )}
-          </div>
 
           {draft && (
-            <div className="absolute right-2 bottom-14 left-2 mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-lg bg-black/80 p-2 text-white/90 shadow-lg backdrop-blur-sm">
-              <span className="w-full text-[12px] font-medium text-white/70">{t('mapPicker.new-marker')}</span>
-              <span className="text-[13px] text-white/70 tabular-nums">
-                {toGridReference(draft.point, 8)}
-              </span>
+            <div
+              role="dialog"
+              aria-label={t('mapPicker.new-marker')}
+              className="absolute right-2 bottom-2 left-2 z-20 mx-auto flex max-h-[calc(100%-1rem)] max-w-sm flex-col gap-2.5 overflow-y-auto rounded-xl bg-black/85 p-3 text-white/90 shadow-lg backdrop-blur-sm"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-3 w-3 shrink-0 rotate-45"
+                  style={{ backgroundColor: markerRgb(draft.color) }}
+                />
+                <span className="text-[14px] font-semibold">{t('mapPicker.new-marker')}</span>
+                <span className="ml-auto text-[13px] text-white/70 tabular-nums">
+                  {toGridReference(draft.point, 8)}
+                </span>
+              </div>
               <input
                 autoFocus
                 value={draft.label}
                 maxLength={40}
                 placeholder={t('mapPicker.label-optional')}
+                aria-label={t('mapPicker.label-optional')}
                 onChange={(event) =>
                   setDraft({ ...draft, label: event.target.value })
                 }
@@ -1411,19 +1466,22 @@ export function MapPicker({
                   if (event.key === 'Enter') saveDraft()
                   if (event.key === 'Escape') setDraft(null)
                 }}
-                className="field min-w-0 flex-1"
+                className="field w-full"
               />
               <ColorField
+                inline
                 value={draft.color}
                 onChange={(color) => setDraft({ ...draft, color })}
                 names={colorName}
               />
-              <button type="button" onClick={saveDraft} className="btn btn-primary">
-                {t('mapPicker.place')}
-              </button>
-              <button type="button" onClick={() => setDraft(null)} className="btn">
-                {t('mapPicker.cancel')}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setDraft(null)} className="btn">
+                  {t('mapPicker.cancel')}
+                </button>
+                <button type="button" onClick={saveDraft} className="btn btn-primary">
+                  {t('mapPicker.place')}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1468,8 +1526,8 @@ export function MapPicker({
         </p>
       )}
 
-      {/* ---- Панель под картой ---- */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      {/* ---- Панель под картой: список карт тянется, кнопки масштаба справа ---- */}
+      <div className="mt-3 flex items-center gap-1.5 sm:gap-2">
         {builtin.length > 0 && <MapGlyph big />}
         {builtin.length > 0 && (
           <Dropdown
@@ -1478,21 +1536,37 @@ export function MapPicker({
             value={mapKey}
             onChange={(key) => (key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
             alignLeft
-            placeholder="—"
-            buttonLabel={mapLabel(mapKey)}
+            fullWidth
+            className="min-w-0 flex-1"
+            buttonClassName="max-sm:pl-2.5"
+            placeholder="-"
+            buttonLabel={
+              current?.lowQuality ? (
+                <span className="flex items-center gap-1.5">
+                  <MapQualityBadge inline />
+                  {mapLabel(mapKey)}
+                </span>
+              ) : (
+                mapLabel(mapKey)
+              )
+            }
             options={mapOptions}
           />
         )}
         {map && (
           <>
-            <div className="ml-auto flex gap-1">
-              <button type="button" className="btn px-3" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}><FieldIcon name="minus" /></button>
-              <button type="button" className="btn px-3" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}><FieldIcon name="plus" /></button>
-              <button type="button" className="btn" onClick={() => setView(null)}>
-                <FieldIcon name="fit" />
-                {t('mapPicker.fit')}
-              </button>
-            </div>
+            <button type="button" className="btn shrink-0 px-3 max-sm:w-9 max-sm:px-0" aria-label="−" onClick={() => zoomAt(1 / 1.6, size.width / 2, size.height / 2)}><FieldIcon name="minus" /></button>
+            <button type="button" className="btn shrink-0 px-3 max-sm:w-9 max-sm:px-0" aria-label="+" onClick={() => zoomAt(1.6, size.width / 2, size.height / 2)}><FieldIcon name="plus" /></button>
+            <button
+              type="button"
+              className="btn shrink-0 max-sm:w-9 max-sm:px-0"
+              title={t('mapPicker.fit')}
+              aria-label={t('mapPicker.fit')}
+              onClick={() => setView(null)}
+            >
+              <FieldIcon name="fit" />
+              <span className="max-sm:hidden">{t('mapPicker.fit')}</span>
+            </button>
           </>
         )}
       </div>
@@ -1501,42 +1575,71 @@ export function MapPicker({
         <>
           {(placing === 'line' || linePoints.length > 0) && (
             <div className="mt-3 rounded-lg bg-app-surface p-3">
+              {/* Заголовок и действия с линией */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="label">
+                <span className="flex items-center gap-2 font-semibold text-app-text">
+                  <FieldIcon name="drawLine" className="h-[18px] w-[18px] text-app-muted" />
                   {t('mapPicker.line-fire')}
                 </span>
-                <Dropdown
-                  alignLeft
-                  label={t('mapPicker.kill-radius')}
-                  value={lineWeaponId}
-                  onChange={(id) => {
-                    setLineWeaponId(id)
-                    setLineIndex(null)
-                    writeStored('lineWeapon', id)
-                  }}
-                  options={LINE_WEAPONS.map((w) => ({
-                    value: w.id,
-                    label: `${lineWeaponName(w.id)} · ±${w.radius} ${unitM}`,
-                  }))}
-                />
                 <div className="ml-auto flex gap-1">
                   <button
                     type="button"
-                    className={buttonClass}
+                    className={`${buttonClass} max-sm:h-8 max-sm:w-8 max-sm:px-0`}
+                    title={t('mapPicker.undo-point')}
+                    aria-label={t('mapPicker.undo-point')}
                     disabled={linePoints.length === 0}
                     onClick={() => changeLine(linePoints.slice(0, -1))}
                   >
-                    {t('mapPicker.undo-point')}
+                    <FieldIcon name="undo" className="h-4 w-4" />
+                    <span className="max-sm:hidden">{t('mapPicker.undo-point')}</span>
                   </button>
                   <button
                     type="button"
-                    className={buttonClass}
+                    className={`${buttonClass} max-sm:h-8 max-sm:w-8 max-sm:px-0`}
+                    title={t('mapPicker.clear')}
+                    aria-label={t('mapPicker.clear')}
                     disabled={linePoints.length === 0}
                     onClick={() => changeLine([])}
                   >
-                    {t('mapPicker.clear')}
+                    <FieldIcon name="trash" className="h-4 w-4" />
+                    <span className="max-sm:hidden">{t('mapPicker.clear')}</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Плотность огня; рекомендуемая подходит текущему орудию */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="text-[13.5px] text-app-muted">{t('mapPicker.fire-density')}</span>
+                <Dropdown
+                  alignLeft
+                  fullWidth
+                  className="min-w-0 flex-1 basis-60"
+                  label={t('mapPicker.fire-density')}
+                  value={lineDensity.id}
+                  onChange={(id) => {
+                    setDensityChoice(id === recommendedId ? null : id)
+                    setLineIndex(null)
+                    writeStored('lineDensity', id === recommendedId ? '' : id)
+                  }}
+                  buttonLabel={
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      {densityLabel(lineDensity, unitM)}
+                      {lineDensity.id === recommendedId && (
+                        <span className="rounded bg-accent-soft px-1.5 text-[12px] font-medium text-accent">
+                          {t('mapPicker.recommended')}
+                        </span>
+                      )}
+                    </span>
+                  }
+                  options={FIRE_DENSITIES.map((d) => ({
+                    value: d.id,
+                    label: densityLabel(d, unitM),
+                    description:
+                      d.id === recommendedId
+                        ? `${t('mapPicker.recommended')}: ${t('mapPicker.density-for-weapon')}`
+                        : `${t('mapPicker.burst')} ±${d.radius} ${unitM}`,
+                  }))}
+                />
               </div>
 
               {linePoints.length === 0 ? (
@@ -1546,68 +1649,97 @@ export function MapPicker({
               ) : (
                 <>
                   <p className="mt-2 text-[13px] text-app-muted tabular-nums">
-                    {t('mapPicker.length')}{' '}
-                    {Math.round(polylineLength(linePoints))} {unitM} ·{' '}
-                    {t('mapPicker.aim-points')} {lineAim.length}{' '}
-                    · {t('mapPicker.spacing')} ≤ {lineWeapon.radius * 2} {unitM}
+                    {t('mapPicker.length')} {Math.round(polylineLength(linePoints))} {unitM} ·{' '}
+                    {t('mapPicker.aim-points')} {lineAim.length}
                   </p>
-                  <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
-                    {lineAim.map((point, i) => {
-                      const line = gun ? bearing(gun, point) : null
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          disabled={!gun}
-                          onClick={() => aimAt(i)}
-                          aria-pressed={lineIndex === i}
-                          title={toGridReference(point, 8)}
-                          className={[
-                            'rounded-md px-2.5 py-1 text-[13px] tabular-nums transition-colors',
-                            lineIndex === i
-                              ? 'bg-accent-soft ring-1 ring-accent'
-                              : 'bg-app-raised hover:bg-app-raised-hover',
-                            gun ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-                          ].join(' ')}
-                        >
-                          <b>{i + 1}</b>
-                          {line && (
-                            <span className="ml-1.5 text-app-muted">
-                              {Math.round(line.distance)} {unitM} ·{' '}
-                              {Math.round(line.azimuthMil)}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {!gun && (
+                  {!gun ? (
                     <p className="mt-2 text-[13px] text-app-muted">
                       {t('mapPicker.place-the-gun-then-one')}
                     </p>
-                  )}
-                  {gun && lineAim.length > 0 && (
-                    <div className="mt-2 flex gap-1.5">
-                      <button
-                        type="button"
-                        className={buttonClass}
-                        disabled={lineIndex === null || lineIndex <= 0}
-                        onClick={() => aimAt((lineIndex ?? 1) - 1)}
-                      >
-                        ← {t('mapPicker.previous')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        disabled={lineIndex !== null && lineIndex >= lineAim.length - 1}
-                        onClick={() => aimAt(lineIndex === null ? 0 : lineIndex + 1)}
-                      >
-                        {lineIndex === null
-                          ? t('mapPicker.first-point')
-                          : t('mapPicker.next')}{' '}
-                        →
-                      </button>
-                    </div>
+                  ) : (
+                    <>
+                      {/* Текущая точка крупно; стрелки — соседние точки */}
+                      <div className="mt-3 flex items-center gap-2 rounded-lg bg-app-raised p-2">
+                        <button
+                          type="button"
+                          className="btn h-11 w-11 shrink-0 px-0"
+                          aria-label={t('mapPicker.previous')}
+                          title={t('mapPicker.previous')}
+                          disabled={lineIndex === null || lineIndex <= 0}
+                          onClick={() => aimAt((lineIndex ?? 1) - 1)}
+                        >
+                          <FieldIcon name="arrowLeft" className="h-5 w-5" />
+                        </button>
+                        <div className="min-w-0 flex-1 text-center">
+                          {lineIndex === null ? (
+                            <button type="button" className="btn btn-primary" onClick={() => aimAt(0)}>
+                              {t('mapPicker.first-point')}
+                            </button>
+                          ) : (
+                            <>
+                              <p className="text-[12.5px] text-app-muted">
+                                {t('mapPicker.point-of', lineIndex + 1, lineAim.length)}
+                                {lineMixedCharges &&
+                                  lineRows[lineIndex]?.solved &&
+                                  ` · ${t('artilleryCalculator.charge')} ${lineRows[lineIndex].solved.charge}`}
+                              </p>
+                              <LineSolution row={lineRows[lineIndex]} />
+                            </>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-primary h-11 w-11 shrink-0 px-0"
+                          aria-label={t('mapPicker.next')}
+                          title={t('mapPicker.next')}
+                          disabled={lineIndex !== null && lineIndex >= lineAim.length - 1}
+                          onClick={() => aimAt(lineIndex === null ? 0 : lineIndex + 1)}
+                        >
+                          <FieldIcon name="arrowRight" className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      {/* Все точки: нажатие наводит на точку */}
+                      <div className="mt-2 max-h-56 overflow-y-auto rounded-lg bg-app-raised/40">
+                        <div
+                          className={[
+                            'sticky top-0 z-10 grid gap-2 bg-app-surface px-2.5 py-1.5 text-[12px] text-app-muted',
+                            lineMixedCharges ? 'grid-cols-[2.25rem_1fr_1fr_3.5rem]' : 'grid-cols-[2.25rem_1fr_1fr]',
+                          ].join(' ')}
+                        >
+                          <span>№</span>
+                          <span className="text-right">{t('artilleryCalculator.elevation')}</span>
+                          <span className="text-right">{t('artilleryCalculator.azimuth')}</span>
+                          {lineMixedCharges && <span className="text-right">{t('artilleryCalculator.charge')}</span>}
+                        </div>
+                        <ul>
+                          {lineRows.map((row, i) => (
+                            <li key={i}>
+                              <button
+                                type="button"
+                                onClick={() => aimAt(i)}
+                                aria-pressed={lineIndex === i}
+                                title={toGridReference(lineAim[i], 8)}
+                                className={[
+                                  'grid w-full cursor-pointer gap-2 px-2.5 py-1.5 text-left text-[14px] tabular-nums transition-colors',
+                                  lineMixedCharges ? 'grid-cols-[2.25rem_1fr_1fr_3.5rem]' : 'grid-cols-[2.25rem_1fr_1fr]',
+                                  lineIndex === i ? 'bg-accent-soft text-app-text' : 'text-app-text-2 hover:bg-app-raised-hover',
+                                ].join(' ')}
+                              >
+                                <b className="text-app-text">{i + 1}</b>
+                                <span className="text-right font-medium text-app-text" title={row.solved ? undefined : t('mapPicker.out-of-range')}>
+                                  {row.solved ? Math.round(row.solved.elevation) : '-'}
+                                </span>
+                                <span className="text-right">{Math.round(row.azimuthMil)}</span>
+                                {lineMixedCharges && (
+                                  <span className="text-right">{row.solved ? row.solved.charge : '-'}</span>
+                                )}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
                   )}
                 </>
               )}
@@ -1633,8 +1765,12 @@ export function MapPicker({
               title: e.name,
               subtitle: e.author,
               thumb: e.preview,
-              group: t('picker.mods'),
-            }))}
+              group: e.kind === 'dlc' ? t('picker.dlc') : t('picker.mods'),
+              source: e.kind === 'dlc' ? ('dlc' as const) : ('mod' as const),
+              badge: e.lowQuality ? <MapQualityBadge /> : undefined,
+            }))
+            // DLC — первыми
+            .sort((a, b) => (a.source === b.source ? 0 : a.source === 'dlc' ? -1 : 1))}
           onPick={(key) => {
             setPickingMod(false)
             openMap(key)
@@ -1662,15 +1798,45 @@ export function MapPicker({
   )
 }
 
-function lineWeaponName(id: LineWeapon["id"]): string {
-  switch (id) {
-    case 'mortar':
-      return t('mapPicker.mortar')
-    case 'artillery':
-      return t('mapPicker.artillery')
-    case 'rocket':
-      return t('mapPicker.rocket')
-    case 'rocket-wide':
-      return t('mapPicker.rocket-wide')
+/** «Плотная · шаг 30 м»: название плотности и шаг между точками прицеливания. */
+function densityLabel(density: FireDensity, unitM: string): string {
+  const names: Record<FireDensity['id'], string> = {
+    dense: t('mapPicker.density-dense'),
+    medium: t('mapPicker.density-medium'),
+    sparse: t('mapPicker.density-sparse'),
+    'very-sparse': t('mapPicker.density-very-sparse'),
   }
+  return `${names[density.id]} · ${t('mapPicker.spacing')} ${density.radius * 2} ${unitM}`
+}
+
+/** Возвышение и азимут в точку линии крупно. */
+function LineSolution({
+  row,
+}: {
+  row: { azimuthMil: number; solved: { elevation: number; charge: number } | null } | undefined
+}) {
+  if (!row) return null
+  const mil = <span className="text-[13px] font-normal text-app-muted"> {t('unit.mil')}</span>
+  return (
+    <div className="mt-1 grid grid-cols-2 gap-2 tabular-nums">
+      <div className="min-w-0">
+        <p className="text-[12px] text-app-muted">{t('artilleryCalculator.elevation')}</p>
+        {row.solved ? (
+          <p className="text-[22px] leading-tight font-semibold whitespace-nowrap text-app-text">
+            {Math.round(row.solved.elevation)}
+            {mil}
+          </p>
+        ) : (
+          <p className="text-[14px] leading-[1.9] text-warn">{t('mapPicker.out-of-range')}</p>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[12px] text-app-muted">{t('artilleryCalculator.azimuth')}</p>
+        <p className="text-[22px] leading-tight font-semibold whitespace-nowrap text-app-text">
+          {Math.round(row.azimuthMil)}
+          {mil}
+        </p>
+      </div>
+    </div>
+  )
 }

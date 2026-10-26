@@ -116,11 +116,51 @@ interface Rect {
   left: number
   width: number
   height: number
+  // Отступ рамки сверху и снизу (не больше PAD)
+  padTop: number
+  padBottom: number
 }
 
 const PAD = 6
+// Толщина рамки (ring-2), она рисуется снаружи подсветки
+const RING = 2
 const CARD_MAX = 352
 const GAP = 12
+
+/**
+ * Границы подсвечиваемого: у строки списка — по её содержимому (подпись и
+ * поля), а не по всей высоте строки. Поле в две строки (снаряд «105 mm [HE]»
+ * на телефоне) растягивает строку, и рамка соседа на него заезжала.
+ */
+function contentBox(element: Element) {
+  const box = element.getBoundingClientRect()
+  if (!element.classList.contains('row')) return { top: box.top, bottom: box.bottom }
+  const parts = [...element.querySelectorAll(':scope > dt, :scope > dd > *')]
+    .map((part) => part.getBoundingClientRect())
+    .filter((r) => r.height > 0)
+  if (parts.length === 0) return { top: box.top, bottom: box.bottom }
+  return { top: Math.min(...parts.map((r) => r.top)), bottom: Math.max(...parts.map((r) => r.bottom)) }
+}
+
+/** Отступ рамки: PAD, но рамка не должна заходить на соседние строки. */
+function padsOf(element: Element) {
+  const own = contentBox(element)
+  const box = element.getBoundingClientRect()
+  let top = PAD
+  let bottom = PAD
+  const prev = element.previousElementSibling
+  const next = element.nextElementSibling
+  if (prev) {
+    const above = contentBox(prev).bottom
+    if (above <= own.top + 1) top = Math.max(0, Math.min(PAD, own.top - above - RING - 1))
+  }
+  if (next) {
+    const below = contentBox(next).top
+    if (below >= own.bottom - 1) bottom = Math.max(0, Math.min(PAD, below - own.bottom - RING - 1))
+  }
+  // Отступы считаются от содержимого: переводим их в отступы от самой строки
+  return { padTop: top - (own.top - box.top), padBottom: bottom - (box.bottom - own.bottom) }
+}
 
 /**
  * Обучение: базовое при первом запуске, продвинутое — после базового.
@@ -201,7 +241,7 @@ export function Tour() {
         return
       }
       const r = element.getBoundingClientRect()
-      setMeasured({ top: r.top, left: r.left, width: r.width, height: r.height })
+      setMeasured({ top: r.top, left: r.left, width: r.width, height: r.height, ...padsOf(element) })
     }
     const frame = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
@@ -261,16 +301,18 @@ export function Tour() {
     height: 0,
   }
   const pad = measured ? PAD : 0
+  const padTop = measured ? measured.padTop : 0
+  const padBottom = measured ? measured.padBottom : 0
 
   // Карточка: под подсветкой, если влезает, иначе над; без элемента — по центру
   let cardTop: number
   let cardLeft: number
   if (measured) {
-    const below = measured.top + measured.height + PAD + GAP
+    const below = measured.top + measured.height + padBottom + GAP
     cardTop =
       below + cardH + 12 <= viewport.h
         ? below
-        : measured.top - PAD - GAP - cardH
+        : measured.top - padTop - GAP - cardH
     cardTop = Math.min(Math.max(12, cardTop), viewport.h - cardH - 12)
     cardLeft = Math.min(Math.max(16, measured.left), viewport.w - cardW - 16)
   } else {
@@ -291,10 +333,10 @@ export function Tour() {
       <div
         className={`pointer-events-none absolute rounded-lg ${measured ? 'ring-2 ring-accent' : ''} ${move}`}
         style={{
-          top: spot.top - pad,
+          top: spot.top - padTop,
           left: spot.left - pad,
           width: spot.width + pad * 2,
-          height: spot.height + pad * 2,
+          height: spot.height + padTop + padBottom,
           boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)',
         }}
       />

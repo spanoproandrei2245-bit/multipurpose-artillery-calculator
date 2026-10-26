@@ -60,7 +60,7 @@ export function AnimatedNumber({
 
   return (
     <span key={pulse} className={`${pulse > 0 ? 'num-pop' : ''} ${className}`}>
-      {shown === null ? '—' : format(shown)}
+      {shown === null ? '-' : format(shown)}
     </span>
   )
 }

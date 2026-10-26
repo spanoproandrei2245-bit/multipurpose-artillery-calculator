@@ -135,6 +135,7 @@ export function ColorField({
   names,
   placement = 'top',
   compact = false,
+  inline = false,
 }: {
   value: MarkerColor
   onChange: (color: MarkerColor) => void
@@ -142,6 +143,9 @@ export function ColorField({
   placement?: 'top' | 'bottom'
   // Только кнопка с текущим цветом (панель с готовыми цветами и кругом)
   compact?: boolean
+  // Круг оттенков раскрывается под цветами внутри окна (по нажатию на цвет),
+  // а не поверх: так он не закрывает поля рядом
+  inline?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -157,16 +161,17 @@ export function ColorField({
   }, [open])
 
   const hover = (event: React.PointerEvent) => {
-    if (event.pointerType !== 'mouse') return
+    if (inline || event.pointerType !== 'mouse') return
     if (closeTimer.current !== null) window.clearTimeout(closeTimer.current)
     closeTimer.current = null
     setOpen(true)
   }
   const leave = (event: React.PointerEvent) => {
-    if (event.pointerType !== 'mouse') return
+    if (inline || event.pointerType !== 'mouse') return
     closeTimer.current = window.setTimeout(() => setOpen(false), 220)
   }
 
+  const custom = !(MARKER_COLORS as readonly string[]).includes(value)
   const swatch = (color: MarkerColor) => (
     <button
       key={color}
@@ -174,7 +179,11 @@ export function ColorField({
       role="radio"
       aria-checked={value === color}
       aria-label={names(color)}
-      onClick={() => onChange(color)}
+      onClick={() => {
+        onChange(color)
+        // На телефоне наведения нет: круг оттенков открывается нажатием
+        setOpen(true)
+      }}
       style={{ backgroundColor: markerRgb(color) }}
       className={[
         'h-6 w-6 shrink-0 cursor-pointer rounded-full ring-offset-2 ring-offset-black',
@@ -208,22 +217,18 @@ export function ColorField({
         ) : (
           <>
             {MARKER_COLORS.map(swatch)}
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-label={t('mapPicker.custom-colour')}
-              title={t('mapPicker.custom-colour')}
-              onClick={() => setOpen((v) => !v)}
-              className="h-6 w-6 shrink-0 cursor-pointer rounded-full ring-offset-2 ring-offset-black"
-              style={{
-                background:
-                  'conic-gradient(hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(0 100% 50%))',
-              }}
-            />
+            {custom && swatch(value)}
           </>
         )}
       </div>
 
+      {inline ? (
+        open && (
+          <div className="appear mt-2 flex justify-center">
+            <Wheel value={value} onChange={onChange} />
+          </div>
+        )
+      ) : (
       <div
         aria-hidden={!open}
         className={[
@@ -243,6 +248,7 @@ export function ColorField({
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

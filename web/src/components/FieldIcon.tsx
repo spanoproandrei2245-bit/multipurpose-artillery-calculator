@@ -394,6 +394,14 @@ const paths = {
       <path d="M6 12c1-4 4-7 8-7s5 3 4 6" />
     </>
   ),
+  // рельеф: две вершины
+  mountain: (
+    <>
+      <path d="M2.5 19.5 9 8l4.2 7.2" />
+      <path d="M10.8 19.5 15.5 11l6 8.5z" />
+      <path d="M2.5 19.5h19" />
+    </>
+  ),
   // предупреждение: треугольник с восклицательным знаком
   warning: (
     <>
@@ -408,6 +416,8 @@ const paths = {
       <path d="m8.5 12 2.5 2.5 4.5-5" />
     </>
   ),
+  // пример: треугольник «пуск»
+  play: <path d="M8 5.5v13l10.5-6.5z" />,
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

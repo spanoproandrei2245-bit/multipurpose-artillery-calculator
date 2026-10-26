@@ -166,7 +166,7 @@ export function AdjustFire({
           {t('adjustFire.adjust-fire')}
         </span>
         {hasTotal && (
-          <span className="tag tag-accent truncate">{describe(total)}</span>
+          <span className="tag tag-accent whitespace-normal">{describe(total)}</span>
         )}
       </summary>
 

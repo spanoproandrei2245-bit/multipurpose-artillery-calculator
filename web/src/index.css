@@ -178,6 +178,15 @@
     font-weight: 500;
     color: var(--color-text);
   }
+  /* Телефон: подписи чуть мельче и ближе к полям, чтобы влезать в одну строку */
+  @media (max-width: 639px) {
+    .row {
+      gap: 0.75rem;
+    }
+    .row > dt {
+      font-size: 15px;
+    }
+  }
   .row > dd,
   .row-value {
     text-align: right;
