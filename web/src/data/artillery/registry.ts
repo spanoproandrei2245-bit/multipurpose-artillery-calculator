@@ -15,4 +15,5 @@ export const artilleryRegistry = {
   d44: artilleryCatalog.d44_sog,
   h12: artilleryCatalog.h12_sog,
   kamaz: artilleryCatalog.kamaz_mrl,
+  m109a6: artilleryCatalog.m109a6_rhsusaf,
 } satisfies Record<ModelId, ArtilleryReference>

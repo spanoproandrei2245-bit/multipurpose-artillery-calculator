@@ -73,6 +73,14 @@ export const models = {
     modes: ['HIGH', 'LOW'],
     notes: 'Vanilla Zamak MRL (ACE realistic name: KamAZ MRL). Same in-game HIGH tables as Seara.',
   },
+
+  m109a6: {
+    name: 'M109A6 (155 mm)',
+    mod: 'RHSUSAF',
+    category: 'spg',
+    modes: ['HIGH', 'LOW'],
+    notes: 'RHSUSAF 155mm self-propelled howitzer.',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
