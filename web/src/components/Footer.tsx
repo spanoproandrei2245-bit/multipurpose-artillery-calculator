@@ -4,6 +4,7 @@ import { FieldIcon } from './FieldIcon'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
 import { isDesktop } from '../lib/desktop'
+import { runUpdateCheck, useUpdateStatus } from '../lib/updater'
 import { syncStatusColor, useSync } from '../lib/syncContext'
 import { setPanel, togglePanel } from '../lib/uiPanels'
 import { LANGUAGES } from '../i18n'
@@ -302,8 +303,50 @@ function AboutButton() {
               </span>
             </a>
           ))}
+          {isDesktop && <UpdateCheck />}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Программа для ПК: версия и проверка обновлений вручную, с результатом или ошибкой. */
+function UpdateCheck() {
+  const status = useUpdateStatus()
+  const text =
+    status.kind === 'checking'
+      ? t('update.checking')
+      : status.kind === 'latest'
+        ? t('update.latest')
+        : status.kind === 'available'
+          ? t('update.available', status.update.version)
+          : status.kind === 'error'
+            ? t('update.check-failed', status.message)
+            : t('update.version', __APP_VERSION__)
+  return (
+    <div className="mt-1 flex items-center gap-3 border-t border-app-border px-2.5 pt-3 pb-1.5">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
+        <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-app-text">{t('update.version', __APP_VERSION__)}</span>
+        <span
+          role="status"
+          className={`block break-words text-[12px] ${status.kind === 'error' ? 'text-danger' : status.kind === 'available' ? 'text-accent' : 'text-app-muted'}`}
+        >
+          {status.kind === 'idle' ? t('update.auto') : text}
+        </span>
+      </span>
+      <button
+        type="button"
+        className="btn btn-sm shrink-0"
+        disabled={status.kind === 'checking' || status.kind === 'available'}
+        onClick={() => void runUpdateCheck()}
+        title={t('update.check')}
+        aria-label={t('update.check')}
+      >
+        <FieldIcon name="reload" className="h-4 w-4" />
+      </button>
     </div>
   )
 }

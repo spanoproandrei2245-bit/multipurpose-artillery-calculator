@@ -273,8 +273,9 @@ export function ArtilleryCalculator({
     ammunition.find((ammo) => ammo.id === ammoId) ?? ammunition[0]
 
   // Погодные поправки и улучшенная баллистика — один переключатель: поправки
-  // имеют смысл только при игре с сопротивлением воздуха и погодой
-  const { profile, missingAdvanced } = selectProfile(
+  // имеют смысл только при игре с сопротивлением воздуха и погодой.
+  // substituted — траектории, для которых нет таблиц под эту физику
+  const { profile, substituted } = selectProfile(
     reference,
     selectedAmmo,
     showWeather
@@ -1200,9 +1201,11 @@ export function ArtilleryCalculator({
               </p>
             )}
 
-            {missingAdvanced && (
+            {profile && substituted.includes(mode) && (
               <p className={`${alertClass} text-warn`}>
-                {t('artilleryCalculator.advanced-missing')}
+                {showWeather
+                  ? t('artilleryCalculator.advanced-missing')
+                  : t('artilleryCalculator.no-drag-missing')}
               </p>
             )}
 
