@@ -49,6 +49,14 @@ export const models = {
     notes:
       'Vanilla M5 Sandstorm MLRS, M269 launcher, 227 mm HE rockets (ACE realistic name: Seara).',
   },
+
+  d44: {
+    name: 'D-44 (85 mm)',
+    mod: 'S.O.G. Prairie Fire (Vietnam DLC)',
+    category: 'towed',
+    modes: ['HIGH', 'LOW'],
+    notes: 'S.O.G. Prairie Fire 85mm divisional gun.',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
