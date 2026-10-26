@@ -63,7 +63,15 @@ export const models = {
     mod: 'S.O.G. Prairie Fire (Vietnam DLC)',
     category: 'mlrs',
     modes: ['HIGH', 'LOW'],
-    notes: 'S.O.G. Prairie Fire 107mm multiple rocket launcher (Type 63).',
+    notes: 'S.O.G. Prairie Fire 107mm multiple rocket launcher.',
+  },
+
+  kamaz: {
+    name: 'KamAZ MRL',
+    mod: 'Arma 3 · Zamak MRL',
+    category: 'mlrs',
+    modes: ['HIGH', 'LOW'],
+    notes: 'Vanilla Zamak MRL (ACE realistic name: KamAZ MRL). Same in-game HIGH tables as Seara.',
   },
 } as const satisfies Record<string, GameModel>
 
