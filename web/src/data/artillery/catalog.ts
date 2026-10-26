@@ -14,6 +14,7 @@ import m777Data from './m777_sod.json'
 import sholefData from './sholef.json'
 import sochorData from './sochor.json'
 import type53Data from './type53_sog.json'
+import type63Data from './type63_sog.json'
 
 import type { ArtilleryReference } from '../../types/artillery'
 
@@ -199,4 +200,5 @@ export const artilleryCatalog = {
   sholef: parseReference(sholefData, 'sholef'),
   sochor: parseReference(sochorData, 'sochor'),
   type53_sog: parseReference(type53Data, 'type53_sog'),
+  type63_sog: parseReference(type63Data, 'type63_sog'),
 }

@@ -121,6 +121,14 @@ export const models = {
     modes: ['HIGH'],
     notes: 'S.O.G. Prairie Fire 82mm mortar.',
   },
+
+  type63: {
+    name: 'Type 63 (60 mm)',
+    mod: 'S.O.G. Prairie Fire (Vietnam DLC)',
+    category: 'mortar',
+    modes: ['HIGH'],
+    notes: 'S.O.G. Prairie Fire 60mm mortar. Same in-game tables as the M2.',
+  },
 } as const satisfies Record<string, GameModel>
 
 export type ModelId = keyof typeof models
