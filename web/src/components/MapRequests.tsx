@@ -199,12 +199,12 @@ export function MapRequests({
                   <b className="tabular-nums">{request.votes}</b>
                 </button>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-app-text">{request.name}</span>
+                  <span className="block break-words text-app-text">{request.name}</span>
                   <a
                     href={`https://steamcommunity.com/sharedfiles/filedetails/?id=${request.workshopId}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="block truncate text-[12px] text-app-muted hover:underline"
+                    className="block break-all text-[12px] text-app-muted hover:underline"
                   >
                     Workshop {request.workshopId}
                   </a>

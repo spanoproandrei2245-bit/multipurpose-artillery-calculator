@@ -115,6 +115,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             title: models[id].name,
             subtitle: `${describe(id)} · ${t(categoryLabels[models[id].category])}`,
             group: isVanilla(id) ? t('picker.vanilla') : models[id].mod,
+            source: isVanilla(id) ? undefined : /\bDLC\b/i.test(models[id].mod) ? ('dlc' as const) : ('mod' as const),
             keywords: models[id].notes,
             icon: <ArtilleryIcon category={models[id].category} size="md" />,
           }))}

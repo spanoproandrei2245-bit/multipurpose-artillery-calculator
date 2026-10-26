@@ -6,7 +6,8 @@ import { OpenOnPhone } from '../components/OpenOnPhone'
 import { GLOBAL_HOTKEYS, isDesktop, toggleOverlay } from '../lib/desktop'
 import { SoundSettings } from '../components/SoundSettings'
 import { FeaturePreview } from '../components/FeaturePreview'
-import { SectionHeading, Switch, Toggle } from '../components/FormControls'
+import { FieldIcon, type FieldIconName } from '../components/FieldIcon'
+import { Switch, Toggle } from '../components/FormControls'
 import { setFlightOnMap, setFlightStyle, useFlightOnMap, useFlightStyle } from '../lib/animation'
 import { setFeature, useFeature } from '../lib/features'
 import { setMotion, useMotion, type MotionKind } from '../lib/motion'
@@ -24,27 +25,35 @@ interface SettingsPageProps {
   onKeepAwakeChange: (value: boolean) => void
 }
 
+/** Раздел настроек: значок, заголовок, пояснение и строки через разделитель. */
 function Card({
-  index,
+  id,
+  icon,
   title,
   description,
   children,
   className = '',
 }: {
-  index: string
+  id: string
+  icon: FieldIconName
   title: string
   description?: string
   children: ReactNode
   className?: string
 }) {
   return (
-    <div className={`panel  p-4 sm:p-5 ${className}`}>
-      <SectionHeading index={index} title={title} />
-      {description && (
-        <p className="mt-3 text-sm text-app-muted">{description}</p>
-      )}
-      {children}
-    </div>
+    <section id={id} className={`panel scroll-mt-20 p-4 sm:p-5 ${className}`}>
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+          <FieldIcon name={icon} className="h-5 w-5" />
+        </span>
+        <h3 className="text-[17px] font-semibold text-app-text">{title}</h3>
+      </div>
+      {description && <p className="mt-2 text-[13.5px] leading-relaxed text-app-muted">{description}</p>}
+      <div className="mt-3 divide-y divide-app-line [&>*]:py-3.5 [&>*:first-child]:pt-1 [&>*:last-child]:pb-0">
+        {children}
+      </div>
+    </section>
   )
 }
 
@@ -78,12 +87,40 @@ export function SettingsPage({
   const motionImpact = useMotion('impact')
   const flightOnMap = useFlightOnMap()
 
+  const sections: { id: string; icon: FieldIconName; title: string }[] = [
+    { id: 'settings-calc', icon: 'charge', title: t('settingsPage.calculator-sections') },
+    { id: 'settings-map', icon: 'map', title: t('settings.map-section') },
+    { id: 'settings-main', icon: 'settings', title: t('settings.preferences') },
+    { id: 'settings-motion', icon: 'fire', title: t('settingsPage.animations') },
+    { id: 'settings-sound', icon: 'sound', title: t('soundSettings.sounds') },
+    ...(isDesktop ? [{ id: 'settings-desktop', icon: 'desktop' as FieldIconName, title: t('settings.desktop') }] : []),
+    { id: 'settings-phone', icon: 'link', title: t('settings.openOnPhone') },
+  ]
+
   return (
     <section className="space-y-4">
+      {/* Быстрый переход к разделу: на телефоне страница длинная */}
+      <nav aria-label={t('settings.jump')} className="flex flex-wrap gap-1.5">
+        {sections.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            onClick={(event) => {
+              // Прокрутка без якоря в адресной строке
+              event.preventDefault()
+              document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-app-raised px-2.5 py-1 text-[13px] sm:px-3 sm:py-1.5 sm:text-[13.5px] font-medium text-app-text-2 transition-colors hover:bg-app-raised-hover hover:text-app-text"
+          >
+            <FieldIcon name={section.icon} className="h-4 w-4" />
+            {section.title}
+          </a>
+        ))}
+      </nav>
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
-          <Card index="01" title={t('settings.preferences')}>
-            <div className="mt-1">
+        <div className="flex flex-col gap-4">
+          <Card id="settings-main" icon="settings" title={t('settings.preferences')} description={t('settings.autoSave')}>
+            <div>
               <FeaturePreview id="keepAwake">
               <Switch
                 checked={keepAwake}
@@ -99,7 +136,7 @@ export function SettingsPage({
               </FeaturePreview>
             </div>
 
-            <div className="mt-5">
+            <div>
               <Switch
                 checked={hints}
                 onChange={(v) => setFeature('hints', v)}
@@ -110,17 +147,15 @@ export function SettingsPage({
               />
             </div>
 
-            <p className="label mt-5 text-app-faint">{t('settings.autoSave')}</p>
           </Card>
 
           <Card
-            index="02"
+            id="settings-motion"
+            icon="fire"
             title={t('settingsPage.animations')}
-            description={
-              t('settingsPage.shell-flight-and-impact-after')
-            }
+            description={t('settingsPage.shell-flight-and-impact-after')}
           >
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               {(
                 [
                   ['numbers', motionNumbers, 'settingsPage.motion-numbers', 'settingsPage.motion-numbers-description'],
@@ -164,11 +199,10 @@ export function SettingsPage({
           </Card>
 
           <SoundSettings />
-        </div>
 
-        <div className="space-y-4">
           {isDesktop && (
-            <Card index="03" title={t('settings.desktop')} description={t('settings.desktopDescription')}>
+            <Card id="settings-desktop" icon="desktop" title={t('settings.desktop')} description={t('settings.desktopDescription')}>
+              <div>
               <button
                 type="button"
                 onClick={() => void toggleOverlay()}
@@ -194,25 +228,29 @@ export function SettingsPage({
               <p className="mt-4 rounded-md bg-app-raised px-3 py-2 text-xs text-app-muted">
                 {t('settings.armaDisplayMode')}
               </p>
+              </div>
             </Card>
           )}
 
           <Card
-            index="04"
+            id="settings-phone"
+            icon="link"
             title={t('settings.openOnPhone')}
             description={t('settings.openOnPhoneDescription')}
           >
-            <OpenOnPhone />
+            <div>
+              <OpenOnPhone />
+            </div>
           </Card>
+        </div>
 
+        <div className="order-first flex flex-col gap-4">
           <Card
-            index="04"
+            id="settings-calc"
+            icon="charge"
             title={t('settingsPage.calculator-sections')}
-            description={
-              t('settingsPage.turn-on-only-what-you')
-            }
+            description={t('settingsPage.turn-on-only-what-you')}
           >
-            <div className="mt-4 space-y-4">
               <FeaturePreview id="adjust">
               <Switch
                 checked={adjust}
@@ -279,15 +317,14 @@ export function SettingsPage({
                 }
               />
               </FeaturePreview>
-            </div>
           </Card>
 
           <Card
-            index="05"
-            title={t('settings.experimental')}
-            description={t('settings.experimentalDescription')}
+            id="settings-map"
+            icon="map"
+            title={t('settings.map-section')}
+            description={t('settings.map-description')}
           >
-            <div className="mt-4 space-y-4">
               <FeaturePreview id="map">
               <Switch
                 checked={mapInput}
@@ -325,7 +362,6 @@ export function SettingsPage({
                 description={t('settings.gridInputDescription')}
               />
               </FeaturePreview>
-            </div>
           </Card>
         </div>
       </div>

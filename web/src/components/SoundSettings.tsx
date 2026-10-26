@@ -14,7 +14,8 @@ import {
   type SoundEvent,
 } from '../lib/sound'
 import { setTimerSound, useTimerSound } from '../lib/timerSound'
-import { SectionHeading, Switch } from './FormControls'
+import { FieldIcon } from './FieldIcon'
+import { Switch } from './FormControls'
 
 const LABELS: Record<SoundEvent, MessageKey> = {
   fire: 'soundSettings.fire-button-pressed',
@@ -60,9 +61,14 @@ export function SoundSettings() {
   const button = 'btn btn-sm'
 
   return (
-    <div className="panel p-4 sm:p-5">
-      <SectionHeading index="02" title={t('soundSettings.sounds')} />
-      <p className="mt-3 text-sm text-app-muted">
+    <div id="settings-sound" className="panel scroll-mt-20 p-4 sm:p-5">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+          <FieldIcon name="sound" className="h-5 w-5" />
+        </span>
+        <h3 className="text-[17px] font-semibold text-app-text">{t('soundSettings.sounds')}</h3>
+      </div>
+      <p className="mt-2 text-[13.5px] leading-relaxed text-app-muted">
         {t('soundSettings.your-own-file-for-each')}
       </p>
 
@@ -104,7 +110,7 @@ export function SoundSettings() {
               </p>
               <p
                 className={[
-                  'truncate  text-[12.5px]',
+                  'break-words  text-[12.5px]',
                   names[event] ? 'text-accent' : 'text-app-faint',
                 ].join(' ')}
               >

@@ -96,7 +96,7 @@ export function TargetBar({ entries, activeId, onLoad, actions }: Props) {
                   : 'bg-app-raised hover:bg-app-raised-hover',
               ].join(' ')}
             >
-              <span className="block max-w-40 truncate text-sm font-medium text-app-text">
+              <span className="block max-w-40 text-sm font-medium break-words text-app-text">
                 {entry.name}
               </span>
               <span className="block text-[12.5px] text-app-muted tabular-nums">

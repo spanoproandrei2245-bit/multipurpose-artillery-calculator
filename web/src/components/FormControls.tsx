@@ -107,11 +107,25 @@ export function Toggle<T extends string>({
   const ref = useRef<HTMLDivElement>(null)
   // Подвижная «таблетка» под выбранной кнопкой: переключение скользит
   const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
+  // Равные колонки: если подпись не влезает, сначала прячутся значки (1),
+  // потом уменьшается шрифт (2), потом колонки делятся по длине подписей (3),
+  // в крайнем случае подпись переносится (4). Многоточия нет: текст виден целиком.
+  const [fit, setFit] = useState(0)
+  const widthRef = useRef(0)
 
   useEffect(() => {
     const root = ref.current
     if (!root) return
     const measure = () => {
+      if (equal) {
+        // Стало шире — пробуем снова со значками
+        if (root.clientWidth > widthRef.current + 8 && widthRef.current > 0) setFit(0)
+        widthRef.current = root.clientWidth
+        const overflow = [...root.querySelectorAll<HTMLElement>('button > span')].some(
+          (span) => span.scrollWidth > span.clientWidth + 1
+        )
+        if (overflow) setFit((level) => Math.min(4, level + 1))
+      }
       const el = root.querySelector<HTMLElement>('button[aria-pressed="true"]')
       setPill(el ? { x: el.offsetLeft, w: el.offsetWidth } : null)
     }
@@ -125,7 +139,7 @@ export function Toggle<T extends string>({
       cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [value, options.length])
+  }, [value, options.length, equal, fit])
 
   return (
     <div
@@ -133,7 +147,7 @@ export function Toggle<T extends string>({
       role="group"
       aria-label={label}
       data-pill={pill ? '' : undefined}
-      className={`seg ${equal ? '!grid grid-flow-col auto-cols-fr' : ''} ${className}`}
+      className={`seg ${equal ? `!grid grid-flow-col ${fit >= 3 ? 'auto-cols-auto' : 'auto-cols-fr'}` : ''} ${className}`}
     >
       {pill && (
         <span
@@ -151,15 +165,28 @@ export function Toggle<T extends string>({
           aria-label={iconOnly ? option.label : undefined}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
-          className={equal ? 'min-w-0 justify-center !px-1.5 max-[430px]:!text-[12.5px]' : undefined}
+          className={
+            equal
+              ? `min-w-0 justify-center !px-1.5 ${fit >= 2 ? '!text-[12px] !tracking-tight' : ''}`
+              : undefined
+          }
         >
-          {option.icon && (
-            <FieldIcon
-              name={option.icon}
-              className={`${iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} ${equal ? 'max-[430px]:hidden' : ''}`}
-            />
+          {option.icon && !(equal && fit >= 1) && (
+            <FieldIcon name={option.icon} className={iconOnly ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} />
           )}
-          {!iconOnly && <span className={equal ? 'truncate' : undefined}>{option.label}</span>}
+          {!iconOnly && (
+            <span
+              className={
+                equal
+                  ? fit >= 4
+                    ? 'min-w-0 leading-tight [overflow-wrap:anywhere]'
+                    : 'min-w-0 overflow-hidden whitespace-nowrap'
+                  : undefined
+              }
+            >
+              {option.label}
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -221,10 +248,16 @@ export function Switch({
   return (
     <label
       className={[
-        'flex items-start gap-3',
+        'flex items-start justify-between gap-4',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       ].join(' ')}
     >
+      <span className="min-w-0">
+        <span className="block text-[15px] leading-snug font-medium text-app-text">{label}</span>
+        {description && (
+          <span className="mt-1 block text-[13px] leading-relaxed text-app-muted">{description}</span>
+        )}
+      </span>
       <input
         type="checkbox"
         role="switch"
@@ -236,24 +269,16 @@ export function Switch({
       <span
         aria-hidden="true"
         className={[
-          'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-solid',
+          'relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-solid',
           checked ? 'bg-accent-solid' : 'bg-app-raised-hover',
         ].join(' ')}
       >
         <span
           className={[
-            'absolute h-4 w-4 rounded-full bg-white shadow transition-all',
-            checked ? 'left-[18px]' : 'left-[2px]',
+            'absolute h-5 w-5 rounded-full bg-white shadow transition-all',
+            checked ? 'left-[22px]' : 'left-[2px]',
           ].join(' ')}
         />
-      </span>
-      <span>
-        <span className="block text-sm text-app-text">{label}</span>
-        {description && (
-          <span className="mt-0.5 block text-xs leading-relaxed text-app-muted">
-            {description}
-          </span>
-        )}
       </span>
     </label>
   )

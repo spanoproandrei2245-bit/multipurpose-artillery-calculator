@@ -234,7 +234,9 @@ async function importMap(source) {
   else await makePreview(world)
   // Официальные карты — от Bohemia Interactive, остальные — от сообщества
   const kind = /bohemia/i.test(map.author) ? 'official' : 'community'
-  return { world, displayName: map.displayName, author: map.author, kind, worldSize }
+  // Снята из игры без grad_meh (tools/arma): в приложении — значок «упрощённое качество»
+  const quality = meta.source === 'gradtopo' ? 'low' : undefined
+  return { world, displayName: map.displayName, author: map.author, kind, ...(quality ? { quality } : {}), worldSize }
 }
 
 // ---- список карт ----
@@ -261,6 +263,8 @@ for (const source of sources) {
   // Названия на других языках задаются в index.json руками — не затираем
   const previous = index.maps.find((m) => m.world === entry.world)
   if (previous?.names) entry.names = previous.names
+  // DLC размечается в index.json руками (по автору не отличить от базовой игры)
+  if (previous?.kind === 'dlc') entry.kind = 'dlc'
   index.maps = [...index.maps.filter((m) => m.world !== entry.world), entry].sort(
     (a, b) => a.displayName.localeCompare(b.displayName)
   )

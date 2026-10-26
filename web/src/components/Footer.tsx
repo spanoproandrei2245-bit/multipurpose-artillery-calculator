@@ -243,8 +243,8 @@ function AboutButton() {
               <FieldIcon name="user" className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-app-text">Heis</span>
-              <span className="block truncate text-[12px] text-app-muted">
+              <span className="block break-words text-app-text">Heis</span>
+              <span className="block break-words text-[12px] text-app-muted">
                 {t('footer.author-on-github')}
               </span>
             </span>
@@ -297,8 +297,8 @@ function AboutButton() {
                 {item.icon}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-app-text">{item.title}</span>
-                <span className="block truncate text-[12px] text-app-muted">{item.text}</span>
+                <span className="block break-words text-app-text">{item.title}</span>
+                <span className="block break-words text-[12px] text-app-muted">{item.text}</span>
               </span>
             </a>
           ))}
@@ -324,10 +324,10 @@ export function Footer({
   // Телефон: сверху «О программе», обучение и язык; ниже связка, тема, настройки.
   // Компьютер: всё в одну строку, справа от «О программе».
   return (
-    <footer className="mx-auto grid w-full max-w-[1240px] grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-4 py-4 sm:flex sm:flex-wrap sm:px-6 sm:py-5">
+    <footer className="mx-auto grid w-full max-w-[1240px] grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-4 py-4 sm:flex sm:flex-nowrap sm:px-6 sm:py-5">
       <AboutButton />
 
-      <div className="col-start-2 row-start-1 justify-self-start sm:ml-auto">
+      <div className="col-start-2 row-start-1 justify-self-start">
         <Dropdown
           up
           variant="ghost"
@@ -373,10 +373,13 @@ export function Footer({
           type="button"
           onClick={() => togglePanel('hotkeys')}
           data-tour="hotkeys"
+          title={t('footer.keyboard-shortcuts')}
+          aria-label={t('footer.keyboard-shortcuts')}
           className="btn btn-ghost hidden sm:inline-flex"
         >
           <FieldIcon name="keyboard" className="h-[18px] w-[18px]" />
-          {t('footer.keyboard-shortcuts')}
+          {/* На средней ширине — только значок, подпись в подсказке */}
+          <span className="hidden xl:inline">{t('footer.keyboard-shortcuts')}</span>
         </button>
 
         {!isDesktop && (
@@ -385,10 +388,11 @@ export function Footer({
             target="_blank"
             rel="noreferrer"
             title={t('footer.overlay-on-top-of-the')}
+            aria-label={t('footer.desktop-app')}
             className="btn btn-ghost max-sm:hidden"
           >
             <FieldIcon name="desktop" className="h-[18px] w-[18px]" />
-            {t('footer.desktop-app')}
+            <span className="hidden lg:inline">{t('footer.desktop-app')}</span>
           </a>
         )}
 
@@ -398,7 +402,7 @@ export function Footer({
           data-tour="link"
           aria-pressed={view === 'sync'}
           className={[
-            'btn col-span-2 col-start-1 row-start-2 justify-center max-sm:h-11',
+            'btn col-span-2 col-start-1 row-start-2 justify-center max-sm:h-11 sm:ml-auto',
             view === 'sync' ? 'bg-app-raised-hover text-app-text' : '',
           ].join(' ')}
         >

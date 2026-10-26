@@ -70,9 +70,9 @@ import { ScreenMarkers } from './ScreenMarkers'
 import { CoordinatePlate } from './map/CoordinatePlate'
 import { DrawToolbar, type DrawTool } from './map/DrawToolbar'
 import { MapGlyph } from './map/MapGlyph'
+import { MapQualityBadge } from './map/MapQualityBadge'
 import { colorName, markerTitle } from './map/mapLabels'
-import { MarkersPanel } from './map/MarkersPanel'
-import { TargetsPanel } from './map/TargetsPanel'
+import { MapPointsPanel } from './map/MapPointsPanel'
 
 export interface MapSelection {
   distance: number
@@ -1158,11 +1158,14 @@ export function MapPicker({
     key: `builtin:${m.world}`,
     name: m.names?.[language] ?? m.displayName,
     author: m.author,
+    kind: mapKind(m),
     official: mapKind(m) === 'official',
+    lowQuality: m.quality === 'low',
     preview: `${MAPS_BASE}${m.world}/preview.webp`,
   }))
+  const current = mapEntries.find((e) => e.key === mapKey)
   function mapLabel(key: string): string {
-    return mapEntries.find((e) => e.key === key)?.name ?? '—'
+    return mapEntries.find((e) => e.key === key)?.name ?? '-'
   }
   const isFavorite = (key: string) => favorites.includes(key)
   const listed = mapEntries.filter(
@@ -1188,6 +1191,14 @@ export function MapPicker({
     icon: <MapGlyph />,
     trailing: (
       <span className="flex shrink-0 items-center gap-1.5">
+        {e.lowQuality && <MapQualityBadge />}
+        {mapOptionTrailing(e)}
+      </span>
+    ),
+  }))
+  function mapOptionTrailing(e: (typeof mapEntries)[number]) {
+    return (
+      <span className="flex shrink-0 items-center gap-1.5">
         <img src={e.preview} alt="" loading="lazy" className="h-9 w-9 rounded object-cover" />
         <button
           type="button"
@@ -1206,8 +1217,8 @@ export function MapPicker({
           <FieldIcon name={isFavorite(e.key) ? 'starFilled' : 'star'} className="h-4 w-4" />
         </button>
       </span>
-    ),
-  }))
+    )
+  }
   const actionIcon = (name: FieldIconName) => (
     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-app-raised-hover text-app-text">
       <FieldIcon name={name} className="h-4 w-4" />
@@ -1372,26 +1383,22 @@ export function MapPicker({
           />
           </div>
 
-          {/* Слева: цели журнала — выбор, экспорт и импорт */}
-          <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
-          {targetActions && (
-            <TargetsPanel
-              targets={quickTargets}
-              actions={targetActions}
-              onPick={onPickJournalTarget}
-              onNotice={setNotice}
-            />
+          {/* Слева: один список «Метки» (сохранённые цели и метки) */}
+          {(targetActions || showMarkers) && (
+            <div className="absolute top-2 left-2 flex max-w-[60%] flex-col items-start gap-2">
+              <MapPointsPanel
+                targets={quickTargets}
+                actions={targetActions}
+                onPickTarget={onPickJournalTarget}
+                markers={showMarkers ? markers : null}
+                now={now}
+                onTargetMarker={(marker) => placeTarget({ x: marker.x, y: marker.y })}
+                onAddByGrid={(point) => setDraft({ point, label: '', color: markerColor })}
+                onNotice={setNotice}
+                shared={sync.enabled}
+              />
+            </div>
           )}
-
-          {showMarkers && (
-            <MarkersPanel
-              markers={markers}
-              now={now}
-              onTarget={(marker) => placeTarget({ x: marker.x, y: marker.y })}
-              onAddByGrid={(point) => setDraft({ point, label: '', color: markerColor })}
-            />
-          )}
-          </div>
 
           {draft && (
             <div className="absolute right-2 bottom-14 left-2 mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-lg bg-black/80 p-2 text-white/90 shadow-lg backdrop-blur-sm">
@@ -1471,6 +1478,7 @@ export function MapPicker({
       {/* ---- Панель под картой ---- */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {builtin.length > 0 && <MapGlyph big />}
+        {current?.lowQuality && <MapQualityBadge />}
         {builtin.length > 0 && (
           <Dropdown
             tourId="map-select"
@@ -1478,7 +1486,7 @@ export function MapPicker({
             value={mapKey}
             onChange={(key) => (key === MOD_MAPS ? setPickingMod(true) : openMap(key))}
             alignLeft
-            placeholder="—"
+            placeholder="-"
             buttonLabel={mapLabel(mapKey)}
             options={mapOptions}
           />
@@ -1633,8 +1641,12 @@ export function MapPicker({
               title: e.name,
               subtitle: e.author,
               thumb: e.preview,
-              group: t('picker.mods'),
-            }))}
+              group: e.kind === 'dlc' ? t('picker.dlc') : t('picker.mods'),
+              source: e.kind === 'dlc' ? ('dlc' as const) : ('mod' as const),
+              badge: e.lowQuality ? <MapQualityBadge /> : undefined,
+            }))
+            // DLC — первыми
+            .sort((a, b) => (a.source === b.source ? 0 : a.source === 'dlc' ? -1 : 1))}
           onPick={(key) => {
             setPickingMod(false)
             openMap(key)

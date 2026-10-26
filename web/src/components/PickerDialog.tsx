@@ -15,7 +15,13 @@ export interface PickerItem {
   icon?: ReactNode
   // Дополнительные слова для поиска
   keywords?: string
+  // DLC или мод: по этому работает фильтр вверху окна
+  source?: 'dlc' | 'mod'
+  // Значок в углу карточки (например, предупреждение о качестве)
+  badge?: ReactNode
 }
+
+type SourceFilter = 'all' | 'dlc' | 'mod'
 
 interface Props {
   title: string
@@ -47,7 +53,10 @@ export function PickerDialog({
   footer,
 }: Props) {
   const [query, setQuery] = useState('')
+  const [source, setSource] = useState<SourceFilter>('all')
   const inputRef = useRef<HTMLInputElement>(null)
+  // Фильтр нужен, только если есть и DLC, и моды
+  const hasSources = items.some((i) => i.source === 'dlc') && items.some((i) => i.source === 'mod')
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -64,10 +73,11 @@ export function PickerDialog({
   const shown = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     return items.filter((item) => {
+      if (source !== 'all' && item.source !== source) return false
       const haystack = `${item.title} ${item.subtitle ?? ''} ${item.group ?? ''} ${item.keywords ?? ''}`.toLowerCase()
       return words.every((w) => haystack.includes(w))
     })
-  }, [items, query])
+  }, [items, query, source])
 
   // Избранные — сверху отдельной группой, остальные по группам в порядке появления
   const groups = useMemo(() => {
@@ -131,6 +141,36 @@ export function PickerDialog({
         </button>
       </div>
 
+      {hasSources && (
+        <div
+          role="group"
+          aria-label={t('picker.filter')}
+          className="mx-auto flex w-full max-w-5xl justify-center gap-1.5 px-4 pb-3"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {(
+            [
+              ['all', t('picker.filter-all')],
+              ['dlc', t('picker.filter-dlc')],
+              ['mod', t('picker.filter-mods')],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={source === value}
+              onClick={() => setSource(value)}
+              className={[
+                'cursor-pointer rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition-colors',
+                source === value ? 'bg-accent-solid text-white' : 'bg-white/10 text-white/80 hover:bg-white/20',
+              ].join(' ')}
+            >
+              {label} <span className="opacity-70">{value === 'all' ? items.length : items.filter((i) => i.source === value).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div
         className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 pb-6"
         onClick={(event) => event.stopPropagation()}
@@ -173,16 +213,19 @@ export function PickerDialog({
                         )}
                       </span>
                       <span className="block px-2.5 py-2">
-                        <span className="block truncate text-[14px] font-medium text-app-text">
+                        <span className="block text-[14px] leading-snug font-medium break-words text-app-text">
                           {item.title}
                         </span>
                         {item.subtitle && (
-                          <span className="block truncate text-[11.5px] text-app-muted opacity-70">
+                          <span className="block text-[11.5px] leading-snug break-words text-app-muted opacity-70">
                             {item.subtitle}
                           </span>
                         )}
                       </span>
                     </button>
+                    {item.badge && (
+                      <span className="pointer-events-auto absolute top-1.5 left-1.5">{item.badge}</span>
+                    )}
                     {onToggleFavorite && (
                       <button
                         type="button"

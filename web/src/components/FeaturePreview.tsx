@@ -1,7 +1,8 @@
 import { t, type MessageKey } from '../i18n'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { useFeature } from '../lib/features'
+import { FieldIcon } from './FieldIcon'
 
 export type PreviewId =
   | 'map'
@@ -262,65 +263,40 @@ const CAPTIONS: Record<PreviewId, MessageKey> = {
 }
 
 /**
- * Демонстрация функции при наведении (или фокусе, или долгом нажатии):
- * короткая зацикленная анимация и подпись, что это и как пользоваться.
+ * Строка настройки с примером: под ней кнопка «Показать пример», по нажатию
+ * открывается короткая анимация и подпись. Без наведения и долгого нажатия:
+ * на телефоне так удобнее, и анимация не рисуется, пока её не открыли.
  */
 export function FeaturePreview({
   id,
   children,
 }: {
   id: PreviewId
-  
   children: ReactNode
 }) {
   const hints = useFeature('hints')
-  const [openRaw, setOpen] = useState(false)
-  const open = openRaw && hints
-  const timer = useRef<number | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current)
-    },
-    []
-  )
-
-  function show(delay: number) {
-    if (timer.current !== null) window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setOpen(true), delay)
-  }
-  function hide() {
-    if (timer.current !== null) window.clearTimeout(timer.current)
-    timer.current = null
-    setOpen(false)
-  }
+  const [open, setOpen] = useState(false)
 
   return (
-    <div
-      className="relative"
-      onPointerEnter={(e) => e.pointerType === 'mouse' && show(250)}
-      onPointerLeave={(e) => e.pointerType === 'mouse' && hide()}
-      onPointerDown={(e) => e.pointerType !== 'mouse' && show(450)}
-      onPointerUp={(e) => e.pointerType !== 'mouse' && hide()}
-      onFocus={() => show(0)}
-      onBlur={hide}
-    >
+    <div>
       {children}
-      {open && (
-        <div
-          role="tooltip"
-          className="pointer-events-none absolute top-full left-0 z-40 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-lg bg-app-raised p-3 shadow-xl shadow-black/50"
+      {hints && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="mt-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md text-[13px] font-medium text-accent hover:underline"
         >
-          <svg
-            viewBox="0 0 240 140"
-            className="block w-full rounded-md bg-app-surface"
-            aria-hidden="true"
-          >
+          <FieldIcon name={open ? 'close' : 'play'} className="h-3.5 w-3.5" />
+          {open ? t('featurePreview.hide') : t('featurePreview.show')}
+        </button>
+      )}
+      {hints && open && (
+        <div className="appear mt-2 max-w-sm rounded-lg bg-app-raised p-3">
+          <svg viewBox="0 0 240 140" className="block w-full rounded-md bg-app-surface" aria-hidden="true">
             <Demo id={id} />
           </svg>
-          <p className="mt-2 text-[13px] leading-snug text-app-text-2">
-            {t(CAPTIONS[id])}
-          </p>
+          <p className="mt-2 text-[13px] leading-snug text-app-text-2">{t(CAPTIONS[id])}</p>
         </div>
       )}
     </div>

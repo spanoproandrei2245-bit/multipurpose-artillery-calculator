@@ -148,7 +148,7 @@ describe('Toggle и Row', () => {
 describe('AnimatedNumber', () => {
   it('показывает прочерк без значения и число со значением', () => {
     const { rerender } = render(<AnimatedNumber value={null} />)
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByText('-')).toBeInTheDocument()
     rerender(<AnimatedNumber value={1043.4} />)
     return waitFor(() => expect(screen.getByText('1043')).toBeInTheDocument())
   })

@@ -90,7 +90,7 @@ function ErrorCard({
       <p className="text-[14px] text-app-text-2">
         {page ? t('errorBoundary.text') : t('errorBoundary.map-text')}
       </p>
-      <p className="truncate rounded-md bg-app-raised px-3 py-2 font-mono text-[12.5px] text-app-muted">
+      <p className="rounded-md bg-app-raised px-3 py-2 font-mono break-all text-[12.5px] text-app-muted">
         {entry.message}
       </p>
       <div className="flex flex-wrap gap-2">

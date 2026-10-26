@@ -81,6 +81,7 @@ import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
 import { CrashProbe, ErrorBoundary } from './ErrorBoundary'
+import { readCalcDraft, readModelDraft, writeCalcDraft, writeModelDraft } from '../lib/calcDraft'
 import { DataStatusBadge } from './DataStatusBadge'
 import { WeatherRows } from './WeatherRows'
 
@@ -147,21 +148,35 @@ export function ArtilleryCalculator({
   const reference = artilleryRegistry[modelId]
   const ammunition = reference.ammunition ?? []
 
+  // Черновик: введённое ранее (другим орудием, до перезагрузки). Запись
+  // журнала, если её загрузили, важнее черновика.
+  const [draft] = useState(() => (initial ? null : readCalcDraft()))
+  const [modelDraft] = useState(() => (initial ? {} : readModelDraft(modelId)))
+
   // Режим из загруженной записи журнала, если модель его поддерживает
   // Траектория: выбранная вручную или «авто» — лучшая по приоритету заряда
   const [modeChoice, setModeChoice] = useState<ArtilleryMode | 'auto'>(() =>
     initial?.mode && reference.availableModes.includes(initial.mode)
       ? initial.mode
-      : reference.availableModes.length > 1
-        ? 'auto'
-        : reference.availableModes[0]
+      : modelDraft.modeChoice &&
+          (modelDraft.modeChoice === 'auto'
+            ? reference.availableModes.length > 1
+            : reference.availableModes.includes(modelDraft.modeChoice))
+        ? modelDraft.modeChoice
+        : reference.availableModes.length > 1
+          ? 'auto'
+          : reference.availableModes[0]
   )
   const [ammoId, setAmmoId] = useState(
     initial && ammunition.some((a) => a.id === initial.ammoId)
       ? initial.ammoId
-      : (ammunition[0]?.id ?? '')
+      : modelDraft.ammoId && ammunition.some((a) => a.id === modelDraft.ammoId)
+        ? modelDraft.ammoId
+        : (ammunition[0]?.id ?? '')
   )
-  const [distance, setDistance] = useState(numberToField(initial?.distance))
+  const [distance, setDistance] = useState(
+    initial ? numberToField(initial.distance) : (draft?.distance ?? '')
+  )
   // Высота орудия: блокировка сохраняет значение между запусками и
   // защищает его от карты, журнала и «Сброса».
   const [heightLocked, setHeightLocked] = useState(
@@ -170,7 +185,9 @@ export function ArtilleryCalculator({
   const [ownHeight, setOwnHeightRaw] = useState(() =>
     readStored<'on' | 'off'>('ownHeightLocked', ['on', 'off'], 'off') === 'on'
       ? readStoredText('ownHeightValue')
-      : numberToField(initial?.ownHeight)
+      : initial
+        ? numberToField(initial.ownHeight)
+        : (draft?.ownHeight ?? '')
   )
   const setOwnHeight = (value: string) => {
     if (!heightLocked) setOwnHeightRaw(value)
@@ -180,13 +197,15 @@ export function ArtilleryCalculator({
     if (heightLocked) writeStored('ownHeightValue', ownHeight)
   }, [heightLocked, ownHeight])
   const [targetHeight, setTargetHeight] = useState(
-    numberToField(initial?.targetHeight)
+    initial ? numberToField(initial.targetHeight) : (draft?.targetHeight ?? '')
   )
-  const [azimuth, setAzimuth] = useState(numberToField(initial?.azimuth))
+  const [azimuth, setAzimuth] = useState(
+    initial ? numberToField(initial.azimuth) : (draft?.azimuth ?? '')
+  )
   // Точка цели на карте, если цель ставили на карте; ручная правка
   // дистанции или азимута её сбрасывает.
   const [mapTarget, setMapTarget] = useState<MapTarget | null>(
-    initial?.target ?? null
+    initial ? (initial.target ?? null) : (draft?.mapTarget ?? null)
   )
   const [azimuthUnit, setAzimuthUnit] = useState<AngleUnit>(
     () =>
@@ -198,8 +217,9 @@ export function ArtilleryCalculator({
   // он становится одной записью истории.
   const [adjustHistory, setAdjustHistory] = useState<AdjustmentEntry[]>(
     () => {
-      const range = initial?.rangeCorrection ?? 0
-      const lateral = initial?.lateralCorrection ?? 0
+      if (!initial) return draft?.adjust ?? []
+      const range = initial.rangeCorrection ?? 0
+      const lateral = initial.lateralCorrection ?? 0
       return range !== 0 || lateral !== 0
         ? [{ range, lateral, label: t('artilleryCalculator.from-journal') }]
         : []
@@ -212,8 +232,16 @@ export function ArtilleryCalculator({
   const [totAt, setTotAt] = useState<number | null>(null)
 
   const [chosenCharge, setChosenCharge] = useState<number | null>(
-    initial?.charge ?? null
+    initial ? (initial.charge ?? null) : (modelDraft.charge ?? null)
   )
+
+  // Всё введённое сохраняется сразу: смена орудия, настройки, перезагрузка
+  useEffect(() => {
+    writeCalcDraft({ distance, ownHeight, targetHeight, azimuth, mapTarget, adjust: adjustHistory })
+  }, [distance, ownHeight, targetHeight, azimuth, mapTarget, adjustHistory])
+  useEffect(() => {
+    writeModelDraft(modelId, { ammoId, modeChoice, charge: chosenCharge })
+  }, [modelId, ammoId, modeChoice, chosenCharge])
   const [saveName, setSaveName] = useState('')
   const [justSaved, setJustSaved] = useState<'saved' | 'updated' | null>(
     null
@@ -1207,7 +1235,7 @@ export function ArtilleryCalculator({
                   <button
                     type="button"
                     onClick={handleUpdate}
-                    className="btn flex-1 truncate"
+                    className="btn flex-1 text-center leading-tight whitespace-normal"
                   >
                     {justSaved === 'updated'
                       ? t('artilleryCalculator.updated')

@@ -408,6 +408,8 @@ const paths = {
       <path d="m8.5 12 2.5 2.5 4.5-5" />
     </>
   ),
+  // пример: треугольник «пуск»
+  play: <path d="M8 5.5v13l10.5-6.5z" />,
 } satisfies Record<string, ReactNode>
 
 export type FieldIconName = keyof typeof paths

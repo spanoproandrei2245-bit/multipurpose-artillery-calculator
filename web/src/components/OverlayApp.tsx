@@ -207,7 +207,7 @@ export function OverlayApp() {
         <span data-tauri-drag-region className="h-2 w-2 shrink-0 rounded-full bg-gun" />
         <p
           data-tauri-drag-region
-          className="min-w-0 flex-1 truncate text-[15px] font-semibold text-app-text"
+          className="min-w-0 flex-1 break-words text-[15px] font-semibold text-app-text"
         >
           {state ? (state.targetName ?? state.title) : t('overlayApp.no-data')}
         </p>
@@ -264,7 +264,7 @@ export function OverlayApp() {
                 solution.azimuth === null ? 'text-app-faint' : '',
               ].join(' ')}
             >
-              {solution.azimuth ?? '——'}
+              {solution.azimuth ?? '-'}
             </p>
           </div>
           <p className="flex items-center gap-2 text-[15px] text-app-text tabular-nums">
@@ -366,9 +366,9 @@ export function OverlayApp() {
       )}
 
       <p data-tauri-drag-region className="mt-2 text-[11.5px] leading-relaxed text-app-faint">
-        Ctrl+Alt+F — {t('combatScreen.fire')} · Ctrl+Alt+D —{' '}
-        {t('overlayApp.input-2')} · Ctrl+Alt+O — {t('overlayApp.hide')} ·
-        Ctrl+Alt+M — HIGH/LOW · Ctrl+Alt+N/P — {t('overlayApp.targets')}
+        Ctrl+Alt+F: {t('combatScreen.fire')} · Ctrl+Alt+D:{' '}
+        {t('overlayApp.input-2')} · Ctrl+Alt+O: {t('overlayApp.hide')} ·
+        Ctrl+Alt+M: HIGH/LOW · Ctrl+Alt+N/P: {t('overlayApp.targets')}
       </p>
     </div>
   )
@@ -488,7 +488,7 @@ function SpotReport({ state }: { state: OverlayState }) {
         >
           {t('overlayApp.undo')}
         </button>
-        <p className="min-w-0 flex-1 truncate text-right text-[12.5px] text-app-muted tabular-nums">
+        <p className="min-w-0 flex-1 break-words text-right text-[12.5px] text-app-muted tabular-nums">
           {adjust.count === 0
             ? t('overlayApp.no-corrections')
             : `${t('overlayApp.range')} ${formatSigned(adjust.range, 0)} · ${
