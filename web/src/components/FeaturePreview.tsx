@@ -12,6 +12,7 @@ export type PreviewId =
   | 'adjust'
   | 'weather'
   | 'tot'
+  | 'mrsi'
   | 'journal'
   | 'table'
   | 'keepAwake'
@@ -193,6 +194,47 @@ function Demo({ id }: { id: PreviewId }) {
           <text x="124" y="118" fontSize="9.5" fill={INK}>{t('featurePreview.countdown-5-4-3-2')}</text>
         </>
       )
+    case 'mrsi': {
+      // Вылет: высокая дуга первой, низкая последней; разрыв у всех в 0.8 цикла
+      const arcs = [
+        { d: 'M28 116 Q120 -36 212 116', from: 0 },
+        { d: 'M28 116 Q120 14 212 116', from: 0.2 },
+        { d: 'M28 116 Q120 64 212 116', from: 0.38 },
+      ]
+      return (
+        <>
+          <path d="M14 118H226" stroke={INK} strokeOpacity=".4" />
+          {arcs.map((arc) => (
+            <g key={arc.d}>
+              <path d={arc.d} fill="none" stroke={INK} strokeOpacity=".35" strokeDasharray="3 4" />
+              <circle r="3.5" fill="var(--color-text)">
+                <animateMotion
+                  path={arc.d}
+                  dur={LOOP}
+                  repeatCount="indefinite"
+                  calcMode="linear"
+                  keyPoints="0;0;1;1"
+                  keyTimes={`0;${arc.from};0.8;1`}
+                />
+                <animate
+                  attributeName="opacity"
+                  dur={LOOP}
+                  repeatCount="indefinite"
+                  keyTimes={`0;${arc.from};${arc.from + 0.01};0.8;0.81;1`}
+                  values="0;0;1;1;0;0"
+                />
+              </circle>
+            </g>
+          ))}
+          <Dot x={28} y={116} color={GUN} />
+          <Dot x={212} y={116} color={TARGET} />
+          <circle cx="212" cy="116" r="0" fill="none" stroke="#ffb020" strokeWidth="3">
+            <animate attributeName="r" dur={LOOP} repeatCount="indefinite" keyTimes="0;0.8;0.95;1" values="0;0;18;18" />
+            <animate attributeName="opacity" dur={LOOP} repeatCount="indefinite" keyTimes="0;0.8;0.95;1" values="0;1;0;0" />
+          </circle>
+        </>
+      )
+    }
     case 'journal':
       return (
         <>
@@ -257,6 +299,7 @@ const CAPTIONS: Record<PreviewId, MessageKey> = {
   adjust: 'featurePreview.the-observer-reports-short-over',
   weather: 'featurePreview.wind-temperature-and-pressure-adjust',
   tot: 'featurePreview.set-the-impact-time-the',
+  mrsi: 'featurePreview.mrsi',
   journal: 'featurePreview.save-targets-and-switch-between',
   table: 'featurePreview.the-in-game-elevation-table',
   keepAwake: 'featurePreview.the-phone-screen-stays-on',

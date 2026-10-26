@@ -18,6 +18,8 @@ export type FeatureId =
   | 'volley'
   // Только заряды, чем-то хорошие: лучший, быстрый, точный
   | 'onlyGood'
+  // Одновременный удар (MRSI): только буксируемые орудия и САУ
+  | 'mrsi'
 
 const KEY_PREFIX = 'feature:'
 const DEFAULT_ON: ReadonlySet<FeatureId> = new Set<FeatureId>(['hints', 'hideUnfit'])

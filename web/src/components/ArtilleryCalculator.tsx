@@ -76,7 +76,7 @@ import type { FlightShot } from './FlightCanvas'
 import type { JournalActions } from '../lib/journalIO'
 import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
-import { MrsiPanel } from './MrsiPanel'
+import { MrsiPanel, MrsiUnavailable } from './MrsiPanel'
 import { SyncStatusLine } from './SyncStatusLine'
 import { TotPanel } from './TotPanel'
 import { fireMoment } from '../lib/tot'
@@ -139,6 +139,7 @@ export function ArtilleryCalculator({
   const showAdjust = useFeature('adjust')
   const showWeather = useFeature('weather')
   const showTot = useFeature('tot')
+  const showMrsi = useFeature('mrsi')
   const showJournal = useFeature('journal')
   const showTable = useFeature('table')
   const showHints = useFeature('hints')
@@ -1342,12 +1343,12 @@ export function ArtilleryCalculator({
         </div>
 
         <div className="min-w-0 space-y-3">
-          {mrsiAllowed && (
-            <MrsiPanel
-              options={mrsiOptions}
-              showMode={profileModes.length > 1}
-            />
-          )}
+          {showMrsi &&
+            (mrsiAllowed ? (
+              solution && <MrsiPanel options={mrsiOptions} showMode={profileModes.length > 1} />
+            ) : (
+              <MrsiUnavailable />
+            ))}
 
           {profile && showTable && (
             <BallisticTableView

@@ -29,11 +29,22 @@ export function DataStatusBadge({
         title={text}
         aria-label={text}
         className={[
-          'absolute -right-1 -bottom-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-app-bg',
-          ok ? 'text-ok' : 'text-warn',
+          'absolute right-0.5 bottom-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-black/80',
+          ok ? 'bg-ok' : 'bg-warn',
         ].join(' ')}
       >
-        <FieldIcon name={ok ? 'shieldCheck' : 'warning'} className="h-3.5 w-3.5" />
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="h-2.5 w-2.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {ok ? <path d="m6.5 12.5 3.6 3.6L17.5 8.5" /> : <path d="M12 5.5v8M12 18.5v.01" />}
+        </svg>
       </span>
     )
   }

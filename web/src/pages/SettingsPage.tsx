@@ -72,6 +72,7 @@ export function SettingsPage({
   const adjust = useFeature('adjust')
   const weather = useFeature('weather')
   const tot = useFeature('tot')
+  const mrsi = useFeature('mrsi')
   const journal = useFeature('journal')
   const table = useFeature('table')
   const hints = useFeature('hints')
@@ -277,6 +278,14 @@ export function SettingsPage({
                 description={
                   t('settingsPage.set-the-impact-time-and')
                 }
+              />
+              </FeaturePreview>
+              <FeaturePreview id="mrsi">
+              <Switch
+                checked={mrsi}
+                onChange={(v) => setFeature('mrsi', v)}
+                label={t('mrsiPanel.simultaneous-impact-mrsi')}
+                description={t('settingsPage.mrsi-description')}
               />
               </FeaturePreview>
               <FeaturePreview id="table">
