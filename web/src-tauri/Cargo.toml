@@ -1,6 +1,6 @@
 [package]
 name = "artillery-calculator"
-version = "0.15.0"
+version = "0.16.0"
 description = "Firing calculator for Arma 3 ACE3 mortars and artillery"
 authors = ["Heis"]
 license = "MIT"

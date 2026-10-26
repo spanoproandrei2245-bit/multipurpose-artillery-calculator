@@ -263,8 +263,9 @@ for (const source of sources) {
   // Названия на других языках задаются в index.json руками — не затираем
   const previous = index.maps.find((m) => m.world === entry.world)
   if (previous?.names) entry.names = previous.names
-  // DLC размечается в index.json руками (по автору не отличить от базовой игры)
-  if (previous?.kind === 'dlc') entry.kind = 'dlc'
+  // Вид карты (DLC, мод) размечается в index.json руками: по автору не отличить
+  // DLC от базовой игры, а карты модов бывают с автором Bohemia (Черноруссия из CUP)
+  if (previous?.kind) entry.kind = previous.kind
   index.maps = [...index.maps.filter((m) => m.world !== entry.world), entry].sort(
     (a, b) => a.displayName.localeCompare(b.displayName)
   )
