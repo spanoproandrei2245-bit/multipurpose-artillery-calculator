@@ -1,32 +1,23 @@
 import { useEffect, useState } from 'react'
 
 import { t } from '../i18n'
-import { checkForUpdate, type AvailableUpdate } from '../lib/updater'
+import { startUpdateChecks, useUpdateStatus } from '../lib/updater'
 import { FieldIcon } from './FieldIcon'
 
 type Phase = { kind: 'idle' } | { kind: 'installing'; share: number | null } | { kind: 'failed' }
 
 /** Программа для ПК: плашка «доступна новая версия» с установкой в один клик. */
 export function UpdateBanner() {
-  const [update, setUpdate] = useState<AvailableUpdate | null>(null)
-  const [hidden, setHidden] = useState(false)
+  const status = useUpdateStatus()
+  // «Позже» прячет плашку для этой версии
+  const [hiddenVersion, setHiddenVersion] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
 
-  useEffect(() => {
-    let cancelled = false
-    // Не мешаем запуску: проверка через несколько секунд
-    const timer = window.setTimeout(() => {
-      void checkForUpdate().then((found) => {
-        if (!cancelled) setUpdate(found)
-      })
-    }, 4000)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [])
+  // Проверки при запуске, во время работы и при повторном запуске программы
+  useEffect(() => startUpdateChecks(), [])
 
-  if (!update || hidden) return null
+  const update = status.kind === 'available' ? status.update : null
+  if (!update || hiddenVersion === update.version) return null
 
   return (
     <div
@@ -63,7 +54,7 @@ export function UpdateBanner() {
           type="button"
           className="btn btn-ghost"
           disabled={phase.kind === 'installing'}
-          onClick={() => setHidden(true)}
+          onClick={() => setHiddenVersion(update.version)}
         >
           {t('update.later')}
         </button>

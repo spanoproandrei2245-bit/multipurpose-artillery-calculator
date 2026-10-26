@@ -1,7 +1,7 @@
 // Без консольного окна в релизной сборке Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{
     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
 };
@@ -23,6 +23,16 @@ fn shortcuts() -> [(Shortcut, &'static str); 7] {
 
 fn main() {
     tauri::Builder::default()
+        // Одна копия программы: повторный запуск показывает уже открытое окно
+        // (вторая копия не получила бы горячие клавиши) и проверяет обновления
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+            let _ = app.emit("second-instance", ());
+        }))
         // Обновление программы из GitHub Releases и перезапуск после него
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
