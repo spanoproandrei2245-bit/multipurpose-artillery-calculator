@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   DEFAULT_LAY_SETTINGS,
+  formatLay,
+  fromDisplay,
+  toDisplay,
   INITIAL_LAY_STATE,
   MIN_CALIBRATION_COUNTS,
   layFraction,
@@ -19,6 +22,7 @@ const settings: LaySettings = {
   max: 300,
   invert: false,
   tolerance: 1,
+  degrees: false,
 }
 
 function run(events: LayEvent[], start: LayState = INITIAL_LAY_STATE, s = settings) {
@@ -165,6 +169,40 @@ describe('parseLaySettings', () => {
       max: 200,
       invert: true,
       tolerance: 2,
+      degrees: true,
     })
+  })
+})
+
+describe('градусы как в игре', () => {
+  const deg = { ...settings, degrees: true }
+
+  it('верхний упор 355 мил показывается как EL 20.0', () => {
+    expect(formatLay(355.5556, deg)).toBe('20.0')
+    expect(formatLay(355.5556, settings)).toBe('356')
+  })
+
+  it('перевод туда и обратно не меняет значение', () => {
+    expect(toDisplay(fromDisplay(7.5, deg), deg)).toBeCloseTo(7.5)
+    expect(fromDisplay(20, deg)).toBeCloseTo(355.556, 2)
+    expect(fromDisplay(20, settings)).toBe(20)
+  })
+
+  it('по умолчанию градусы, старые сохранённые настройки без поля тоже', () => {
+    expect(DEFAULT_LAY_SETTINGS.degrees).toBe(true)
+    expect(parseLaySettings(JSON.stringify({ min: -10, max: 50 })).degrees).toBe(true)
+    expect(parseLaySettings(JSON.stringify({ degrees: false })).degrees).toBe(false)
+  })
+})
+
+describe('layReduce: сверка с игрой', () => {
+  it('угол из игры ставит ствол на это значение в пределах упоров', () => {
+    expect(run([{ type: 'set', elevation: 120 }]).state.elevation).toBe(120)
+    expect(run([{ type: 'set', elevation: 999 }]).state.elevation).toBe(300)
+  })
+
+  it('сверка отменяет калибровку', () => {
+    const { state } = run([{ type: 'calibrate' }, { type: 'set', elevation: 10 }])
+    expect(state.calibration).toBeNull()
   })
 })

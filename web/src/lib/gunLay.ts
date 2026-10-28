@@ -7,6 +7,8 @@
  * после упора углы снова совпадают.
  */
 
+import { degToMil, milToDeg } from './ballistics'
+
 export interface LaySettings {
   // Сколько мил ствола даёт один отсчёт мыши
   milPerCount: number
@@ -17,6 +19,8 @@ export interface LaySettings {
   invert: boolean
   // Допуск «угол верный», мил
   tolerance: number
+  // Показывать углы в градусах, как в игре (EL: 20.0); внутри всё в милах
+  degrees: boolean
 }
 
 // От -8° до +20°: типичные пределы танкового орудия
@@ -26,6 +30,7 @@ export const DEFAULT_LAY_SETTINGS: LaySettings = {
   max: 355,
   invert: false,
   tolerance: 1,
+  degrees: true,
 }
 
 export interface LayState {
@@ -46,6 +51,8 @@ export type LayEvent =
   // Первое нажатие: ствол на нижнем упоре, начать счёт.
   // Второе: ствол на верхнем упоре, вывести чувствительность
   | { type: 'calibrate' }
+  // Угол прочитан в игре: симуляция встаёт на него, мил
+  | { type: 'set'; elevation: number }
 
 // Калибровка короче этого числа отсчётов считается случайным нажатием
 export const MIN_CALIBRATION_COUNTS = 20
@@ -75,6 +82,11 @@ export function layReduce(
         },
       }
     }
+    case 'set':
+      return {
+        settings,
+        state: { elevation: clampElevation(event.elevation, settings), calibration: null },
+      }
     case 'low':
       return { settings, state: { elevation: settings.min, calibration: null } }
     case 'high':
@@ -128,6 +140,21 @@ export function layGuidance(
   return { error, verdict, counts }
 }
 
+/** Мил из числа в единицах показа (градусы или мил). */
+export function fromDisplay(value: number, settings: LaySettings): number {
+  return settings.degrees ? degToMil(value) : value
+}
+
+/** Мил в единицы показа. */
+export function toDisplay(mil: number, settings: LaySettings): number {
+  return settings.degrees ? milToDeg(mil) : mil
+}
+
+/** Число с подписью единицы: в градусах один знак (20.0), в милах целое. */
+export function formatLay(mil: number, settings: LaySettings): string {
+  return toDisplay(mil, settings).toFixed(settings.degrees ? 1 : 0)
+}
+
 /** Положение на шкале ствола: 0 — нижний упор, 1 — верхний. */
 export function layFraction(value: number, settings: LaySettings): number {
   const span = settings.max - settings.min
@@ -158,6 +185,7 @@ export function parseLaySettings(raw: string | null): LaySettings {
       max,
       invert: data.invert === true,
       tolerance: Math.max(0, finiteOr(data.tolerance, base.tolerance)),
+      degrees: data.degrees !== false,
     }
   } catch {
     return base

@@ -13,7 +13,13 @@ import {
 } from '../lib/gunLayStore'
 import { LayReadout } from './GunLayPanel'
 
-const settings = { ...DEFAULT_LAY_SETTINGS, min: -100, max: 300, milPerCount: 0.5 }
+const settings = {
+  ...DEFAULT_LAY_SETTINGS,
+  min: -100,
+  max: 300,
+  milPerCount: 0.5,
+  degrees: false,
+}
 
 beforeEach(() => setLanguage('ru'))
 afterEach(cleanup)
@@ -43,6 +49,14 @@ describe('LayReadout', () => {
   it('без нужного возвышения подсказывает, что ввести', () => {
     render(<LayReadout elevation={0} target={null} settings={settings} />)
     expect(screen.getByText(/Нет нужного возвышения/)).toBeTruthy()
+  })
+})
+
+describe('LayReadout в градусах', () => {
+  it('показывает угол как в игре: EL 20.0', () => {
+    const deg = { ...settings, degrees: true, max: 355.56 }
+    render(<LayReadout elevation={355.56} target={177.78} settings={deg} />)
+    expect(screen.getByText('Опустить на 10.0°')).toBeTruthy()
   })
 })
 
