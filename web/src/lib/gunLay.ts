@@ -43,9 +43,18 @@ export interface LayState {
   elevation: number
   // Калибровка идёт: отсчёты мыши вверх с нижнего упора; null — не идёт
   calibration: number | null
+  // Последняя точка, где угол известно точно (упор или сверка с игрой), и отсчёты
+  // мыши вверх с тех пор. По двум таким точкам программа сама находит чувствительность.
+  // null — точки нет или после неё ствол побывал на упоре (счёт сбит)
+  anchor: { elevation: number; counts: number } | null
 }
 
-export const INITIAL_LAY_STATE: LayState = { elevation: 0, calibration: null }
+export const INITIAL_LAY_STATE: LayState = { elevation: 0, calibration: null, anchor: null }
+
+// Чувствительность по сверкам: ход не меньше этого (мил) и не меньше стольких отсчётов,
+// иначе точность HUD (0.1°) даёт слишком большую ошибку
+export const MIN_LEARN_TRAVEL_MIL = 40
+export const MIN_LEARN_COUNTS = 30
 
 export type LayEvent =
   // Отсчёты мыши за короткий промежуток (dy < 0 — мышь от себя вверх)
@@ -75,30 +84,57 @@ export function layReduce(
     case 'move': {
       // Движение вверх: отрицательный dy (вниз по экрану — положительный)
       const up = settings.invert ? event.dy : -event.dy
+      const wanted = state.elevation + up * settings.milPerCount
+      const elevation = clampElevation(wanted, settings)
       return {
         settings,
         state: {
-          elevation: clampElevation(
-            state.elevation + up * settings.milPerCount,
-            settings
-          ),
-          calibration:
-            state.calibration === null ? null : state.calibration + up,
+          elevation,
+          calibration: state.calibration === null ? null : state.calibration + up,
+          // Упёрлись в упор: счёт отсчётов с точки сбит (ствол стоял, мышь шла)
+          anchor:
+            state.anchor === null || elevation !== wanted
+              ? null
+              : { ...state.anchor, counts: state.anchor.counts + up },
         },
       }
     }
-    case 'set':
+    case 'set': {
+      const elevation = clampElevation(event.elevation, settings)
+      // Вторая сверка: чувствительность = ход угла по HUD / отсчёты мыши между сверками
+      const { anchor } = state
+      let learned = settings
+      if (anchor !== null && Math.abs(anchor.counts) >= MIN_LEARN_COUNTS) {
+        const travel = elevation - anchor.elevation
+        const perCount = travel / anchor.counts
+        // Ход в сторону движения мыши, достаточный, и значение не дико отличается от прежнего
+        if (
+          Math.abs(travel) >= MIN_LEARN_TRAVEL_MIL &&
+          perCount > 0 &&
+          perCount > settings.milPerCount / 5 &&
+          perCount < settings.milPerCount * 5
+        ) {
+          learned = { ...settings, milPerCount: perCount }
+        }
+      }
+      return {
+        settings: learned,
+        state: { elevation, calibration: null, anchor: { elevation, counts: 0 } },
+      }
+    }
+    case 'low':
       return {
         settings,
-        state: { elevation: clampElevation(event.elevation, settings), calibration: null },
+        state: { elevation: settings.min, calibration: null, anchor: { elevation: settings.min, counts: 0 } },
       }
-    case 'low':
-      return { settings, state: { elevation: settings.min, calibration: null } }
     case 'high':
-      return { settings, state: { elevation: settings.max, calibration: null } }
+      return {
+        settings,
+        state: { elevation: settings.max, calibration: null, anchor: { elevation: settings.max, counts: 0 } },
+      }
     case 'calibrate': {
       if (state.calibration === null) {
-        return { settings, state: { elevation: settings.min, calibration: 0 } }
+        return { settings, state: { elevation: settings.min, calibration: 0, anchor: null } }
       }
       // Мало отсчётов: отмена без изменений
       if (state.calibration < MIN_CALIBRATION_COUNTS) {
@@ -109,7 +145,11 @@ export function layReduce(
           ...settings,
           milPerCount: (settings.max - settings.min) / state.calibration,
         },
-        state: { elevation: settings.max, calibration: null },
+        state: {
+          elevation: settings.max,
+          calibration: null,
+          anchor: { elevation: settings.max, counts: 0 },
+        },
       }
     }
   }

@@ -48,4 +48,17 @@ GRAD_trackEh = _veh addEventHandler ["Fired", {
 		];
 	};
 }];
+GRAD_trackGen = (missionNamespace getVariable ["GRAD_trackGen", 0]) + 1;
+[GRAD_trackGen, _veh] spawn {
+	params ["_gen", "_v"];
+	while { (missionNamespace getVariable ["GRAD_trackGen", 0]) == _gen && {!isNull _v} } do {
+		private _wd = _v weaponDirection "cannon_120mm";
+		private _md = _v vectorWorldToModel _wd;
+		diag_log format [
+			"GRADBRIDGE|el|world=%1|rel=%2|pitch=%3",
+			asin (_wd select 2), asin (_md select 2), (_v call BIS_fnc_getPitchBank) select 0
+		];
+		sleep 0.5;
+	};
+};
 systemChat format ["GRAD: tracking shots of %1, fire now", typeOf _veh];

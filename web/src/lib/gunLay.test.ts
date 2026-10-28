@@ -72,7 +72,7 @@ describe('layReduce: движение мыши', () => {
 
 describe('layReduce: упоры', () => {
   it('нижний и верхний упор ставят угол в предел', () => {
-    const start = { elevation: 42, calibration: null }
+    const start = { elevation: 42, calibration: null, anchor: null }
     expect(run([{ type: 'low' }], start).state.elevation).toBe(-100)
     expect(run([{ type: 'high' }], start).state.elevation).toBe(300)
   })
@@ -81,8 +81,8 @@ describe('layReduce: упоры', () => {
 describe('layReduce: калибровка', () => {
   it('два нажатия выводят чувствительность из хода между упорами', () => {
     // 400 мил между упорами за 800 отсчётов: 0.5 мил на отсчёт
-    const first = run([{ type: 'calibrate' }], { elevation: 50, calibration: null })
-    expect(first.state).toEqual({ elevation: -100, calibration: 0 })
+    const first = run([{ type: 'calibrate' }], { elevation: 50, calibration: null, anchor: null })
+    expect(first.state).toEqual({ elevation: -100, calibration: 0, anchor: null })
 
     const done = run(
       [{ type: 'move', dy: -800 }, { type: 'calibrate' }],
@@ -90,7 +90,11 @@ describe('layReduce: калибровка', () => {
       { ...settings, milPerCount: 9 }
     )
     expect(done.settings.milPerCount).toBeCloseTo(0.5)
-    expect(done.state).toEqual({ elevation: 300, calibration: null })
+    expect(done.state).toEqual({
+      elevation: 300,
+      calibration: null,
+      anchor: { elevation: 300, counts: 0 },
+    })
   })
 
   it('во время калибровки считаются только отсчёты вверх со знаком', () => {
@@ -196,6 +200,42 @@ describe('градусы как в игре', () => {
     expect(DEFAULT_LAY_SETTINGS.degrees).toBe(true)
     expect(parseLaySettings(JSON.stringify({ min: -10, max: 50 })).degrees).toBe(true)
     expect(parseLaySettings(JSON.stringify({ degrees: false })).degrees).toBe(false)
+  })
+})
+
+describe('чувствительность по сверкам с HUD', () => {
+  const base: LaySettings = { ...settings, milPerCount: 0.5 }
+
+  it('две сверки с ходом мыши между ними дают чувствительность', () => {
+    // Верхний упор 300, мышь прошла 400 отсчётов вниз (по оценке программы 200 мил),
+    // а в HUD угол стал 120 вместо 100: ход 180 мил на 400 отсчётов = 0.45
+    const first = run([{ type: 'high' }, { type: 'move', dy: 400 }], INITIAL_LAY_STATE, base)
+    expect(first.state.anchor).toEqual({ elevation: 300, counts: -400 })
+    const second = run([{ type: 'set', elevation: 120 }], first.state, base)
+    expect(second.settings.milPerCount).toBeCloseTo(0.45)
+    expect(second.state.elevation).toBe(120)
+    expect(second.state.anchor).toEqual({ elevation: 120, counts: 0 })
+  })
+
+  it('упор после сверки сбивает счёт: чувствительность не меняется', () => {
+    const first = run([{ type: 'set', elevation: 100 }, { type: 'move', dy: 100000 }], INITIAL_LAY_STATE, base)
+    expect(first.state.anchor).toBeNull()
+    const second = run([{ type: 'set', elevation: 0 }], first.state, base)
+    expect(second.settings.milPerCount).toBe(0.5)
+  })
+
+  it('малый ход не учит: HUD слишком грубый', () => {
+    const first = run([{ type: 'set', elevation: 100 }, { type: 'move', dy: -40 }], INITIAL_LAY_STATE, base)
+    const second = run([{ type: 'set', elevation: 118 }], first.state, base)
+    expect(second.settings.milPerCount).toBe(0.5)
+  })
+
+  it('ход против направления мыши или дикое значение отбрасываются', () => {
+    const first = run([{ type: 'set', elevation: 100 }, { type: 'move', dy: -400 }], INITIAL_LAY_STATE, base)
+    // Мышь вверх, а угол по HUD упал
+    expect(run([{ type: 'set', elevation: 20 }], first.state, base).settings.milPerCount).toBe(0.5)
+    // Угол вырос в 10 раз сильнее ожидаемого
+    expect(run([{ type: 'set', elevation: 100 + 2000 }], first.state, base).settings.milPerCount).toBe(0.5)
   })
 })
 
