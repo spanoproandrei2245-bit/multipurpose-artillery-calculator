@@ -11,6 +11,7 @@ for "_i" from 1 to 150 do { GRAD_phys_angles pushBack (_i * 0.02); };
 for "_i" from 1 to 170 do { GRAD_phys_angles pushBack (3 + _i * 0.1); };
 
 GRAD_phys_shots = [];
+isNil {
 {
 	_x params ["_ammo", "_speed"];
 	{
@@ -23,9 +24,10 @@ GRAD_phys_shots = [];
 		GRAD_phys_shots pushBack [_p, _ammo, _a];
 	} forEach GRAD_phys_angles;
 } forEach GRAD_phys_rounds;
-
 GRAD_phys_t0 = time;
-diag_log format ["GRADBRIDGE|phys|start|shots=%1|originASL=%2", count GRAD_phys_shots, GRAD_phys_origin];
+};
+
+diag_log format ["GRADBRIDGE|phys|start|atomic=1|crossing=asc|shots=%1|originASL=%2", count GRAD_phys_shots, GRAD_phys_origin];
 
 [] spawn {
 	private _o = GRAD_phys_origin;
@@ -58,8 +60,8 @@ diag_log format ["GRADBRIDGE|phys|start|shots=%1|originASL=%2", count GRAD_phys_
 					{
 						private _lvl = _x;
 						private _k = _forEachIndex;
-						if (!(_done select _k) && {_lastDz >= _lvl} && {_dz < _lvl}) then {
-							private _f = (_lastDz - _lvl) / (_lastDz - _dz);
+						if (!(_done select _k) && {((_lvl > 0) && {_lastDz < _lvl} && {_dz >= _lvl}) || ((_lvl <= 0) && {_lastDz >= _lvl} && {_dz < _lvl})}) then {
+							private _f = (_lvl - _lastDz) / (_dz - _lastDz);
 							diag_log format [
 								"GRADBRIDGE|phys|%1|%2|lvl=%3|dist=%4|tof=%5|speed=%6",
 								_ammo, _a, _lvl, _lastDist + _f * (_dist - _lastDist), _lastT + _f * (_t - _lastT), _speed
