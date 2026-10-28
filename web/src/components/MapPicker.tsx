@@ -19,6 +19,7 @@ import {
 } from '../lib/fireLine'
 import { readStoredText, writeStored } from '../lib/input'
 import { sampleProfile, type TerrainProfile } from '../lib/terrainClearance'
+import { computeCoverage, nearestGoodSpot, type Coverage } from '../lib/coverage'
 import {
   drawVector,
   loadVector,
@@ -124,6 +125,9 @@ interface Props {
   // Огонь по линии: возвышение в точку при этой дальности и разнице высот
   // (цель минус орудие) тем же способом, что и основной расчёт
   solveLine?: (distance: number, heightDiff: number) => { elevation: number; charge: number } | null
+  // Меняется, когда меняется способ выстрела (орудие, снаряд, траектория, заряд, погода):
+  // по нему пересчитываются зоны досягаемости на карте
+  solveKey?: string
   // Орудие закреплено на карте (true) или освобождено (false); высота —
   // высота орудия в точке, м, если известна
   onGunLockChange?: (locked: boolean, height: number | null) => void
@@ -232,6 +236,7 @@ export function MapPicker({
   shellType = 'HE',
   onGunLockChange,
   solveLine,
+  solveKey = '',
   onTerrainProfile,
 }: Props) {
   const ru = language === 'ru'
@@ -263,6 +268,9 @@ export function MapPicker({
 
   // Орудие закреплено на карте: касания его не двигают
   const [gunLocked, setGunLocked] = useState(false)
+
+  // Зоны по рельефу: куда достаёт орудие («from») и откуда достать до цели («to»)
+  const [coverageMode, setCoverageMode] = useState<'off' | 'from' | 'to'>('off')
 
   // Линия огня: ломаная из точек, плотность огня (радиус разрыва) и номер
   // точки прицеливания, по которой стреляют сейчас. Плотность по умолчанию —
@@ -297,6 +305,34 @@ export function MapPicker({
   const relief = useMemo(
     () => (map ? createReliefCanvas(map, night ? 'night' : 'day') : null),
     [map, night]
+  )
+
+  // Зоны досягаемости: считаются при смене точки, карты или способа выстрела,
+  // а не при каждом сдвиге карты
+  const solveRef = useRef(solveLine)
+  useEffect(() => {
+    solveRef.current = solveLine
+  })
+  const reachMin = reach?.min ?? 0
+  const reachMax = reach?.max ?? 0
+  const coverage = useMemo<Coverage | null>(() => {
+    if (coverageMode === 'off' || !map || reachMax <= 0) return null
+    const center = coverageMode === 'from' ? gun : target
+    if (!center) return null
+    return computeCoverage({
+      map,
+      center,
+      mode: coverageMode,
+      minRange: reachMin,
+      maxRange: reachMax,
+      solve: (distance, heightDiff) => solveRef.current?.(distance, heightDiff) ?? null,
+    })
+    // solveKey заменяет solveLine: функция каждый раз новая
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageMode, map, gun, target, reachMin, reachMax, solveKey])
+  const spot = useMemo(
+    () => (coverage && coverage.mode === 'to' ? nearestGoodSpot(coverage, gun ?? coverage.center) : null),
+    [coverage, gun]
   )
 
   // ---- метки ----
@@ -782,6 +818,49 @@ export function MapPicker({
       ctx.textAlign = 'start'
     }
 
+    // Зоны по рельефу: зелёное достаёт, жёлтое впритык к рельефу, красное закрыто
+    if (coverage) {
+      const c = toScreen(coverage.center)
+      const half = coverage.width / 2 + 0.004
+      const colors = {
+        ok: 'rgba(70,200,120,0.34)',
+        tight: 'rgba(255,176,32,0.34)',
+        blocked: 'rgba(228,72,72,0.24)',
+      } as const
+      for (const ray of coverage.rays) {
+        const a0 = ray.angle - Math.PI / 2 - half
+        const a1 = ray.angle - Math.PI / 2 + half
+        for (const segment of ray.segments) {
+          ctx.fillStyle = colors[segment.status]
+          ctx.beginPath()
+          ctx.arc(c.x, c.y, segment.to * scale, a0, a1)
+          ctx.arc(c.x, c.y, Math.max(0, segment.from) * scale, a1, a0, true)
+          ctx.closePath()
+          ctx.fill()
+        }
+      }
+      // Где встать: ближайшее хорошее место
+      if (spot) {
+        const p = toScreen(spot.point)
+        ctx.fillStyle = 'rgba(70,200,120,1)'
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        const label = `${t('mapPicker.stand-here')} · ${Math.round(spot.distance)} ${unitM}`
+        ctx.font = '12px ' + sans
+        const w = ctx.measureText(label).width
+        ctx.fillStyle = ink.plate
+        ctx.fillRect(p.x - w / 2 - 5, p.y - 30, w + 10, 18)
+        ctx.fillStyle = '#ffffff'
+        ctx.textAlign = 'center'
+        ctx.fillText(label, p.x, p.y - 17)
+        ctx.textAlign = 'start'
+      }
+    }
+
     // Досягаемость орудия: дальний край — сплошное кольцо, ближний — пунктир
     if (gun && reach && reach.max > 0) {
       const c = toScreen(gun)
@@ -853,7 +932,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineDensity, reach, strokes, liveStroke, vector, mapStyle, settleTick])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineDensity, reach, coverage, spot, strokes, liveStroke, vector, mapStyle, settleTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -1485,6 +1564,37 @@ export function MapPicker({
             </div>
           )}
 
+
+          {/* Слева снизу: зоны по рельефу */}
+          <div className="absolute bottom-12 left-2 flex flex-col items-start gap-1">
+            {coverageMode !== 'off' && (
+              <p className="max-w-[15rem] rounded-md bg-black/70 px-2 py-1 text-[11.5px] leading-snug text-white/85 backdrop-blur-sm">
+                {coverage
+                  ? t('mapPicker.coverage-legend')
+                  : coverageMode === 'from'
+                    ? t('mapPicker.coverage-need-gun')
+                    : t('mapPicker.coverage-need-target')}
+              </p>
+            )}
+            <div className="flex gap-1">
+              {(['from', 'to'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={coverageMode === id}
+                  onClick={() => setCoverageMode(coverageMode === id ? 'off' : id)}
+                  className={[
+                    'cursor-pointer rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium shadow-lg backdrop-blur-sm transition-colors',
+                    coverageMode === id
+                      ? 'bg-accent-solid text-white'
+                      : 'bg-black/70 text-white/90 hover:bg-black/85',
+                  ].join(' ')}
+                >
+                  {id === 'from' ? t('mapPicker.coverage-from') : t('mapPicker.coverage-to')}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Справа снизу: слой карты (спутник / топо); значок — текущий режим */}
           {vector && tiles && (

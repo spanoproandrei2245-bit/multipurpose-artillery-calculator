@@ -4,6 +4,12 @@
  * версии: тест следит, чтобы ключи и подстановки у языков совпадали.
  */
 export const ru = {
+  "mapPicker.coverage-from": "Куда достаю",
+  "mapPicker.coverage-to": "Где встать",
+  "mapPicker.stand-here": "Встать здесь",
+  "mapPicker.coverage-legend": "Зелёное: достаёт. Жёлтое: впритык к рельефу. Красное: рельеф закрывает.",
+  "mapPicker.coverage-need-gun": "Поставьте орудие на карте.",
+  "mapPicker.coverage-need-target": "Поставьте цель на карте.",
   "gunLay.title": "Наводка по мыши",
   "gunLay.tracking-on": "Слежение включено",
   "gunLay.tracking-off": "Слежение выключено",
@@ -681,6 +687,12 @@ export const ru = {
 } as const
 
 export const en: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "Where I can hit",
+  "mapPicker.coverage-to": "Where to stand",
+  "mapPicker.stand-here": "Stand here",
+  "mapPicker.coverage-legend": "Green: reachable. Yellow: tight over terrain. Red: terrain blocks the shot.",
+  "mapPicker.coverage-need-gun": "Place the gun on the map.",
+  "mapPicker.coverage-need-target": "Place a target on the map.",
   "gunLay.title": "Mouse gun laying",
   "gunLay.tracking-on": "Tracking on",
   "gunLay.tracking-off": "Tracking off",

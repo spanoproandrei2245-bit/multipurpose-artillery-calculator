@@ -1,6 +1,12 @@
 import type { ru } from './messages'
 
 export const ja: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "命中できる範囲",
+  "mapPicker.coverage-to": "どこに構えるか",
+  "mapPicker.stand-here": "ここに構える",
+  "mapPicker.coverage-legend": "緑：届く。黄：地形すれすれ。赤：地形が射線を遮る。",
+  "mapPicker.coverage-need-gun": "地図に砲を置いてください。",
+  "mapPicker.coverage-need-target": "地図に目標を置いてください。",
   "gunLay.title": "マウス照準",
   "gunLay.tracking-on": "追跡オン",
   "gunLay.tracking-off": "追跡オフ",

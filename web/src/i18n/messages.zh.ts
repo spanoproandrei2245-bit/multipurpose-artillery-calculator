@@ -1,6 +1,12 @@
 import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "可命中范围",
+  "mapPicker.coverage-to": "在哪里架炮",
+  "mapPicker.stand-here": "在此架炮",
+  "mapPicker.coverage-legend": "绿色：可达。黄色：贴近地形。红色：地形阻挡。",
+  "mapPicker.coverage-need-gun": "请在地图上放置火炮。",
+  "mapPicker.coverage-need-target": "请在地图上放置目标。",
   "gunLay.title": "鼠标瞄准",
   "gunLay.tracking-on": "跟踪已开启",
   "gunLay.tracking-off": "跟踪已关闭",

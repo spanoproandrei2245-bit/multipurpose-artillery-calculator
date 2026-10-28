@@ -1,6 +1,12 @@
 import type { ru } from './messages'
 
 export const uk: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "Куди дістаю",
+  "mapPicker.coverage-to": "Де стати",
+  "mapPicker.stand-here": "Стати тут",
+  "mapPicker.coverage-legend": "Зелене: дістає. Жовте: впритул до рельєфу. Червоне: рельєф закриває.",
+  "mapPicker.coverage-need-gun": "Поставте гармату на карті.",
+  "mapPicker.coverage-need-target": "Поставте ціль на карті.",
   "gunLay.title": "Наведення мишею",
   "gunLay.tracking-on": "Стеження увімкнено",
   "gunLay.tracking-off": "Стеження вимкнено",

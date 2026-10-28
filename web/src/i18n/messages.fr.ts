@@ -1,6 +1,12 @@
 import type { ru } from './messages'
 
 export const fr: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "Zone atteignable",
+  "mapPicker.coverage-to": "Où se placer",
+  "mapPicker.stand-here": "Se placer ici",
+  "mapPicker.coverage-legend": "Vert : atteignable. Jaune : juste au-dessus du relief. Rouge : le relief bloque le tir.",
+  "mapPicker.coverage-need-gun": "Placez le canon sur la carte.",
+  "mapPicker.coverage-need-target": "Placez une cible sur la carte.",
   "gunLay.title": "Pointage à la souris",
   "gunLay.tracking-on": "Suivi activé",
   "gunLay.tracking-off": "Suivi désactivé",

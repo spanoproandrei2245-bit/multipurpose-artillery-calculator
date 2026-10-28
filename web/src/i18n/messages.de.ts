@@ -1,6 +1,12 @@
 import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
+  "mapPicker.coverage-from": "Trefferzone",
+  "mapPicker.coverage-to": "Wo aufstellen",
+  "mapPicker.stand-here": "Hier aufstellen",
+  "mapPicker.coverage-legend": "Grün: erreichbar. Gelb: knapp über dem Gelände. Rot: Gelände versperrt den Schuss.",
+  "mapPicker.coverage-need-gun": "Geschütz auf der Karte setzen.",
+  "mapPicker.coverage-need-target": "Ziel auf der Karte setzen.",
   "gunLay.title": "Richten per Maus",
   "gunLay.tracking-on": "Verfolgung an",
   "gunLay.tracking-off": "Verfolgung aus",
