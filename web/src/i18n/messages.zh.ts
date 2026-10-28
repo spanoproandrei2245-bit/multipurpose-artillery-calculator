@@ -1,6 +1,8 @@
 import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
+  "gunLay.zeroing": "游戏内表尺装定",
+  "gunLay.zero-note": "表尺装定会使炮管比瞄准线高 {0}：所需的瞄准角相应减小。",
   "mapPicker.contours": "等高线",
   "gunLay.overlay-x": "悬浮窗：中心向右偏移",
   "gunLay.overlay-y": "悬浮窗：中心向下偏移",

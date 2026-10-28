@@ -16,7 +16,7 @@ import {
   updateLaySettings,
   useGunLay,
 } from '../lib/gunLayStore'
-import { parseNumber } from '../lib/input'
+import { parseNumber, readStoredText, writeStored } from '../lib/input'
 import { FieldIcon } from './FieldIcon'
 import { InlineNumber } from './FormControls'
 
@@ -136,9 +136,12 @@ function display(value: number, digits: number): string {
  */
 export function GunLayPanel({
   solutionElevation,
+  solveAt,
   limits = null,
 }: {
   solutionElevation: number | null
+  // Возвышение ствола на ровной земле на дальность, мил: по нему считается пристрелка
+  solveAt?: (distance: number) => { elevation: number } | null
   // Упоры ствола выбранной техники, мил; из справочника модели
   limits?: { minElevation: number; maxElevation: number } | null
 }) {
@@ -151,9 +154,18 @@ export function GunLayPanel({
 
   // Свои значения вводятся в единицах показа (в игре угол виден в градусах)
   const [sync, setSync] = useState('')
+  // Пристрелка в игре (дальность в HUD): ствол приподнят над линией прицела на
+  // табличный угол для этой дальности, мышь же ведёт прицел
+  const [zeroing, setZeroing] = useState(() => readStoredText('gunLayZeroing'))
+  useEffect(() => writeStored('gunLayZeroing', zeroing), [zeroing])
+  const zeroDistance = parseNumber(zeroing)
+  const zeroOffset =
+    zeroDistance !== null && zeroDistance > 0 ? (solveAt?.(zeroDistance)?.elevation ?? 0) : 0
   const manualValue = parseNumber(manual)
-  const target =
+  const barrelTarget =
     manualValue === null ? solutionElevation : fromDisplay(manualValue, settings)
+  // Нужный угол прицела = угол ствола минус пристрелка
+  const target = barrelTarget === null ? null : barrelTarget - zeroOffset
 
   useEffect(() => setLayTarget(target), [target])
 
@@ -277,6 +289,25 @@ export function GunLayPanel({
           </button>
         </span>
       </div>
+
+      <label className="mt-3 flex items-center justify-between gap-3 text-[14px] text-app-text-2">
+        <span>{t('gunLay.zeroing')}</span>
+        <span className="flex w-32 items-center gap-2">
+          <InlineNumber
+            id="gun-lay-zeroing"
+            value={zeroing}
+            onChange={setZeroing}
+            unit={t('unit.m')}
+            placeholder="0"
+            block
+          />
+        </span>
+      </label>
+      {zeroOffset !== 0 && (
+        <p className="mt-1 text-[12.5px] text-app-muted">
+          {t('gunLay.zero-note', formatLay(zeroOffset, settings, settings.degrees ? 2 : 0) + unit)}
+        </p>
+      )}
 
       <label className="mt-3 flex items-center justify-between gap-3 text-[14px] text-app-text-2">
         <span>{t('gunLay.manual')}</span>

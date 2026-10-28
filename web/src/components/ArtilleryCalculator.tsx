@@ -1408,6 +1408,7 @@ export function ArtilleryCalculator({
           {showGunLay && (
             <GunLayPanel
               solutionElevation={solution?.elevation ?? null}
+              solveAt={(distance) => solveLinePoint(distance, 0)}
               limits={reference.limits ?? null}
             />
           )}

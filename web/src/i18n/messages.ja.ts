@@ -1,6 +1,8 @@
 import type { ru } from './messages'
 
 export const ja: Record<keyof typeof ru, string> = {
+  "gunLay.zeroing": "ゲーム内の照準距離設定",
+  "gunLay.zero-note": "照準距離設定により砲身は照準線より{0}高くなります。必要な照準角はその分だけ減ります。",
   "mapPicker.contours": "等高線",
   "gunLay.overlay-x": "オーバーレイ：中央から右へ",
   "gunLay.overlay-y": "オーバーレイ：中央から下へ",
