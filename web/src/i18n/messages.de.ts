@@ -1,6 +1,7 @@
 import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
+  "categories.tank": "Panzer",
   "mapPicker.coverage-from": "Trefferzone",
   "mapPicker.coverage-to": "Wo aufstellen",
   "mapPicker.stand-here": "Hier aufstellen",

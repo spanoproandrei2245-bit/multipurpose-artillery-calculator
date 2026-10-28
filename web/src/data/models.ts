@@ -122,6 +122,15 @@ export const models = {
     notes: 'S.O.G. Prairie Fire 82mm mortar.',
   },
 
+  merkava: {
+    name: 'Merkava Mk IV (120 mm)',
+    mod: 'Arma 3 · M2A4 Slammer UP',
+    category: 'tank',
+    modes: ['LOW'],
+    notes:
+      'Vanilla M2A4 Slammer UP (ACE realistic name: Merkava Mk IV LIC), 120 mm gun. Tables are computed from the game config.',
+  },
+
   type63: {
     name: 'Type 63 (60 mm)',
     mod: 'S.O.G. Prairie Fire (Vietnam DLC)',

@@ -15,6 +15,7 @@ import sholefData from './sholef.json'
 import sochorData from './sochor.json'
 import type53Data from './type53_sog.json'
 import type63Data from './type63_sog.json'
+import merkavaData from './merkava_mk4.json'
 
 import type { ArtilleryReference } from '../../types/artillery'
 
@@ -107,6 +108,15 @@ export function parseReference(
       (mode: unknown) => mode === 'HIGH' || mode === 'LOW'
     )
 
+  const validLimits =
+    data.limits === undefined ||
+    (isObject(data.limits) &&
+      typeof data.limits.minElevation === 'number' &&
+      typeof data.limits.maxElevation === 'number' &&
+      Number.isFinite(data.limits.minElevation) &&
+      Number.isFinite(data.limits.maxElevation) &&
+      data.limits.minElevation < data.limits.maxElevation)
+
   const validScreenshots =
     Array.isArray(data.screenshots) &&
     data.screenshots.every(
@@ -170,6 +180,7 @@ export function parseReference(
     typeof data.source.name !== 'string' ||
     !validStatus ||
     !validModes ||
+    !validLimits ||
     !validScreenshots ||
     !validAmmunition ||
     !validProfiles ||
@@ -201,4 +212,5 @@ export const artilleryCatalog = {
   sochor: parseReference(sochorData, 'sochor'),
   type53_sog: parseReference(type53Data, 'type53_sog'),
   type63_sog: parseReference(type63Data, 'type63_sog'),
+  merkava_mk4: parseReference(merkavaData, 'merkava_mk4'),
 }

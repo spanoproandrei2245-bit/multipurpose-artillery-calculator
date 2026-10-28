@@ -73,6 +73,9 @@ export interface ArtilleryReference {
 
   availableModes: ArtilleryMode[]
 
+  // Пределы возвышения ствола, мил (у танка это упоры ствола). Нет — не заданы
+  limits?: { minElevation: number; maxElevation: number }
+
   source: {
     name: string
     status: DataStatus

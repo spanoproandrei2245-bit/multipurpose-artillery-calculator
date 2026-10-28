@@ -1,6 +1,3 @@
-// Разовая выгрузка конфига техники для калькулятора: орудия, боеприпасы, пределы ствола.
-// Только читает конфиг. Запуск: сесть в технику, Esc, отладочная консоль, LOCAL EXEC.
-// Результат: строки GRADBRIDGE|data|... в RPT (%LOCALAPPDATA%\Arma 3) и в буфере обмена.
 private _veh = vehicle player;
 if (_veh == player) then { _veh = cursorObject; };
 private _cls = typeOf _veh;
@@ -34,7 +31,6 @@ for "_i" from 0 to (count _turrets - 1) do {
 	if (isClass _s) then { [_s, configName _s] call GRAD_dumpTurret; };
 };
 
-// Орудия: скорость вылета оружия, режимы, перезарядка, дальность
 {
 	private _w = configFile >> "CfgWeapons" >> _x;
 	private _muzzles = getArray (_w >> "muzzles");
@@ -58,7 +54,6 @@ for "_i" from 0 to (count _turrets - 1) do {
 	} forEach _muzzles;
 } forEach GRAD_weapons;
 
-// Магазины и боеприпасы: скорость, сопротивление воздуха, время жизни, поражение
 GRAD_ammos = [];
 {
 	private _m = configFile >> "CfgMagazines" >> _x;
@@ -82,7 +77,6 @@ GRAD_ammos = [];
 	];
 } forEach GRAD_ammos;
 
-// Что сейчас выбрано у наводчика
 GRAD_out pushBack format ["selected|%1|%2", _veh currentWeaponTurret [0], _veh currentMagazineTurret [0]];
 
 { diag_log ("GRADBRIDGE|data|" + _x); } forEach GRAD_out;

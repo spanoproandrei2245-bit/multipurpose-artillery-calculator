@@ -1,6 +1,7 @@
 import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
+  "categories.tank": "坦克",
   "mapPicker.coverage-from": "可命中范围",
   "mapPicker.coverage-to": "在哪里架炮",
   "mapPicker.stand-here": "在此架炮",

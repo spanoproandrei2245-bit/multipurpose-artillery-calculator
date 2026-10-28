@@ -6,14 +6,16 @@ export const categoryLabels: Record<ArtilleryCategory, MessageKey> = {
   towed: 'categories.towed-gun',
   spg: 'categories.self-propelled-gun',
   mlrs: 'categories.rocket-artillery',
+  tank: 'categories.tank',
 }
 
 // Класс орудия — цветная точка в левом верхнем углу значка:
 // миномёт — зелёная, артиллерия (буксируемая и САУ) — жёлтая,
-// реактивная (особая) — фиолетовая.
+// реактивная (особая) — фиолетовая, танк — красная.
 export const categoryMarks: Record<ArtilleryCategory, string> = {
   mortar: 'bg-ok',
   towed: 'bg-warn',
   spg: 'bg-warn',
   mlrs: 'bg-special',
+  tank: 'bg-danger',
 }

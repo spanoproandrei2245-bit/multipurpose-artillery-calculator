@@ -28,7 +28,7 @@ function fakeContext() {
   }
 }
 
-const CATEGORIES: ArtilleryCategory[] = ['mortar', 'towed', 'spg', 'mlrs']
+const CATEGORIES: ArtilleryCategory[] = ['mortar', 'towed', 'spg', 'mlrs', 'tank']
 const KINDS: ShellKind[] = ['he', 'illum', 'smoke']
 
 function params(over: Partial<FlightParams>): FlightParams {

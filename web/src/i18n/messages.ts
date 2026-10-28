@@ -4,6 +4,7 @@
  * версии: тест следит, чтобы ключи и подстановки у языков совпадали.
  */
 export const ru = {
+  "categories.tank": "Танк",
   "mapPicker.coverage-from": "Куда достаю",
   "mapPicker.coverage-to": "Где встать",
   "mapPicker.stand-here": "Встать здесь",
@@ -687,6 +688,7 @@ export const ru = {
 } as const
 
 export const en: Record<keyof typeof ru, string> = {
+  "categories.tank": "Tank",
   "mapPicker.coverage-from": "Where I can hit",
   "mapPicker.coverage-to": "Where to stand",
   "mapPicker.stand-here": "Stand here",

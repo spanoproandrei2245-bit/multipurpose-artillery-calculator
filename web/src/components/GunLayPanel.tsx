@@ -127,7 +127,14 @@ function display(value: number, digits: number): string {
  * программа повторяет движение мыши в своей симуляции и сравнивает угол
  * с нужным возвышением. Упоры ствола выравнивают симуляцию с игрой.
  */
-export function GunLayPanel({ solutionElevation }: { solutionElevation: number | null }) {
+export function GunLayPanel({
+  solutionElevation,
+  limits = null,
+}: {
+  solutionElevation: number | null
+  // Упоры ствола выбранной техники, мил; из справочника модели
+  limits?: { minElevation: number; maxElevation: number } | null
+}) {
   const { tracking, state, settings } = useGunLay()
   const unit = settings.degrees ? '°' : t('unit.mil')
 
@@ -142,6 +149,14 @@ export function GunLayPanel({ solutionElevation }: { solutionElevation: number |
     manualValue === null ? solutionElevation : fromDisplay(manualValue, settings)
 
   useEffect(() => setLayTarget(target), [target])
+
+  // У техники в справочнике есть упоры ствола: они становятся пределами симуляции
+  const limitMin = limits?.minElevation
+  const limitMax = limits?.maxElevation
+  useEffect(() => {
+    if (limitMin === undefined || limitMax === undefined) return
+    updateLaySettings({ min: limitMin, max: limitMax })
+  }, [limitMin, limitMax])
 
   function change(key: SettingKey, text: string) {
     setEditing({ key, text })

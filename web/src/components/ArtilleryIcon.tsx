@@ -37,6 +37,16 @@ function Glyph({ category }: { category: ArtilleryCategory }) {
         </>
       )
 
+    case 'tank':
+      return (
+        <>
+          <rect x="3" y="15.5" width="17" height="4" rx="2" />
+          <path d="M6 15.5 L7.6 12.6 H14.4 L16 15.5" />
+          <path d="M12.2 13.9 H22" />
+          <path d="M6.5 17.5 H16.5" />
+        </>
+      )
+
     case 'mlrs':
       return (
         <>

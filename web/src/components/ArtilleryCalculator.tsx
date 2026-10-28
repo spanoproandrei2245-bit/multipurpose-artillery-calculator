@@ -1406,7 +1406,10 @@ export function ArtilleryCalculator({
 
         <div className="min-w-0 space-y-3">
           {showGunLay && (
-            <GunLayPanel solutionElevation={solution?.elevation ?? null} />
+            <GunLayPanel
+              solutionElevation={solution?.elevation ?? null}
+              limits={reference.limits ?? null}
+            />
           )}
 
           {showMrsi &&

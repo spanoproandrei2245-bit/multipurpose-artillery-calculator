@@ -1,0 +1,46 @@
+{
+  "id": "merkava_mk4",
+  "name": "Merkava Mk IV (120 mm)",
+  "modification": "Arma 3 (M2A4 Slammer UP, ACE realistic name: Merkava Mk IV LIC) + ACE3",
+  "source": "Arma 3 config dump of B_MBT_01_TUSK_F on 2026-10-28 (tools/arma/dump_vehicle.sqf): CfgVehicles MainTurret, CfgMagazines, CfgAmmo.",
+  "vehicle": {
+    "class": "B_MBT_01_TUSK_F",
+    "displayName": "Merkava Mk IV LIC",
+    "weapon": "cannon_120mm",
+    "weaponInitSpeed": 0,
+    "minElevDeg": -7,
+    "maxElevDeg": 20
+  },
+  "rounds": [
+    {
+      "id": "apfsds_t",
+      "designation": "120 mm",
+      "type": "APFSDS-T",
+      "magazine": "24Rnd_120mm_APFSDS_shells_Tracer_Red",
+      "ammo": "Sh_120mm_APFSDS_Tracer_Red",
+      "muzzleSpeed": 1670,
+      "airFriction": -3.96e-05,
+      "timeToLive": 15
+    },
+    {
+      "id": "he_t",
+      "designation": "120 mm",
+      "type": "HE-T",
+      "magazine": "12Rnd_120mm_HE_shells_Tracer_Red",
+      "ammo": "Sh_120mm_HE_Tracer_Red",
+      "muzzleSpeed": 1410,
+      "airFriction": -0.000275,
+      "timeToLive": 15
+    },
+    {
+      "id": "heat_mp_t",
+      "designation": "120 mm",
+      "type": "HEAT-MP-T",
+      "magazine": "12Rnd_120mm_HEAT_MP_T_Red",
+      "ammo": "Sh_120mm_HEAT_MP_T_Red",
+      "muzzleSpeed": 1330,
+      "airFriction": -0.000275,
+      "timeToLive": 15
+    }
+  ]
+}

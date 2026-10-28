@@ -48,6 +48,9 @@ function lift(category: ArtilleryCategory, t: number): number {
       return parabola
     case 'mlrs':
       return Math.pow(parabola, 0.7) * 0.55
+    case 'tank':
+      // Настильно: почти прямая
+      return parabola * 0.12
     default:
       return parabola * 0.6
   }
