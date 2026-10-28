@@ -47,6 +47,7 @@ import type {
   MapTarget,
 } from '../lib/journal'
 import {
+  isDesktop,
   notifyOverlayShot,
   onHotkey,
   onOverlayCommand,
@@ -76,6 +77,7 @@ import type { FlightShot } from './FlightCanvas'
 import type { JournalActions } from '../lib/journalIO'
 import { InlineNumber, Row, Toggle } from './FormControls'
 import { GridInput } from './GridInput'
+import { GunLayPanel } from './GunLayPanel'
 import { MrsiPanel, MrsiUnavailable } from './MrsiPanel'
 import { TerrainWarning } from './TerrainWarning'
 import { clearance, isBlocked, isTight, type Clearance, type TerrainProfile } from '../lib/terrainClearance'
@@ -142,6 +144,7 @@ export function ArtilleryCalculator({
   const showWeather = useFeature('weather')
   const showTot = useFeature('tot')
   const showMrsi = useFeature('mrsi')
+  const showGunLay = useFeature('gunLay') && isDesktop
   const showJournal = useFeature('journal')
   const showTable = useFeature('table')
   const showHints = useFeature('hints')
@@ -1401,6 +1404,10 @@ export function ArtilleryCalculator({
         </div>
 
         <div className="min-w-0 space-y-3">
+          {showGunLay && (
+            <GunLayPanel solutionElevation={solution?.elevation ?? null} />
+          )}
+
           {showMrsi &&
             (mrsiAllowed ? (
               solution && <MrsiPanel options={mrsiOptions} showMode={profileModes.length > 1} />

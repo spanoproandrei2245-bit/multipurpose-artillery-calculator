@@ -20,6 +20,8 @@ export type FeatureId =
   | 'onlyGood'
   // Одновременный удар (MRSI): только буксируемые орудия и САУ
   | 'mrsi'
+  // Наводка по мыши: симуляция угла ствола танка (только программа для ПК)
+  | 'gunLay'
 
 const KEY_PREFIX = 'feature:'
 const DEFAULT_ON: ReadonlySet<FeatureId> = new Set<FeatureId>(['hints', 'hideUnfit'])
@@ -54,6 +56,11 @@ function snapshot(id: FeatureId): boolean {
 function subscribe(listener: () => void) {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+/** Включён ли раздел сейчас (вне React, например в обработчике клавиши). */
+export function getFeature(id: FeatureId): boolean {
+  return snapshot(id)
 }
 
 /** Включён ли необязательный раздел. */

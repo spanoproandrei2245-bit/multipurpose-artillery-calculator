@@ -73,6 +73,7 @@ export function SettingsPage({
   const weather = useFeature('weather')
   const tot = useFeature('tot')
   const mrsi = useFeature('mrsi')
+  const gunLay = useFeature('gunLay')
   const journal = useFeature('journal')
   const table = useFeature('table')
   const hints = useFeature('hints')
@@ -288,6 +289,14 @@ export function SettingsPage({
                 description={t('settingsPage.mrsi-description')}
               />
               </FeaturePreview>
+              {isDesktop && (
+                <Switch
+                  checked={gunLay}
+                  onChange={(v) => setFeature('gunLay', v)}
+                  label={t('gunLay.title')}
+                  description={t('settingsPage.gun-lay-description')}
+                />
+              )}
               <FeaturePreview id="table">
               <Switch
                 checked={table}

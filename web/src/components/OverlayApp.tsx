@@ -5,15 +5,18 @@ import {
   focusCurrentWindow,
   hideCurrentWindow,
   onHotkey,
+  onLayState,
   onOverlayShot,
   onSolution,
   requestSolution,
   resizeCurrentWindow,
   sendOverlayCommand,
+  type LayPublished,
   type OverlayField,
   type OverlayState,
 } from '../lib/desktop'
 import { formatSigned, isInvalid, parseNumber } from '../lib/input'
+import { LayReadout } from './GunLayPanel'
 import { ProgressBar } from './FormControls'
 
 // Предупреждение «сплэш» за столько секунд до разрыва (как в FireTimer)
@@ -24,6 +27,8 @@ const IMPACT_HOLD_MS = 4000
 const WIDTH = 340
 const COMPACT_HEIGHT = 250
 const EDITING_HEIGHT = 580
+// Блок «Наводка по мыши» добавляет к окну высоту
+const LAY_EXTRA_HEIGHT = 150
 
 const FIELDS: readonly OverlayField[] = [
   'distance',
@@ -55,6 +60,8 @@ export function OverlayApp() {
   const [shot, setShot] = useState<Shot | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [editing, setEditing] = useState(false)
+  // Наводка по мыши: угол ствола в симуляции считает основное окно
+  const [lay, setLay] = useState<LayPublished | null>(null)
   // Счётчик запросов «курсор в поле дистанции» (Ctrl+Alt+D)
   const [focusRequest, setFocusRequest] = useState(0)
 
@@ -88,12 +95,15 @@ export function OverlayApp() {
     return stop
   }, [])
 
+  useEffect(() => onLayState(setLay), [])
+
+  // Блок наводки виден, пока слежение идёт или идёт калибровка
+  const layVisible = lay !== null && (lay.tracking || lay.calibrating)
+
   useEffect(() => {
-    void resizeCurrentWindow(
-      WIDTH,
-      canEdit ? EDITING_HEIGHT : COMPACT_HEIGHT
-    )
-  }, [canEdit])
+    const base = canEdit ? EDITING_HEIGHT : COMPACT_HEIGHT
+    void resizeCurrentWindow(WIDTH, layVisible ? base + LAY_EXTRA_HEIGHT : base)
+  }, [canEdit, layVisible])
 
   useEffect(
     () =>
@@ -289,6 +299,19 @@ export function OverlayApp() {
             ? t('overlayApp.waiting-for-the-fire-direction')
             : t('overlayApp.enter-a-distance-here-input')}
         </p>
+      )}
+
+      {lay && layVisible && (
+        <div className="mt-2 rounded-lg bg-app-raised p-2.5">
+          {lay.calibrating && (
+            <p className="mb-2 text-[12.5px] text-app-text">{t('gunLay.calibrating')}</p>
+          )}
+          <LayReadout
+            elevation={lay.elevation}
+            target={lay.target}
+            settings={lay.settings}
+          />
+        </div>
       )}
 
       {totLeft !== null && totLeft > -3 && !shot && (

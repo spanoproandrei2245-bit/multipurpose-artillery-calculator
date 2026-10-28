@@ -1,6 +1,8 @@
 // Без консольного окна в релизной сборке Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod mouse;
+
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{
     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
@@ -8,9 +10,14 @@ use tauri_plugin_global_shortcut::{
 
 /// Глобальные горячие клавиши: работают, когда в фокусе игра.
 /// Нажатие пересылается в окна событием `hotkey` с названием действия.
-fn shortcuts() -> [(Shortcut, &'static str); 7] {
+fn shortcuts() -> [(Shortcut, &'static str); 11] {
     let modifiers = Some(Modifiers::CONTROL | Modifiers::ALT);
     [
+        // Наводка по мыши: слежение, упоры ствола, калибровка
+        (Shortcut::new(modifiers, Code::KeyG), "lay"),
+        (Shortcut::new(modifiers, Code::KeyB), "lay-low"),
+        (Shortcut::new(modifiers, Code::KeyT), "lay-high"),
+        (Shortcut::new(modifiers, Code::KeyK), "lay-calibrate"),
         (Shortcut::new(modifiers, Code::KeyF), "fire"),
         (Shortcut::new(modifiers, Code::KeyO), "overlay"),
         (Shortcut::new(modifiers, Code::KeyD), "input"),
@@ -50,7 +57,9 @@ fn main() {
                 })
                 .build(),
         )
+        .invoke_handler(tauri::generate_handler![mouse::set_mouse_capture])
         .setup(|app| {
+            mouse::start(app.handle().clone());
             for (shortcut, _) in shortcuts() {
                 // Сочетание может быть занято другой программой —
                 // приложение всё равно запускается.

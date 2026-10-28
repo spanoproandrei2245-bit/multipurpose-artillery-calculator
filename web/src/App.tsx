@@ -16,7 +16,8 @@ import { Tour } from './components/Tour'
 import { DashboardPage } from './pages/DashboardPage'
 
 import { isModelId, type ModelId } from './data/models'
-import { onHotkey, toggleOverlay } from './lib/desktop'
+import { isDesktop, onHotkey, toggleOverlay } from './lib/desktop'
+import { startGunLay } from './lib/gunLayStore'
 import { readInvite } from './lib/sync'
 import { usePersistentState } from './lib/usePersistentState'
 import { useWakeLock } from './lib/useWakeLock'
@@ -119,6 +120,9 @@ function App() {
       }),
     []
   )
+
+  // Наводка по мыши: движение мыши и клавиши считает основное окно
+  useEffect(() => (isDesktop ? startGunLay() : undefined), [])
 
   useEffect(() => {
     document.documentElement.lang = localeOf(language)

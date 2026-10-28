@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { LogicalSize } from '@tauri-apps/api/dpi'
 import { emit, listen } from '@tauri-apps/api/event'
 import {
@@ -6,6 +7,7 @@ import {
 } from '@tauri-apps/api/webviewWindow'
 
 import type { ArtilleryMode } from '../types/artillery'
+import type { LaySettings } from './gunLay'
 import type { Language } from '../types/settings'
 
 /** Приложение запущено как программа для ПК (Tauri), а не в браузере. */
@@ -25,11 +27,20 @@ export type HotkeyAction =
   | 'mode'
   | 'next-target'
   | 'previous-target'
+  // Наводка по мыши: слежение, упоры ствола, калибровка
+  | 'lay'
+  | 'lay-low'
+  | 'lay-high'
+  | 'lay-calibrate'
 
 export const GLOBAL_HOTKEYS: readonly {
   keys: string
   action: HotkeyAction
 }[] = [
+  { keys: 'Ctrl + Alt + G', action: 'lay' },
+  { keys: 'Ctrl + Alt + B', action: 'lay-low' },
+  { keys: 'Ctrl + Alt + T', action: 'lay-high' },
+  { keys: 'Ctrl + Alt + K', action: 'lay-calibrate' },
   { keys: 'Ctrl + Alt + F', action: 'fire' },
   { keys: 'Ctrl + Alt + O', action: 'overlay' },
   { keys: 'Ctrl + Alt + D', action: 'input' },
@@ -146,6 +157,34 @@ export function requestSolution() {
 
 export function onSolutionRequest(handler: () => void) {
   return subscribe<null>('overlay-ready', () => handler())
+}
+
+/** Что оверлей показывает про наводку по мыши (считает основное окно). */
+export interface LayPublished {
+  tracking: boolean
+  // Возвышение ствола в симуляции и нужное, мил; target null — нужного нет
+  elevation: number
+  target: number | null
+  calibrating: boolean
+  settings: LaySettings
+}
+
+export function publishLay(state: LayPublished) {
+  if (isDesktop) void emit('lay-state', state).catch(() => {})
+}
+
+export function onLayState(handler: (state: LayPublished) => void) {
+  return subscribe<LayPublished>('lay-state', handler)
+}
+
+/** Движение мыши за короткий промежуток, отсчёты (Rust, src-tauri/src/mouse.rs). */
+export function onMouseDelta(handler: (delta: { dx: number; dy: number }) => void) {
+  return subscribe<{ dx: number; dy: number }>('mouse-delta', handler)
+}
+
+/** Включить или выключить чтение движения мыши. */
+export function setMouseCapture(enabled: boolean) {
+  if (isDesktop) void invoke('set_mouse_capture', { enabled }).catch(() => {})
 }
 
 export async function toggleOverlay() {
