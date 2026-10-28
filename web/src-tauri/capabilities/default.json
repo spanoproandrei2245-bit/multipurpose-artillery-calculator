@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window and the overlay: events, show/hide, focus, resize and drag the overlay.",
+  "description": "Main window, the overlay and the gun lay bar: events, show/hide, focus, resize and drag the overlay.",
   "windows": [
     "main",
-    "overlay"
+    "overlay",
+    "laybar"
   ],
   "permissions": [
     "core:default",
@@ -14,6 +15,9 @@
     "core:window:allow-set-focus",
     "core:window:allow-set-size",
     "core:window:allow-start-dragging",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-set-position",
+    "core:window:allow-current-monitor",
     "updater:default",
     "process:allow-restart"
   ]

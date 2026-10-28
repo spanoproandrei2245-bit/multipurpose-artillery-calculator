@@ -1,6 +1,9 @@
 import type { ru } from './messages'
 
 export const zh: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "等高线",
+  "gunLay.overlay-x": "悬浮窗：中心向右偏移",
+  "gunLay.overlay-y": "悬浮窗：中心向下偏移",
   "categories.tank": "坦克",
   "mapPicker.coverage-from": "可命中范围",
   "mapPicker.coverage-to": "在哪里架炮",

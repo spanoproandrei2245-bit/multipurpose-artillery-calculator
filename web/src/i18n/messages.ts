@@ -4,6 +4,9 @@
  * версии: тест следит, чтобы ключи и подстановки у языков совпадали.
  */
 export const ru = {
+  "mapPicker.contours": "Высотные линии",
+  "gunLay.overlay-x": "Окно поверх игры: вправо от центра",
+  "gunLay.overlay-y": "Окно поверх игры: вниз от центра",
   "categories.tank": "Танк",
   "mapPicker.coverage-from": "Куда достаю",
   "mapPicker.coverage-to": "Где встать",
@@ -688,6 +691,9 @@ export const ru = {
 } as const
 
 export const en: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "Contour lines",
+  "gunLay.overlay-x": "Overlay: right of screen center",
+  "gunLay.overlay-y": "Overlay: down from screen center",
   "categories.tank": "Tank",
   "mapPicker.coverage-from": "Where I can hit",
   "mapPicker.coverage-to": "Where to stand",

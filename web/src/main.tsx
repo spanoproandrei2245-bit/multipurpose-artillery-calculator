@@ -5,9 +5,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { LayOverlay } from './components/LayOverlay.tsx'
 import { OverlayApp } from './components/OverlayApp.tsx'
 import { SyncProvider } from './components/SyncProvider.tsx'
-import { isDesktop, isOverlayWindow } from './lib/desktop.ts'
+import { isDesktop, isLayWindow, isOverlayWindow } from './lib/desktop.ts'
 import { loadCustomSounds } from './lib/sound.ts'
 
 // Работа без интернета (PWA). В режиме разработки не нужна — мешала бы
@@ -42,7 +43,9 @@ installGlobalErrorLog()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary area={isOverlayWindow ? 'overlay' : 'app'}>
-      {isOverlayWindow ? (
+      {isLayWindow ? (
+        <LayOverlay />
+      ) : isOverlayWindow ? (
         <OverlayApp />
       ) : (
         <SyncProvider>

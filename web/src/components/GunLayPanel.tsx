@@ -107,14 +107,21 @@ export function LayReadout({ elevation, target, settings, large = false }: Reado
   )
 }
 
-type SettingKey = 'min' | 'max' | 'tolerance' | 'milPerCount'
+type SettingKey = 'min' | 'max' | 'tolerance' | 'milPerCount' | 'overlayX' | 'overlayY'
 
-// Подпись поля получает название единицы: чувствительность «° на отсчёт»
-const SETTING_FIELDS: readonly { key: SettingKey; label: (unit: string) => string }[] = [
-  { key: 'min', label: () => t('gunLay.low-stop') },
-  { key: 'max', label: () => t('gunLay.high-stop') },
-  { key: 'tolerance', label: () => t('gunLay.tolerance') },
-  { key: 'milPerCount', label: (unit) => t('gunLay.sensitivity', unit) },
+// Подпись поля получает название единицы: чувствительность «° на отсчёт».
+// angle: значение угловое и вводится в градусах или милах; иначе это пиксели.
+const SETTING_FIELDS: readonly {
+  key: SettingKey
+  angle: boolean
+  label: (unit: string) => string
+}[] = [
+  { key: 'min', angle: true, label: () => t('gunLay.low-stop') },
+  { key: 'max', angle: true, label: () => t('gunLay.high-stop') },
+  { key: 'tolerance', angle: true, label: () => t('gunLay.tolerance') },
+  { key: 'milPerCount', angle: true, label: (unit) => t('gunLay.sensitivity', unit) },
+  { key: 'overlayX', angle: false, label: () => t('gunLay.overlay-x') },
+  { key: 'overlayY', angle: false, label: () => t('gunLay.overlay-y') },
 ]
 
 function display(value: number, digits: number): string {
@@ -162,6 +169,10 @@ export function GunLayPanel({
     setEditing({ key, text })
     const typed = parseNumber(text)
     if (typed === null) return
+    if (key === 'overlayX' || key === 'overlayY') {
+      updateLaySettings({ [key]: Math.round(typed) } as Partial<LaySettings>)
+      return
+    }
     const value = fromDisplay(typed, settings)
     // Диапазон и чувствительность не бывают нулевыми или перевёрнутыми
     if (key === 'milPerCount' && value <= 0) return
@@ -300,7 +311,7 @@ export function GunLayPanel({
             </button>
           ))}
         </div>
-        {SETTING_FIELDS.map(({ key, label }) => (
+        {SETTING_FIELDS.map(({ key, angle, label }) => (
           <label
             key={key}
             onBlur={() => setEditing(null)}
@@ -313,10 +324,12 @@ export function GunLayPanel({
                 value={
                   editing?.key === key
                     ? editing.text
-                    : display(toDisplay(settings[key], settings), key === 'milPerCount' ? 4 : 2)
+                    : angle
+                      ? display(toDisplay(settings[key], settings), key === 'milPerCount' ? 4 : 2)
+                      : display(settings[key], 0)
                 }
                 onChange={(text) => change(key, text)}
-                unit={key === 'milPerCount' ? '' : unit}
+                unit={!angle ? 'px' : key === 'milPerCount' ? '' : unit}
                 block
               />
             </span>

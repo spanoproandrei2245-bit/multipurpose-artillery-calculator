@@ -21,6 +21,9 @@ export interface LaySettings {
   tolerance: number
   // Показывать углы в градусах, как в игре (EL: 20.0); внутри всё в милах
   degrees: boolean
+  // Окно «выше / ниже» поверх игры: смещение от центра экрана, пиксели (вправо, вниз)
+  overlayX: number
+  overlayY: number
 }
 
 // От -8° до +20°: типичные пределы танкового орудия
@@ -31,6 +34,8 @@ export const DEFAULT_LAY_SETTINGS: LaySettings = {
   invert: false,
   tolerance: 1,
   degrees: true,
+  overlayX: 150,
+  overlayY: -50,
 }
 
 export interface LayState {
@@ -150,9 +155,13 @@ export function toDisplay(mil: number, settings: LaySettings): number {
   return settings.degrees ? milToDeg(mil) : mil
 }
 
-/** Число с подписью единицы: в градусах один знак (20.0), в милах целое. */
-export function formatLay(mil: number, settings: LaySettings): string {
-  return toDisplay(mil, settings).toFixed(settings.degrees ? 1 : 0)
+/** Число в единицах показа: в градусах один знак (20.0, как в игре), в милах целое. */
+export function formatLay(
+  mil: number,
+  settings: LaySettings,
+  digits = settings.degrees ? 1 : 0
+): string {
+  return toDisplay(mil, settings).toFixed(digits)
 }
 
 /** Положение на шкале ствола: 0 — нижний упор, 1 — верхний. */
@@ -186,6 +195,8 @@ export function parseLaySettings(raw: string | null): LaySettings {
       invert: data.invert === true,
       tolerance: Math.max(0, finiteOr(data.tolerance, base.tolerance)),
       degrees: data.degrees !== false,
+      overlayX: finiteOr(data.overlayX, base.overlayX),
+      overlayY: finiteOr(data.overlayY, base.overlayY),
     }
   } catch {
     return base

@@ -1,6 +1,9 @@
 import type { ru } from './messages'
 
 export const uk: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "Горизонталі",
+  "gunLay.overlay-x": "Вікно поверх гри: праворуч від центру",
+  "gunLay.overlay-y": "Вікно поверх гри: вниз від центру",
   "categories.tank": "Танк",
   "mapPicker.coverage-from": "Куди дістаю",
   "mapPicker.coverage-to": "Де стати",

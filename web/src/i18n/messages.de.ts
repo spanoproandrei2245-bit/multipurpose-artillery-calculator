@@ -1,6 +1,9 @@
 import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "Höhenlinien",
+  "gunLay.overlay-x": "Overlay: rechts der Bildmitte",
+  "gunLay.overlay-y": "Overlay: unterhalb der Bildmitte",
   "categories.tank": "Panzer",
   "mapPicker.coverage-from": "Trefferzone",
   "mapPicker.coverage-to": "Wo aufstellen",

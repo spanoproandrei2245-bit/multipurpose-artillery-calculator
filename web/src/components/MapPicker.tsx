@@ -20,6 +20,7 @@ import {
 import { readStoredText, writeStored } from '../lib/input'
 import { sampleProfile, type TerrainProfile } from '../lib/terrainClearance'
 import { computeCoverage, nearestGoodSpot, type Coverage } from '../lib/coverage'
+import { contourInterval, drawDemContours } from '../lib/contours'
 import {
   drawVector,
   loadVector,
@@ -268,6 +269,9 @@ export function MapPicker({
 
   // Орудие закреплено на карте: касания его не двигают
   const [gunLocked, setGunLocked] = useState(false)
+
+  // Высотные линии из сетки высот: чтобы точнее ставить орудие
+  const [contoursOn, setContoursOn] = useState(() => readStoredText('mapContours') !== 'off')
 
   // Зоны по рельефу: куда достаёт орудие («from») и откуда достать до цели («to»)
   const [coverageMode, setCoverageMode] = useState<'off' | 'from' | 'to'>('off')
@@ -592,12 +596,15 @@ export function MapPicker({
         }
       }
       // Здания, дороги, горизонтали: поверх спутника — при сильном приближении
+      const baseView = { x0: bx0, y0: by0, scale, width: w, height: h }
+      const demLines = contoursOn && contourInterval(scale) !== null
       if (vector) {
-        drawVector(target, vector, { x0: bx0, y0: by0, scale, width: w, height: h }, topo ? 'topo' : 'sat', sans)
+        drawVector(target, vector, baseView, topo ? 'topo' : 'sat', sans, !demLines)
       }
+      if (demLines) drawDemContours(target, map, baseView, topo ? 'topo' : 'sat', sans)
     }
 
-    const cacheKey = [map.world, topo, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0].join('|')
+    const cacheKey = [map.world, topo, night, ratio, size.width, size.height, tileTick, vector ? 1 : 0, contoursOn ? 1 : 0].join('|')
     let cache = baseCache.current
     const w2 = size.width * 2
     const h2 = size.height * 2
@@ -932,7 +939,7 @@ export function MapPicker({
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
-  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineDensity, reach, coverage, spot, strokes, liveStroke, vector, mapStyle, settleTick])
+  }, [canvas, map, relief, activeView, gun, target, size, unitM, ratio, markers, now, draft, ru, night, journalTargets, tiles, tileTick, linePoints, lineAim, lineIndex, lineDensity, reach, coverage, spot, contoursOn, strokes, liveStroke, vector, mapStyle, settleTick])
 
   // ---- масштаб колёсиком (нужен не-пассивный обработчик) ----
   const viewRef = useRef<View | null>(null)
@@ -1595,6 +1602,26 @@ export function MapPicker({
               ))}
             </div>
           </div>
+
+          {/* Справа снизу над слоем: высотные линии из сетки высот */}
+          <button
+            type="button"
+            aria-pressed={contoursOn}
+            title={t('mapPicker.contours')}
+            aria-label={t('mapPicker.contours')}
+            onClick={() => {
+              const next = !contoursOn
+              setContoursOn(next)
+              writeStored('mapContours', next ? 'on' : 'off')
+            }}
+            className={[
+              'absolute right-2 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors',
+              vector && tiles ? 'bottom-12' : 'bottom-2',
+              contoursOn ? 'bg-accent-solid text-white' : 'bg-black/70 text-white/90 hover:bg-black/85',
+            ].join(' ')}
+          >
+            <FieldIcon name="mountain" className="h-5 w-5" />
+          </button>
 
           {/* Справа снизу: слой карты (спутник / топо); значок — текущий режим */}
           {vector && tiles && (

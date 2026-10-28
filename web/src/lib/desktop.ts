@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
-import { LogicalSize } from '@tauri-apps/api/dpi'
+import { LogicalSize, PhysicalPosition } from '@tauri-apps/api/dpi'
 import { emit, listen } from '@tauri-apps/api/event'
+import { currentMonitor } from '@tauri-apps/api/window'
 import {
   getCurrentWebviewWindow,
   WebviewWindow,
@@ -14,9 +15,13 @@ import type { Language } from '../types/settings'
 export const isDesktop =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
-/** Окно-оверлей поверх игры открывается с адресом …#overlay. */
+/** Окно «выше / ниже» для стрельбы из танка открывается с адресом …#lay. */
+export const isLayWindow =
+  typeof window !== 'undefined' && window.location.hash === '#lay'
+
+/** Дополнительное окно поверх игры: оверлей (…#overlay) или окно «выше / ниже». */
 export const isOverlayWindow =
-  typeof window !== 'undefined' && window.location.hash === '#overlay'
+  isLayWindow || (typeof window !== 'undefined' && window.location.hash === '#overlay')
 
 /** Глобальные горячие клавиши (src-tauri/src/main.rs). */
 export type HotkeyAction =
@@ -185,6 +190,27 @@ export function onMouseDelta(handler: (delta: { dx: number; dy: number }) => voi
 /** Включить или выключить чтение движения мыши. */
 export function setMouseCapture(enabled: boolean) {
   if (isDesktop) void invoke('set_mouse_capture', { enabled }).catch(() => {})
+}
+
+/**
+ * Окно «выше / ниже»: пропускает клики мыши и ставится рядом с прицелом
+ * (смещение от центра экрана в пикселях). Окно создаётся один раз при запуске
+ * и больше не показывается и не скрывается: показ забрал бы фокус у игры.
+ */
+export async function placeLayWindow(dx: number, dy: number) {
+  if (!isDesktop) return
+  try {
+    const current = getCurrentWebviewWindow()
+    await current.setIgnoreCursorEvents(true)
+    const monitor = await currentMonitor()
+    if (!monitor) return
+    const scale = monitor.scaleFactor
+    const x = monitor.position.x + monitor.size.width / 2 + dx * scale
+    const y = monitor.position.y + monitor.size.height / 2 + dy * scale
+    await current.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)))
+  } catch {
+    // Нет прав или окно недоступно: остаётся прежнее место.
+  }
 }
 
 export async function toggleOverlay() {

@@ -23,6 +23,8 @@ const settings: LaySettings = {
   invert: false,
   tolerance: 1,
   degrees: false,
+  overlayX: 0,
+  overlayY: 0,
 }
 
 function run(events: LayEvent[], start: LayState = INITIAL_LAY_STATE, s = settings) {
@@ -170,6 +172,8 @@ describe('parseLaySettings', () => {
       invert: true,
       tolerance: 2,
       degrees: true,
+      overlayX: DEFAULT_LAY_SETTINGS.overlayX,
+      overlayY: DEFAULT_LAY_SETTINGS.overlayY,
     })
   })
 })

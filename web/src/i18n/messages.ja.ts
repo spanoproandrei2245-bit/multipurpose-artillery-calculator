@@ -1,6 +1,9 @@
 import type { ru } from './messages'
 
 export const ja: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "等高線",
+  "gunLay.overlay-x": "オーバーレイ：中央から右へ",
+  "gunLay.overlay-y": "オーバーレイ：中央から下へ",
   "categories.tank": "戦車",
   "mapPicker.coverage-from": "命中できる範囲",
   "mapPicker.coverage-to": "どこに構えるか",

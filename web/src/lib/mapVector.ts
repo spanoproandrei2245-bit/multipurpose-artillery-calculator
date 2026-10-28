@@ -166,7 +166,9 @@ export function drawVector(
   vec: MapVector,
   v: VectorView,
   style: MapStyle,
-  font: string
+  font: string,
+  // false: горизонтали из векторных данных не рисуются (их рисует drawDemContours)
+  contourLines = true
 ) {
   const topo = style === 'topo'
   if (!topo && v.scale < SAT_OVERLAY_MIN_SCALE) return
@@ -190,7 +192,7 @@ export function drawVector(
     ctx.lineWidth = 0.7
     ctx.strokeStyle = TOPO.contour
     ctx.beginPath()
-    for (const c of vec.contours) {
+    for (const c of contourLines ? vec.contours : []) {
       if (c.elevation % every !== 0 || c.elevation % 50 === 0 || !visible(c, v, 14)) continue
       trace(ctx, c, v, false)
     }
@@ -198,7 +200,7 @@ export function drawVector(
     ctx.lineWidth = 1.2
     ctx.strokeStyle = TOPO.contourMajor
     ctx.beginPath()
-    for (const c of vec.contours) {
+    for (const c of contourLines ? vec.contours : []) {
       if (c.elevation % 50 !== 0 || c.elevation % every !== 0 || !visible(c, v, 14)) continue
       trace(ctx, c, v, false)
     }

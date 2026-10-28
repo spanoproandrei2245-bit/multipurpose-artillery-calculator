@@ -1,6 +1,9 @@
 import type { ru } from './messages'
 
 export const fr: Record<keyof typeof ru, string> = {
+  "mapPicker.contours": "Courbes de niveau",
+  "gunLay.overlay-x": "Overlay : à droite du centre",
+  "gunLay.overlay-y": "Overlay : sous le centre",
   "categories.tank": "Char",
   "mapPicker.coverage-from": "Zone atteignable",
   "mapPicker.coverage-to": "Où se placer",
