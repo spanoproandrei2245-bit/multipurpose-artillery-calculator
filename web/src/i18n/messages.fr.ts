@@ -1,6 +1,7 @@
 import type { ru } from './messages'
 
 export const fr: Record<keyof typeof ru, string> = {
+  "gunLay.pitch": "Inclinaison de la caisse (nez haut +)",
   "gunLay.zeroing": "Réglage en jeu",
   "gunLay.zero-note": "Le réglage relève le canon de {0} au-dessus de la ligne de visée : l’angle de visée nécessaire est réduit d’autant.",
   "mapPicker.contours": "Courbes de niveau",

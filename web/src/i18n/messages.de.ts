@@ -1,6 +1,7 @@
 import type { ru } from './messages'
 
 export const de: Record<keyof typeof ru, string> = {
+  "gunLay.pitch": "Wannenneigung (Bug oben +)",
   "gunLay.zeroing": "Einschießen im Spiel",
   "gunLay.zero-note": "Das Einschießen hebt das Rohr um {0} über die Visierlinie: der nötige Visierwinkel ist um so viel kleiner.",
   "mapPicker.contours": "Höhenlinien",

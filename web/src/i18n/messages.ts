@@ -4,6 +4,7 @@
  * версии: тест следит, чтобы ключи и подстановки у языков совпадали.
  */
 export const ru = {
+  "gunLay.pitch": "Наклон корпуса (нос вверх +)",
   "gunLay.zeroing": "Пристрелка в игре",
   "gunLay.zero-note": "Пристрелка приподнимает ствол над прицелом на {0}: нужный угол прицела уменьшен на столько.",
   "mapPicker.contours": "Высотные линии",
@@ -693,6 +694,7 @@ export const ru = {
 } as const
 
 export const en: Record<keyof typeof ru, string> = {
+  "gunLay.pitch": "Hull pitch (nose up +)",
   "gunLay.zeroing": "Zeroing in the game",
   "gunLay.zero-note": "Zeroing raises the barrel above the sight by {0}: the needed sight angle is reduced by that much.",
   "mapPicker.contours": "Contour lines",

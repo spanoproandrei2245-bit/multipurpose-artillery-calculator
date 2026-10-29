@@ -1,6 +1,7 @@
 import type { ru } from './messages'
 
 export const uk: Record<keyof typeof ru, string> = {
+  "gunLay.pitch": "Нахил корпусу (ніс угору +)",
   "gunLay.zeroing": "Пристрілка в грі",
   "gunLay.zero-note": "Пристрілка піднімає ствол над прицілом на {0}: потрібний кут прицілу зменшено на стільки.",
   "mapPicker.contours": "Горизонталі",

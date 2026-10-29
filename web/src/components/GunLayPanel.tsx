@@ -16,6 +16,7 @@ import {
   updateLaySettings,
   useGunLay,
 } from '../lib/gunLayStore'
+import { degToMil } from '../lib/ballistics'
 import { parseNumber, readStoredText, writeStored } from '../lib/input'
 import { FieldIcon } from './FieldIcon'
 import { InlineNumber } from './FormControls'
@@ -161,11 +162,17 @@ export function GunLayPanel({
   const zeroDistance = parseNumber(zeroing)
   const zeroOffset =
     zeroDistance !== null && zeroDistance > 0 ? (solveAt?.(zeroDistance)?.elevation ?? 0) : 0
+  // Наклон корпуса: EL в HUD и мышь считают угол относительно корпуса, таблица - от горизонта
+  const [pitch, setPitch] = useState(() => readStoredText('gunLayPitch'))
+  useEffect(() => writeStored('gunLayPitch', pitch), [pitch])
+  const pitchDeg = parseNumber(pitch) ?? 0
+  const pitchMil = degToMil(pitchDeg)
   const manualValue = parseNumber(manual)
   const barrelTarget =
     manualValue === null ? solutionElevation : fromDisplay(manualValue, settings)
-  // Нужный угол прицела = угол ствола минус пристрелка
-  const target = barrelTarget === null ? null : barrelTarget - zeroOffset
+  // Нужный угол прицела относительно корпуса = угол ствола от горизонта минус пристрелка
+  // минус наклон корпуса (нос вверх: корпус уже поднял ствол)
+  const target = barrelTarget === null ? null : barrelTarget - zeroOffset - pitchMil
 
   useEffect(() => setLayTarget(target), [target])
 
@@ -303,6 +310,13 @@ export function GunLayPanel({
           />
         </span>
       </label>
+      <label className="mt-3 flex items-center justify-between gap-3 text-[14px] text-app-text-2">
+        <span>{t('gunLay.pitch')}</span>
+        <span className="flex w-32 items-center gap-2">
+          <InlineNumber id="gun-lay-pitch" value={pitch} onChange={setPitch} unit="°" placeholder="0" block />
+        </span>
+      </label>
+
       {zeroOffset !== 0 && (
         <p className="mt-1 text-[12.5px] text-app-muted">
           {t('gunLay.zero-note', formatLay(zeroOffset, settings, settings.degrees ? 2 : 0) + unit)}
